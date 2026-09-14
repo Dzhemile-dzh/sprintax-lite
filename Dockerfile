@@ -5,10 +5,11 @@ RUN apt-get update \
         git \
         unzip \
         libicu-dev \
+        libpng-dev \
         libzip-dev \
         libsqlite3-dev \
     && docker-php-ext-configure intl \
-    && docker-php-ext-install -j$(nproc) intl zip pdo pdo_sqlite opcache \
+    && docker-php-ext-install -j$(nproc) gd intl zip pdo pdo_sqlite opcache \
     && a2enmod rewrite \
     && printf '\nServerName localhost\n' >> /etc/apache2/apache2.conf \
     && rm -rf /var/lib/apt/lists/*

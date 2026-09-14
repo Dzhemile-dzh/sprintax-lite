@@ -16,9 +16,14 @@ final readonly class CalculationResult
     ) {
     }
 
+    public function has(string $field): bool
+    {
+        return array_key_exists($field, $this->values);
+    }
+
     public function value(string $field): int|float|string
     {
-        if (!array_key_exists($field, $this->values)) {
+        if (!$this->has($field)) {
             throw new InvalidArgumentException(sprintf('Calculated field "%s" is not present.', $field));
         }
 

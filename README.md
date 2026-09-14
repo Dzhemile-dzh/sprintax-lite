@@ -2,7 +2,7 @@
 
 Symfony questionnaire engine and IRS Form 1040-NR PDF generator (take-home assignment).
 
-Domain model, Doctrine persistence, server-side visibility, and a pluggable calculation engine are in place. The client wizard, admin builder, PDF overlay, and security land in later commits.
+Domain model, Doctrine persistence, server-side visibility, a pluggable calculation engine, and coordinate-based PDF overlay are in place. The client wizard, admin builder, and security land in later commits.
 
 ## Architecture
 
@@ -32,7 +32,9 @@ Meaningful boundaries:
 
 There are no generic managers, base CRUD services, or abstract domain service classes. Business rules must not live in controllers or Twig.
 
-Placeholder PDF adapter remains. Calculation is pluggable: `CalculateSubmission` picks a `CalculatorInterface` by questionnaire name. `Form1040NrCalculator` is a simplified 10% tax stand-in whose output keys (`taxable_income`, `tax_owed`, …) are meant for PDF mappings, not IRS tables.
+Calculation is pluggable: `CalculateSubmission` picks a `CalculatorInterface` by questionnaire name. `Form1040NrCalculator` is a simplified 10% tax stand-in whose output keys (`taxable_income`, `tax_owed`, …) are meant for PDF mappings, not IRS tables.
+
+PDF overlay goes through `PdfGeneratorInterface`. `GenerateSubmissionPdf` resolves the template as `resources/pdf/{form-name}.pdf`, maps visible answers and computed fields through admin `QuestionMapping` coordinates (mm), and `FpdiPdfGenerator` stamps those values. The generator has no hardcoded field positions. Async Messenger generation and HTTP download come later.
 
 ## Domain model
 
@@ -73,6 +75,7 @@ Conditional visibility lives on the question (`equals` / `not_equals`). `Questio
 - Doctrine ORM + migrations
 - SQLite
 - Twig, Forms, Validator, Security, Messenger
+- FPDI + FPDF (coordinate overlay)
 - PHPUnit + WebTestCase
 - PHPStan
 - Docker

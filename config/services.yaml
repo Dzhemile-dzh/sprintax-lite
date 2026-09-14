@@ -7,6 +7,8 @@
 # Put parameters here that don't need to change on each machine where the app is deployed
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
+    app.pdf.templates_dir: '%kernel.project_dir%/resources/pdf'
+    app.pdf.output_dir: '%kernel.project_dir%/var/pdf'
 
 services:
     # default configuration for services in *this* file
@@ -31,6 +33,14 @@ services:
     App\Application\Calculation\CalculateSubmission:
         arguments:
             $calculators: !tagged_iterator app.calculator
+
+    App\Application\Pdf\GenerateSubmissionPdf:
+        arguments:
+            $templatesDirectory: '%app.pdf.templates_dir%'
+            $outputDirectory: '%app.pdf.output_dir%'
+
+    App\Domain\Pdf\Contract\PdfGeneratorInterface:
+        alias: App\Infrastructure\Pdf\FpdiPdfGenerator
 
     App\Domain\Questionnaire\Repository\QuestionnaireRepositoryInterface:
         alias: App\Infrastructure\Persistence\Doctrine\DoctrineQuestionnaireRepository
