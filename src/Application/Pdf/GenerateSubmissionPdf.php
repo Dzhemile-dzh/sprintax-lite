@@ -6,6 +6,7 @@ namespace App\Application\Pdf;
 
 use App\Application\Calculation\CalculateSubmission;
 use App\Domain\Calculation\DTO\CalculationResult;
+use App\Domain\Filesystem\Contract\FileStorageInterface;
 use App\Domain\Pdf\Contract\PdfGeneratorInterface;
 use App\Domain\Pdf\DTO\PdfFieldPlacement;
 use App\Domain\Pdf\DTO\PdfGenerationRequest;
@@ -14,8 +15,11 @@ use App\Domain\Questionnaire\Entity\QuestionMapping;
 use App\Domain\Questionnaire\Entity\Questionnaire;
 use App\Domain\Questionnaire\QuestionVisibilityEvaluator;
 use App\Domain\Submission\Entity\QuestionnaireSubmission;
+use App\Domain\Submission\Exception\InvalidSubmission;
 use App\Domain\Submission\Repository\SubmissionRepositoryInterface;
 use App\Domain\Submission\ValueObject\AnswerValue;
+use App\Domain\Submission\ValueObject\SubmissionStatus;
+use DateTimeImmutable;
 
 final class GenerateSubmissionPdf
 {
@@ -24,6 +28,7 @@ final class GenerateSubmissionPdf
         private readonly CalculateSubmission $calculateSubmission,
         private readonly PdfGeneratorInterface $pdfGenerator,
         private readonly QuestionVisibilityEvaluator $visibility,
+        private readonly FileStorageInterface $fileStorage,
         private readonly string $templatesDirectory,
         private readonly string $outputDirectory,
     ) {
@@ -32,11 +37,21 @@ final class GenerateSubmissionPdf
     public function execute(string $submissionId): string
     {
         $submission = $this->submissions->get($submissionId);
+
+        if ($submission->status() === SubmissionStatus::InProgress) {
+            throw InvalidSubmission::cannotGeneratePdf($submission->status());
+        }
+
+        $outputPath = $this->outputPathFor($submission->id());
+        $existingPath = $this->existingPdfPath($submission, $outputPath);
+
+        if ($existingPath !== null) {
+            return $existingPath;
+        }
+
         $questionnaire = $submission->questionnaire();
         $answersByKey = $this->answersByQuestionKey($submission);
         $calculation = $this->calculationIfNeeded($submission, $questionnaire);
-
-        $outputPath = $this->outputDirectory.DIRECTORY_SEPARATOR.$submission->id().'.pdf';
 
         $this->pdfGenerator->generate(new PdfGenerationRequest(
             $this->templatePath($questionnaire->name()),
@@ -44,7 +59,33 @@ final class GenerateSubmissionPdf
             $this->overlayFields($submission, $questionnaire, $answersByKey, $calculation),
         ));
 
+        $submission->markPdfReady(new DateTimeImmutable(), $this->storedPdfPath($submission->id()));
+        $this->submissions->save($submission);
+
         return $outputPath;
+    }
+
+    private function existingPdfPath(QuestionnaireSubmission $submission, string $outputPath): ?string
+    {
+        if ($submission->status() !== SubmissionStatus::PdfReady) {
+            return null;
+        }
+
+        if ($this->fileStorage->exists($outputPath)) {
+            return $outputPath;
+        }
+
+        return null;
+    }
+
+    private function storedPdfPath(string $submissionId): string
+    {
+        return $submissionId.'.pdf';
+    }
+
+    private function outputPathFor(string $submissionId): string
+    {
+        return $this->outputDirectory.DIRECTORY_SEPARATOR.$this->storedPdfPath($submissionId);
     }
 
     /**
@@ -184,7 +225,7 @@ final class GenerateSubmissionPdf
     {
         $path = $this->templatesDirectory.DIRECTORY_SEPARATOR.strtolower($formType).'.pdf';
 
-        if (!is_file($path)) {
+        if (!$this->fileStorage->exists($path)) {
             throw PdfGenerationFailed::templateMissing($formType, $path);
         }
 

@@ -3,21 +3,33 @@ services:
     build: .
     ports:
       - "8080:80"
-    environment:
+    environment: &app-environment
       APP_ENV: dev
       APP_DEBUG: "1"
       APP_SECRET: ${APP_SECRET:-f4aca114fe4323f54c9b7fdd214278ba}
       DATABASE_URL: sqlite:////var/www/html/var/data/app.db
       DEFAULT_URI: http://localhost:8080
       MESSENGER_TRANSPORT_DSN: doctrine://default?auto_setup=1
-    volumes:
+    volumes: &app-volumes
       - .:/var/www/html
       - vendor_data:/var/www/html/vendor
       - sqlite_data:/var/www/html/var/data
     command:
       - bash
       - -lc
-      - composer install --prefer-dist --no-interaction && mkdir -p var/cache var/log var/data && { test -f .env || cp .env.example .env; } && apache2-foreground
+      - composer install --prefer-dist --no-interaction && mkdir -p var/cache var/log var/data var/pdf && { test -f .env || cp .env.example .env; } && apache2-foreground
+
+  worker:
+    build: .
+    environment: *app-environment
+    volumes: *app-volumes
+    depends_on:
+      - app
+    restart: unless-stopped
+    command:
+      - bash
+      - -lc
+      - until [ -f vendor/autoload.php ]; do sleep 2; done && mkdir -p var/pdf && php bin/console messenger:consume async --time-limit=3600 -vv
 
 volumes:
   vendor_data:

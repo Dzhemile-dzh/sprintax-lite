@@ -10,7 +10,6 @@ use App\Domain\Calculation\Contract\CalculatorInterface;
 use App\Domain\Calculation\DTO\CalculationInput;
 use App\Domain\Calculation\DTO\CalculationResult;
 use App\Domain\Pdf\Contract\PdfGeneratorInterface;
-use App\Domain\Pdf\DTO\PdfGenerationRequest;
 use App\Domain\Pdf\Exception\PdfGenerationFailed;
 use App\Domain\Questionnaire\Entity\QuestionMapping;
 use App\Domain\Questionnaire\Entity\Questionnaire;
@@ -21,21 +20,27 @@ use App\Domain\Questionnaire\ValueObject\VisibilityCondition;
 use App\Domain\Questionnaire\ValueObject\VisibilityOperator;
 use App\Domain\Questionnaire\ValueObject\VisibilityRule;
 use App\Domain\Submission\Entity\QuestionnaireSubmission;
-use App\Domain\Submission\Exception\SubmissionNotFound;
-use App\Domain\Submission\Repository\SubmissionRepositoryInterface;
+use App\Domain\Submission\Exception\InvalidSubmission;
 use App\Domain\Submission\ValueObject\AnswerValue;
+use App\Domain\Submission\ValueObject\SubmissionStatus;
 use App\Domain\User\Entity\User;
 use App\Domain\User\ValueObject\Email;
 use App\Infrastructure\Calculation\Form1040NrCalculator;
+use App\Infrastructure\Filesystem\LocalFileStorage;
+use App\Tests\Support\FailingPdfGenerator;
+use App\Tests\Support\InMemorySubmissionRepository;
+use App\Tests\Support\RecordingPdfGenerator;
 use DateTimeImmutable;
 use LogicException;
 use PHPUnit\Framework\TestCase;
 
 final class GenerateSubmissionPdfTest extends TestCase
 {
+    private InMemorySubmissionRepository $submissions;
+
     public function testItOverlaysVisibleAnswersAndComputedFieldsUsingMappingCoordinates(): void
     {
-        $submission = $this->submission();
+        $submission = $this->finalized($this->submission());
         $recorder = new RecordingPdfGenerator();
         $templates = $this->templatesDirectoryWith('1040-nr.pdf');
         $outputDirectory = sys_get_temp_dir().DIRECTORY_SEPARATOR.'sprintax-pdf-out-'.uniqid('', true);
@@ -73,7 +78,7 @@ final class GenerateSubmissionPdfTest extends TestCase
 
     public function testItOmitsHiddenAndBlankAnswers(): void
     {
-        $submission = $this->submission();
+        $submission = $this->finalized($this->submission());
         $recorder = new RecordingPdfGenerator();
         $useCase = $this->useCase(
             $submission,
@@ -123,6 +128,7 @@ final class GenerateSubmissionPdfTest extends TestCase
             AnswerValue::text('Ada'),
             new DateTimeImmutable('2026-01-01T10:05:00+00:00'),
         );
+        $this->finalized($submission);
 
         $calculator = new class implements CalculatorInterface {
             public bool $called = false;
@@ -141,11 +147,13 @@ final class GenerateSubmissionPdfTest extends TestCase
         };
 
         $recorder = new RecordingPdfGenerator();
+        $repository = InMemorySubmissionRepository::with($submission);
         $useCase = new GenerateSubmissionPdf(
-            $this->submissions($submission),
-            new CalculateSubmission($this->submissions($submission), [$calculator]),
+            $repository,
+            new CalculateSubmission($repository, [$calculator]),
             $recorder,
             new QuestionVisibilityEvaluator(),
+            new LocalFileStorage(),
             $this->templatesDirectoryWith('1040-nr.pdf'),
             sys_get_temp_dir().DIRECTORY_SEPARATOR.'sprintax-pdf-out-'.uniqid('', true),
         );
@@ -160,7 +168,7 @@ final class GenerateSubmissionPdfTest extends TestCase
 
     public function testItFailsWhenTheTemplateFileIsMissing(): void
     {
-        $submission = $this->submission();
+        $submission = $this->finalized($this->submission());
         $useCase = $this->useCase(
             $submission,
             new RecordingPdfGenerator(),
@@ -168,7 +176,111 @@ final class GenerateSubmissionPdfTest extends TestCase
             sys_get_temp_dir().DIRECTORY_SEPARATOR.'sprintax-pdf-out-'.uniqid('', true),
         );
 
-        $this->expectException(PdfGenerationFailed::class);
+        try {
+            $useCase->execute('sub-1');
+            self::fail('Expected PDF generation to fail when the template is missing.');
+        } catch (PdfGenerationFailed) {
+            self::assertSame(SubmissionStatus::Finalized, $submission->status());
+            self::assertNull($submission->pdfPath());
+            self::assertSame(0, $this->submissions->saveCount);
+        }
+    }
+
+    public function testItMarksPdfReadyAndPersistsTheOutputPath(): void
+    {
+        $submission = $this->finalized($this->submission());
+        $outputDirectory = sys_get_temp_dir().DIRECTORY_SEPARATOR.'sprintax-pdf-out-'.uniqid('', true);
+        $useCase = $this->useCase(
+            $submission,
+            new RecordingPdfGenerator(),
+            $this->templatesDirectoryWith('1040-nr.pdf'),
+            $outputDirectory,
+        );
+
+        $outputPath = $useCase->execute('sub-1');
+
+        self::assertSame(SubmissionStatus::PdfReady, $submission->status());
+        self::assertSame('sub-1.pdf', $submission->pdfPath());
+        self::assertSame($outputDirectory.DIRECTORY_SEPARATOR.'sub-1.pdf', $outputPath);
+        self::assertFileExists($outputPath);
+        self::assertSame(1, $this->submissions->saveCount);
+    }
+
+    public function testItDoesNotRegenerateWhenThePdfIsAlreadyReady(): void
+    {
+        $submission = $this->finalized($this->submission());
+        $recorder = new RecordingPdfGenerator();
+        $useCase = $this->useCase(
+            $submission,
+            $recorder,
+            $this->templatesDirectoryWith('1040-nr.pdf'),
+            sys_get_temp_dir().DIRECTORY_SEPARATOR.'sprintax-pdf-out-'.uniqid('', true),
+        );
+
+        $firstPath = $useCase->execute('sub-1');
+        $secondPath = $useCase->execute('sub-1');
+
+        self::assertSame(1, $recorder->calls);
+        self::assertSame($firstPath, $secondPath);
+        self::assertSame('sub-1.pdf', $submission->pdfPath());
+        self::assertSame(SubmissionStatus::PdfReady, $submission->status());
+        self::assertSame(1, $this->submissions->saveCount);
+    }
+
+    public function testItRegeneratesWhenTheStoredPdfFileIsMissing(): void
+    {
+        $submission = $this->finalized($this->submission());
+        $recorder = new RecordingPdfGenerator();
+        $useCase = $this->useCase(
+            $submission,
+            $recorder,
+            $this->templatesDirectoryWith('1040-nr.pdf'),
+            sys_get_temp_dir().DIRECTORY_SEPARATOR.'sprintax-pdf-out-'.uniqid('', true),
+        );
+
+        $path = $useCase->execute('sub-1');
+        unlink($path);
+
+        $regenerated = $useCase->execute('sub-1');
+
+        self::assertSame(2, $recorder->calls);
+        self::assertSame($path, $regenerated);
+        self::assertSame(SubmissionStatus::PdfReady, $submission->status());
+        self::assertSame('sub-1.pdf', $submission->pdfPath());
+        self::assertFileExists($regenerated);
+        self::assertSame(2, $this->submissions->saveCount);
+    }
+
+    public function testItDoesNotMarkPdfReadyWhenGenerationFails(): void
+    {
+        $submission = $this->finalized($this->submission());
+        $useCase = $this->useCase(
+            $submission,
+            new FailingPdfGenerator(),
+            $this->templatesDirectoryWith('1040-nr.pdf'),
+            sys_get_temp_dir().DIRECTORY_SEPARATOR.'sprintax-pdf-out-'.uniqid('', true),
+        );
+
+        try {
+            $useCase->execute('sub-1');
+            self::fail('Expected PDF generation to fail.');
+        } catch (PdfGenerationFailed) {
+            self::assertSame(SubmissionStatus::Finalized, $submission->status());
+            self::assertNull($submission->pdfPath());
+            self::assertSame(0, $this->submissions->saveCount);
+        }
+    }
+
+    public function testItRejectsInProgressSubmissions(): void
+    {
+        $useCase = $this->useCase(
+            $this->submission(),
+            new RecordingPdfGenerator(),
+            $this->templatesDirectoryWith('1040-nr.pdf'),
+            sys_get_temp_dir().DIRECTORY_SEPARATOR.'sprintax-pdf-out-'.uniqid('', true),
+        );
+
+        $this->expectException(InvalidSubmission::class);
         $useCase->execute('sub-1');
     }
 
@@ -178,72 +290,17 @@ final class GenerateSubmissionPdfTest extends TestCase
         string $templatesDirectory,
         string $outputDirectory,
     ): GenerateSubmissionPdf {
-        $repository = $this->submissions($submission);
+        $this->submissions = InMemorySubmissionRepository::with($submission);
 
         return new GenerateSubmissionPdf(
-            $repository,
-            new CalculateSubmission($repository, [new Form1040NrCalculator()]),
+            $this->submissions,
+            new CalculateSubmission($this->submissions, [new Form1040NrCalculator()]),
             $generator,
             new QuestionVisibilityEvaluator(),
+            new LocalFileStorage(),
             $templatesDirectory,
             $outputDirectory,
         );
-    }
-
-    private function submissions(QuestionnaireSubmission $submission): SubmissionRepositoryInterface
-    {
-        return new class([$submission->id() => $submission]) implements SubmissionRepositoryInterface {
-            /**
-             * @param array<string, QuestionnaireSubmission> $items
-             */
-            public function __construct(
-                private array $items,
-            ) {
-            }
-
-            public function get(string $id): QuestionnaireSubmission
-            {
-                $submission = $this->items[$id] ?? null;
-
-                if (!$submission instanceof QuestionnaireSubmission) {
-                    throw SubmissionNotFound::withId($id);
-                }
-
-                return $submission;
-            }
-
-            public function save(QuestionnaireSubmission $submission): void
-            {
-                $this->items[$submission->id()] = $submission;
-            }
-
-            public function findByUserAndQuestionnaire(string $userId, string $questionnaireId): ?QuestionnaireSubmission
-            {
-                foreach ($this->items as $submission) {
-                    if ($submission->user()->id() === $userId && $submission->questionnaire()->id() === $questionnaireId) {
-                        return $submission;
-                    }
-                }
-
-                return null;
-            }
-
-            /**
-             * @return list<QuestionnaireSubmission>
-             */
-            public function findForUser(string $userId): array
-            {
-                $matches = [];
-
-                foreach ($this->items as $submission) {
-                    if ($submission->user()->id() === $userId) {
-                        $matches[] = $submission;
-                    }
-                }
-
-                return $matches;
-            }
-        };
     }
 
     private function templatesDirectoryWith(string $fileName): string
@@ -253,6 +310,13 @@ final class GenerateSubmissionPdfTest extends TestCase
         file_put_contents($directory.DIRECTORY_SEPARATOR.$fileName, '%PDF-1.4 placeholder');
 
         return $directory;
+    }
+
+    private function finalized(QuestionnaireSubmission $submission): QuestionnaireSubmission
+    {
+        $submission->finalize(new DateTimeImmutable('2026-01-01T11:00:00+00:00'));
+
+        return $submission;
     }
 
     private function submission(): QuestionnaireSubmission
@@ -346,15 +410,5 @@ final class GenerateSubmissionPdfTest extends TestCase
         $submission->recordAnswer($wages, AnswerValue::text('50000'), $now);
 
         return $submission;
-    }
-}
-
-final class RecordingPdfGenerator implements PdfGeneratorInterface
-{
-    public ?PdfGenerationRequest $last = null;
-
-    public function generate(PdfGenerationRequest $request): void
-    {
-        $this->last = $request;
     }
 }

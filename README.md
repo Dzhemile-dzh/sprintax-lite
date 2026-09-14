@@ -2,7 +2,7 @@
 
 Symfony questionnaire engine and IRS Form 1040-NR PDF generator (take-home assignment).
 
-Domain model, Doctrine persistence, server-side visibility, a pluggable calculation engine, coordinate-based PDF overlay, Symfony Security, the admin questionnaire builder, and the client multi-page wizard are in place. Finalizing a submission queues PDF generation on Messenger. Secure PDF download lands in a later commit.
+Domain model, Doctrine persistence, server-side visibility, a pluggable calculation engine, coordinate-based PDF overlay, Symfony Security, the admin questionnaire builder, and the client multi-page wizard are in place. Finalizing a submission queues PDF generation on Messenger. A worker consumes that job, writes `var/pdf/{submissionId}.pdf`, stores the path, and marks the submission `pdf_ready`. Secure HTTP download lands in a later commit.
 
 ## Architecture
 
@@ -22,19 +22,19 @@ Infrastructure implementations
 | --- | --- | --- |
 | Domain | `App\Domain` | Entities, value objects, repository interfaces, calculation/PDF contracts. No Symfony, HTTP, Forms, or Twig. Doctrine mapping attributes and collections only. |
 | Application | `App\Application` | Use cases that orchestrate starting a submission, saving a step, calculating, generating a PDF. |
-| Infrastructure | `App\Infrastructure` | Doctrine repositories, FPDI PDF adapter, 1040-NR calculator. |
+| Infrastructure | `App\Infrastructure` | Doctrine repositories, FPDI PDF adapter, local filesystem, 1040-NR calculator, Messenger. |
 | Presentation | `App\Presentation` | Thin controllers, forms, and other HTTP concerns for admin, client, and security. |
 
 Meaningful boundaries:
 
-- `CalculatorInterface` / `PdfGeneratorInterface`
+- `CalculatorInterface` / `PdfGeneratorInterface` / `FileStorageInterface`
 - `QuestionnaireRepositoryInterface` / `SubmissionRepositoryInterface` / `UserRepositoryInterface`
 
 There are no generic managers, base CRUD services, or abstract domain service classes. Business rules must not live in controllers or Twig.
 
 Calculation is pluggable: `CalculateSubmission` picks a `CalculatorInterface` by questionnaire name. `Form1040NrCalculator` is a simplified 10% tax stand-in whose output keys (`taxable_income`, `tax_owed`, …) are meant for PDF mappings, not IRS tables.
 
-PDF overlay goes through `PdfGeneratorInterface`. `GenerateSubmissionPdf` resolves the template as `resources/pdf/{form-name}.pdf`, maps visible answers and computed fields through admin `QuestionMapping` coordinates (mm), and `FpdiPdfGenerator` stamps those values. The generator has no hardcoded field positions. Finalizing a submission dispatches `GenerateSubmissionPdfMessage` on the async Messenger transport; HTTP download comes later.
+PDF overlay goes through `PdfGeneratorInterface`. File checks and directory creation go through `FileStorageInterface` rather than scattered `is_file` / `mkdir` calls. `GenerateSubmissionPdf` resolves the template as `resources/pdf/{form-name}.pdf`, maps visible answers and computed fields through admin `QuestionMapping` coordinates (mm), and `FpdiPdfGenerator` stamps those values. The generator has no hardcoded field positions. Finalizing a submission dispatches `GenerateSubmissionPdfMessage` on the async transport. The worker is idempotent: a second delivery of the same message does not write another PDF if the file is already there. Failed jobs retry, then land on the `failed` transport. HTTP download comes later.
 
 Security uses a `SecurityUser` adapter so the domain `User` stays free of Symfony. Clients register at `/register` (always `ROLE_CLIENT`). Admins cannot self-register. `SubmissionVoter` allows a client to view/edit/download only their own submission; admins can access any submission.
 
@@ -64,7 +64,7 @@ User
 - `yes_no` is a dedicated type, not a choice list configured by the admin.
 - PDF mappings cannot reference a question that is not on the questionnaire.
 - A submission starts on the first step, belongs to one client and one questionnaire, and keeps at most one answer per question.
-- Status only moves `in_progress` → `finalized` → `pdf_ready`.
+- Status only moves `in_progress` → `finalized` → `pdf_ready`. The generated file path is stored when the submission becomes `pdf_ready`.
 - Clients are registered through `User::registerClient()`; admins are provisioned through `User::provisionAdmin()`.
 
 Conditional visibility lives on the question (`equals` / `not_equals`). `QuestionVisibilityEvaluator` applies those rules server-side against answers keyed by question key:
@@ -96,7 +96,7 @@ Conditional visibility lives on the question (`equals` / `not_equals`). `Questio
 docker compose up --build
 ```
 
-The app listens on [http://localhost:8080](http://localhost:8080).
+The app listens on [http://localhost:8080](http://localhost:8080). Compose also starts a `worker` service that consumes async PDF jobs.
 
 SQLite data is stored in a Docker volume. Linux vendor packages are isolated from the host `vendor/` directory so Windows and container PHP builds do not mix.
 
@@ -119,7 +119,7 @@ Runtime settings come from environment variables. Copy `.env.example` to `.env` 
 | `APP_ENV` | `dev`, `test`, or `prod` |
 | `APP_SECRET` | Symfony secret |
 | `DATABASE_URL` | SQLite path |
-| `MESSENGER_TRANSPORT_DSN` | Messenger transport (async usage comes later) |
+| `MESSENGER_TRANSPORT_DSN` | Async Messenger transport (Doctrine queue by default) |
 
 ## Quality commands
 
@@ -137,6 +137,16 @@ Warm the Symfony cache before PHPStan so the compiled container XML exists:
 php bin/console cache:warmup
 composer phpstan
 ```
+
+## PDF worker
+
+After a client finalizes a submission, consume the async transport so the PDF is generated:
+
+```bash
+php bin/console messenger:consume async
+```
+
+Docker Compose runs that command in the `worker` service. Jobs retry up to three times, then move to the `failed` transport (`doctrine://default?queue_name=failed`). Generated files are written to `var/pdf/{submissionId}.pdf`.
 
 ## Repository
 
