@@ -31,6 +31,13 @@
     <a href="{{ href }}">{{ label }}</a>
 {% endmacro %}
 
+{% macro delete(action, csrf, label) %}
+    <form method="post" action="{{ action }}" class="inline">
+        <input type="hidden" name="_csrf_token" value="{{ csrf }}">
+        <button type="submit">{{ label }}</button>
+    </form>
+{% endmacro %}
+
 {% macro pdf_download(submission) %}
     {% if submission.status.value == 'pdf_ready' and is_granted('submission_download', submission) %}
         {{ _self.link(path('submission_pdf', {id: submission.id}), 'Download PDF') }}

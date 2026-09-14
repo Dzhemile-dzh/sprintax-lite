@@ -8,6 +8,7 @@ use App\Domain\Questionnaire\ValueObject\QuestionType;
 use App\Domain\Questionnaire\ValueObject\VisibilityOperator;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\EnumType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
@@ -36,9 +37,12 @@ final class QuestionFormType extends AbstractType
 {
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
+        $lockIdentity = $options['lock_identity'] === true;
+
         $builder
             ->add('key', TextType::class, [
                 'label' => 'Key',
+                'disabled' => $lockIdentity,
                 'constraints' => [
                     new NotBlank(),
                     new Length(max: 100),
@@ -54,6 +58,7 @@ final class QuestionFormType extends AbstractType
             ->add('type', EnumType::class, [
                 'class' => QuestionType::class,
                 'label' => 'Type',
+                'disabled' => $lockIdentity,
                 'choice_label' => static fn (QuestionType $type): string => $type->value,
             ])
             ->add('helpText', TextType::class, [
@@ -82,15 +87,17 @@ final class QuestionFormType extends AbstractType
                 'label' => 'Regex',
                 'required' => false,
             ])
-            ->add('visibilityQuestionKey', TextType::class, [
-                'label' => 'Visible when question key',
+            ->add('visibilityQuestionKey', ChoiceType::class, [
+                'label' => 'Visible when question',
                 'required' => false,
+                'placeholder' => 'Always visible',
+                'choices' => $options['visibility_question_keys'],
             ])
             ->add('visibilityOperator', EnumType::class, [
                 'class' => VisibilityOperator::class,
                 'label' => 'Operator',
                 'required' => false,
-                'placeholder' => 'Always visible',
+                'placeholder' => 'Choose operator',
                 'choice_label' => static fn (VisibilityOperator $operator): string => $operator->value,
             ])
             ->add('visibilityExpectedValue', TextType::class, [
@@ -103,7 +110,11 @@ final class QuestionFormType extends AbstractType
     {
         $resolver->setDefaults([
             'csrf_protection' => true,
+            'lock_identity' => false,
+            'visibility_question_keys' => [],
         ]);
+        $resolver->setAllowedTypes('lock_identity', 'bool');
+        $resolver->setAllowedTypes('visibility_question_keys', 'array');
     }
 
     public function getBlockPrefix(): string

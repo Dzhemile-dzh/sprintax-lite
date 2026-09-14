@@ -6,6 +6,9 @@ namespace App\Presentation\Admin;
 
 use App\Application\Questionnaire\AddStep\AddQuestionnaireStep;
 use App\Application\Questionnaire\Get\GetQuestionnaire;
+use App\Application\Questionnaire\RemoveStep\RemoveQuestionnaireStep;
+use App\Application\Questionnaire\UpdateStep\UpdateQuestionnaireStep;
+use App\Domain\Questionnaire\Entity\Questionnaire;
 use App\Domain\Questionnaire\Exception\InvalidQuestionnaire;
 use App\Domain\Questionnaire\Exception\QuestionnaireNotFound;
 use App\Presentation\Admin\Form\StepFormType;
@@ -22,6 +25,8 @@ final class StepController extends AbstractController
 {
     public function __construct(
         private readonly AddQuestionnaireStep $addQuestionnaireStep,
+        private readonly UpdateQuestionnaireStep $updateQuestionnaireStep,
+        private readonly RemoveQuestionnaireStep $removeQuestionnaireStep,
         private readonly GetQuestionnaire $getQuestionnaire,
     ) {
     }
@@ -29,12 +34,7 @@ final class StepController extends AbstractController
     #[Route('/questionnaires/{id}/steps/new', name: 'admin_step_new', methods: ['GET', 'POST'])]
     public function new(Request $request, string $id): Response
     {
-        try {
-            $this->getQuestionnaire->execute($id);
-        } catch (QuestionnaireNotFound) {
-            throw $this->createNotFoundException();
-        }
-
+        $this->questionnaire($id);
         $form = $this->createForm(StepFormType::class);
         $form->handleRequest($request);
 
@@ -56,5 +56,65 @@ final class StepController extends AbstractController
             'form' => $form,
             'title' => 'Add step',
         ]);
+    }
+
+    #[Route('/questionnaires/{id}/steps/{stepId}/edit', name: 'admin_step_edit', methods: ['GET', 'POST'])]
+    public function edit(Request $request, string $id, string $stepId): Response
+    {
+        $questionnaire = $this->questionnaire($id);
+        $step = $questionnaire->findStep($stepId);
+
+        if ($step === null) {
+            throw $this->createNotFoundException();
+        }
+
+        $form = $this->createForm(StepFormType::class, ['title' => $step->title()]);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $title = $form->get('title')->getData();
+
+            if (is_string($title)) {
+                try {
+                    $this->updateQuestionnaireStep->execute($id, $stepId, $title);
+
+                    return $this->redirectToRoute('admin_questionnaire_show', ['id' => $id]);
+                } catch (InvalidQuestionnaire $exception) {
+                    $form->addError(new FormError($exception->getMessage()));
+                }
+            }
+        }
+
+        return $this->render('admin/structure/form.html.twig', [
+            'form' => $form,
+            'title' => 'Edit step',
+        ]);
+    }
+
+    #[Route('/questionnaires/{id}/steps/{stepId}/delete', name: 'admin_step_delete', methods: ['POST'])]
+    public function delete(Request $request, string $id, string $stepId): Response
+    {
+        $this->questionnaire($id);
+
+        if (!$this->isCsrfTokenValid('delete-step-'.$stepId, $request->request->getString('_csrf_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token.');
+        }
+
+        try {
+            $this->removeQuestionnaireStep->execute($id, $stepId);
+        } catch (InvalidQuestionnaire $exception) {
+            $this->addFlash('error', $exception->getMessage());
+        }
+
+        return $this->redirectToRoute('admin_questionnaire_show', ['id' => $id]);
+    }
+
+    private function questionnaire(string $id): Questionnaire
+    {
+        try {
+            return $this->getQuestionnaire->execute($id)->questionnaire;
+        } catch (QuestionnaireNotFound) {
+            throw $this->createNotFoundException();
+        }
     }
 }

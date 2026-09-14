@@ -100,13 +100,12 @@ final class QuestionnaireBuilderTest extends WebDatabaseTestCase
         $crawler = $this->client->followRedirect();
         self::assertSelectorTextContains('body', 'Wages = wages');
 
-        preg_match('/id: ([a-f0-9]+)/', $crawler->text(), $matches);
-        self::assertArrayHasKey(1, $matches);
-
         $crawler = $this->client->click($crawler->selectLink('Add PDF mapping')->link());
+        self::assertSelectorExists('#mapping_questionKey option[value="married"]');
+        self::assertSelectorExists('#mapping_computedField option[value="tax_owed"]');
         $form = $crawler->selectButton('Save')->form([
             'mapping[sourceType]' => MappingSourceType::Question->value,
-            'mapping[sourceReference]' => $matches[1],
+            'mapping[questionKey]' => 'married',
             'mapping[page]' => '1',
             'mapping[xMm]' => '20.5',
             'mapping[yMm]' => '40.25',
@@ -114,8 +113,23 @@ final class QuestionnaireBuilderTest extends WebDatabaseTestCase
         ]);
         $this->client->submit($form);
         $crawler = $this->client->followRedirect();
-        self::assertSelectorTextContains('body', 'question: '.$matches[1]);
+        self::assertSelectorTextContains('body', 'question: married');
         self::assertSelectorTextContains('body', '20.5mm, 40.25mm');
+
+        $crawler = $this->client->click($crawler->selectLink('Edit step')->link());
+        $this->client->submit($crawler->selectButton('Save')->form([
+            'step[title]' => 'About you',
+        ]));
+        $crawler = $this->client->followRedirect();
+        self::assertSelectorTextContains('body', 'About you');
+
+        $crawler = $this->client->click($crawler->selectLink('Edit question')->eq(1)->link());
+        self::assertSelectorExists('#question_visibilityQuestionKey option[value="married"]');
+        $this->client->submit($crawler->selectButton('Save')->form([
+            'question[label]' => 'Income sources',
+        ]));
+        $crawler = $this->client->followRedirect();
+        self::assertSelectorTextContains('body', 'Income sources');
 
         $this->client->click($crawler->selectLink('Preview')->link());
         self::assertSelectorTextContains('h1', 'Preview: 1040-NR');
