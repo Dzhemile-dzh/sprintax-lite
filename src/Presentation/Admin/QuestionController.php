@@ -5,15 +5,10 @@ declare(strict_types=1);
 namespace App\Presentation\Admin;
 
 use App\Application\Questionnaire\AddQuestion\AddQuestionnaireQuestion;
-use App\Domain\Questionnaire\Entity\Questionnaire;
+use App\Application\Questionnaire\Get\GetQuestionnaire;
 use App\Domain\Questionnaire\Exception\InvalidQuestionnaire;
 use App\Domain\Questionnaire\Exception\QuestionnaireNotFound;
-use App\Domain\Questionnaire\Repository\QuestionnaireRepositoryInterface;
 use App\Domain\Questionnaire\ValueObject\QuestionType;
-use App\Domain\Questionnaire\ValueObject\QuestionValidation;
-use App\Domain\Questionnaire\ValueObject\VisibilityCondition;
-use App\Domain\Questionnaire\ValueObject\VisibilityOperator;
-use App\Domain\Questionnaire\ValueObject\VisibilityRule;
 use App\Presentation\Admin\Form\QuestionFormType;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\FormError;
@@ -28,14 +23,18 @@ final class QuestionController extends AbstractController
 {
     public function __construct(
         private readonly AddQuestionnaireQuestion $addQuestionnaireQuestion,
-        private readonly QuestionnaireRepositoryInterface $questionnaires,
+        private readonly GetQuestionnaire $getQuestionnaire,
     ) {
     }
 
     #[Route('/questionnaires/{id}/steps/{stepId}/questions/new', name: 'admin_question_new', methods: ['GET', 'POST'])]
     public function new(Request $request, string $id, string $stepId): Response
     {
-        $questionnaire = $this->questionnaire($id);
+        try {
+            $questionnaire = $this->getQuestionnaire->execute($id)->questionnaire;
+        } catch (QuestionnaireNotFound) {
+            throw $this->createNotFoundException();
+        }
 
         if ($questionnaire->findStep($stepId) === null) {
             throw $this->createNotFoundException();
@@ -59,17 +58,13 @@ final class QuestionController extends AbstractController
                         $label,
                         $type,
                         $helpText,
-                        $this->validationFromForm(
-                            $form->get('required')->getData() === true,
-                            $form->get('min')->getData(),
-                            $form->get('max')->getData(),
-                            $form->get('regex')->getData(),
-                        ),
-                        $this->visibilityFromForm(
-                            $form->get('visibilityQuestionKey')->getData(),
-                            $form->get('visibilityOperator')->getData(),
-                            $form->get('visibilityExpectedValue')->getData(),
-                        ),
+                        $form->get('required')->getData() === true,
+                        $form->get('min')->getData(),
+                        $form->get('max')->getData(),
+                        $form->get('regex')->getData(),
+                        $form->get('visibilityQuestionKey')->getData(),
+                        $form->get('visibilityOperator')->getData(),
+                        $form->get('visibilityExpectedValue')->getData(),
                     );
 
                     return $this->redirectToRoute('admin_questionnaire_show', ['id' => $id]);
@@ -83,40 +78,5 @@ final class QuestionController extends AbstractController
             'form' => $form,
             'title' => 'Add question',
         ]);
-    }
-
-    private function validationFromForm(bool $required, mixed $min, mixed $max, mixed $regex): QuestionValidation
-    {
-        $pattern = is_string($regex) && trim($regex) !== '' ? $regex : null;
-
-        return new QuestionValidation(
-            required: $required,
-            min: is_int($min) ? $min : null,
-            max: is_int($max) ? $max : null,
-            regex: $pattern,
-        );
-    }
-
-    private function visibilityFromForm(mixed $questionKey, mixed $operator, mixed $expectedValue): VisibilityRule
-    {
-        if (!is_string($questionKey) || trim($questionKey) === '') {
-            return VisibilityRule::alwaysVisible();
-        }
-
-        $visibilityOperator = $operator instanceof VisibilityOperator ? $operator : VisibilityOperator::Equals;
-        $value = is_string($expectedValue) ? $expectedValue : '';
-
-        return new VisibilityRule([
-            new VisibilityCondition($questionKey, $visibilityOperator, $value),
-        ]);
-    }
-
-    private function questionnaire(string $id): Questionnaire
-    {
-        try {
-            return $this->questionnaires->get($id);
-        } catch (QuestionnaireNotFound) {
-            throw $this->createNotFoundException();
-        }
     }
 }
