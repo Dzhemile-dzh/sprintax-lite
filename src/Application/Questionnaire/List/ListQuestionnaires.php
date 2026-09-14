@@ -2,20 +2,23 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Questionnaire\Preview;
+namespace App\Application\Questionnaire\List;
 
 use App\Domain\Questionnaire\Entity\Questionnaire;
 use App\Domain\Questionnaire\Repository\QuestionnaireRepositoryInterface;
 
-final class PreviewQuestionnaire
+final class ListQuestionnaires
 {
     public function __construct(
         private readonly QuestionnaireRepositoryInterface $questionnaires,
     ) {
     }
 
-    public function execute(string $id): Questionnaire
+    /**
+     * @return list<Questionnaire>
+     */
+    public function execute(): array
     {
-        return $this->questionnaires->get($id);
+        return $this->questionnaires->all();
     }
 }
