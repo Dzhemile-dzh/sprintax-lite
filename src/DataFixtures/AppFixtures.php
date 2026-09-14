@@ -165,17 +165,17 @@ final class AppFixtures extends Fixture
 
         $questionnaire->addMapping(QuestionMapping::forQuestion(
             $this->id(),
-            $firstName->id(),
+            $firstName->key(),
             new PdfCoordinates(1, 20.5, 40.25, 11),
         ));
         $questionnaire->addMapping(QuestionMapping::forQuestion(
             $this->id(),
-            $spouseName->id(),
+            $spouseName->key(),
             new PdfCoordinates(1, 20.5, 50.0, 11),
         ));
         $questionnaire->addMapping(QuestionMapping::forQuestion(
             $this->id(),
-            $wages->id(),
+            $wages->key(),
             new PdfCoordinates(1, 100.0, 120.0, 10),
         ));
         $questionnaire->addMapping(QuestionMapping::forComputedField(

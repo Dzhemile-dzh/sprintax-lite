@@ -79,7 +79,7 @@ final class AppFixturesTest extends WebDatabaseTestCase
             static fn (QuestionMapping $mapping): string => $mapping->source()->reference,
             $questionnaire->mappings(),
         );
-        self::assertContains($firstName->id(), $mappingSources);
+        self::assertContains($firstName->key(), $mappingSources);
         self::assertContains(Form1040NrCalculator::FIELD_TAX_OWED, $mappingSources);
 
         $this->signIn(AppFixtures::ADMIN_EMAIL, AppFixtures::ADMIN_PASSWORD);

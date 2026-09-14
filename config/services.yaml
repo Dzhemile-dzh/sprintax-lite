@@ -35,6 +35,10 @@ services:
         arguments:
             $calculators: !tagged_iterator app.calculator
 
+    App\Application\Calculation\ListCalculatorFields:
+        arguments:
+            $calculators: !tagged_iterator app.calculator
+
     App\Application\Pdf\GenerateSubmissionPdf:
         arguments:
             $templatesDirectory: '%app.pdf.templates_dir%'

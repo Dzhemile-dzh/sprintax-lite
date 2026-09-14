@@ -131,6 +131,11 @@ final class Question
         return $this->id;
     }
 
+    public function step(): QuestionnaireStep
+    {
+        return $this->step;
+    }
+
     public function key(): string
     {
         return $this->key;
@@ -205,5 +210,79 @@ final class Question
     public function configureVisibility(VisibilityRule $visibility): void
     {
         $this->visibility = $visibility;
+    }
+
+    public function relabel(string $label): void
+    {
+        if (trim($label) === '') {
+            throw InvalidQuestionnaire::blank('question label');
+        }
+
+        $this->label = $label;
+    }
+
+    public function changeHelpText(?string $helpText): void
+    {
+        $this->helpText = $helpText !== null && trim($helpText) === '' ? null : $helpText;
+    }
+
+    public function reposition(int $position): void
+    {
+        if ($position < 1) {
+            throw InvalidQuestionnaire::blank('question position');
+        }
+
+        $this->position = $position;
+    }
+
+    public function findOption(string $optionId): ?QuestionOption
+    {
+        foreach ($this->options as $option) {
+            if ($option->id() === $optionId) {
+                return $option;
+            }
+        }
+
+        return null;
+    }
+
+    public function nextOptionPosition(): int
+    {
+        $position = 0;
+
+        foreach ($this->options as $option) {
+            $position = max($position, $option->position());
+        }
+
+        return $position + 1;
+    }
+
+    public function updateOption(string $optionId, string $label, string $value): void
+    {
+        $option = $this->findOption($optionId);
+
+        if ($option === null) {
+            throw InvalidQuestionnaire::optionNotFound($optionId);
+        }
+
+        foreach ($this->options as $existing) {
+            if ($existing->id() !== $optionId && $existing->value() === $value) {
+                throw InvalidQuestionnaire::duplicateOptionValue($value);
+            }
+        }
+
+        $option->relabel($label);
+        $option->changeValue($value);
+    }
+
+    public function removeOption(string $optionId): void
+    {
+        $option = $this->findOption($optionId);
+
+        if ($option === null) {
+            throw InvalidQuestionnaire::optionNotFound($optionId);
+        }
+
+        $this->options->removeElement($option);
     }
 }

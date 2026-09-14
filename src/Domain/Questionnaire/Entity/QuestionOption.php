@@ -87,4 +87,31 @@ final class QuestionOption
     {
         return $this->position;
     }
+
+    public function relabel(string $label): void
+    {
+        if (trim($label) === '') {
+            throw InvalidQuestionnaire::blank('option label');
+        }
+
+        $this->label = $label;
+    }
+
+    public function changeValue(string $value): void
+    {
+        if (trim($value) === '') {
+            throw InvalidQuestionnaire::blank('option value');
+        }
+
+        $this->value = $value;
+    }
+
+    public function reposition(int $position): void
+    {
+        if ($position < 1) {
+            throw InvalidQuestionnaire::blank('option position');
+        }
+
+        $this->position = $position;
+    }
 }

@@ -114,7 +114,7 @@ final class GenerateSubmissionPdfTest extends TestCase
         );
         $questionnaire->addMapping(QuestionMapping::forQuestion(
             'map-name',
-            $firstName->id(),
+            $firstName->key(),
             new PdfCoordinates(1, 10.0, 10.0),
         ));
 
@@ -139,6 +139,11 @@ final class GenerateSubmissionPdfTest extends TestCase
                 $this->called = true;
 
                 return true;
+            }
+
+            public function outputFields(): array
+            {
+                return [];
             }
 
             public function calculate(CalculationInput $input): CalculationResult
@@ -393,22 +398,22 @@ final class GenerateSubmissionPdfTest extends TestCase
 
         $questionnaire->addMapping(QuestionMapping::forQuestion(
             'map-name',
-            $firstName->id(),
+            $firstName->key(),
             new PdfCoordinates(1, 20.5, 40.25, 11),
         ));
         $questionnaire->addMapping(QuestionMapping::forQuestion(
             'map-spouse',
-            $spouseName->id(),
+            $spouseName->key(),
             new PdfCoordinates(1, 20.5, 50.0, 11),
         ));
         $questionnaire->addMapping(QuestionMapping::forQuestion(
             'map-types',
-            $incomeTypes->id(),
+            $incomeTypes->key(),
             new PdfCoordinates(1, 15.0, 60.0),
         ));
         $questionnaire->addMapping(QuestionMapping::forQuestion(
             'map-notes',
-            $notes->id(),
+            $notes->key(),
             new PdfCoordinates(1, 15.0, 70.0),
         ));
         $questionnaire->addMapping(QuestionMapping::forComputedField(

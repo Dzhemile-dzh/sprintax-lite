@@ -238,10 +238,10 @@ final class QuestionVisibilityEvaluatorTest extends TestCase
             'orphan',
             'Orphan',
             QuestionType::ShortText,
-            visibility: new VisibilityRule([
-                new VisibilityCondition('missing_key', VisibilityOperator::Equals, 'yes'),
-            ]),
         );
+        $orphan->configureVisibility(new VisibilityRule([
+            new VisibilityCondition('missing_key', VisibilityOperator::Equals, 'yes'),
+        ]));
 
         $evaluator = new QuestionVisibilityEvaluator();
 
@@ -286,9 +286,6 @@ final class QuestionVisibilityEvaluatorTest extends TestCase
             'alpha',
             'Alpha',
             QuestionType::YesNo,
-            visibility: new VisibilityRule([
-                new VisibilityCondition('beta', VisibilityOperator::Equals, 'yes'),
-            ]),
         );
         $second = $questionnaire->addQuestion(
             'step-1',
@@ -296,10 +293,13 @@ final class QuestionVisibilityEvaluatorTest extends TestCase
             'beta',
             'Beta',
             QuestionType::YesNo,
-            visibility: new VisibilityRule([
-                new VisibilityCondition('alpha', VisibilityOperator::Equals, 'yes'),
-            ]),
         );
+        $first->configureVisibility(new VisibilityRule([
+            new VisibilityCondition('beta', VisibilityOperator::Equals, 'yes'),
+        ]));
+        $second->configureVisibility(new VisibilityRule([
+            new VisibilityCondition('alpha', VisibilityOperator::Equals, 'yes'),
+        ]));
 
         $evaluator = new QuestionVisibilityEvaluator();
         $answers = [

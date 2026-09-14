@@ -78,7 +78,7 @@ final class QuestionnaireTest extends TestCase
 
         $questionnaire->addMapping(QuestionMapping::forQuestion(
             'map-1',
-            'question-1',
+            'married',
             new PdfCoordinates(1, 20.0, 40.0, 10),
         ));
         $questionnaire->addMapping(QuestionMapping::forComputedField(
@@ -104,14 +104,14 @@ final class QuestionnaireTest extends TestCase
         $questionnaire->addQuestion('step-1', 'question-1', 'married', 'Married?', QuestionType::YesNo);
         $questionnaire->addMapping(QuestionMapping::forQuestion(
             'map-1',
-            'question-1',
+            'married',
             new PdfCoordinates(1, 20.0, 40.0, 10),
         ));
 
         $this->expectException(InvalidQuestionnaire::class);
         $questionnaire->addMapping(QuestionMapping::forQuestion(
             'map-2',
-            'question-1',
+            'married',
             new PdfCoordinates(1, 10.0, 10.0),
         ));
     }
@@ -184,6 +184,94 @@ final class QuestionnaireTest extends TestCase
         $questionnaire->changeFormType(FormType::Form1040Nr, true);
 
         self::assertSame(FormType::Form1040Nr, $questionnaire->formType());
+    }
+
+    public function testAStepCanBeRenamedAndRemoved(): void
+    {
+        $questionnaire = $this->questionnaireWithPersonalAndIncomeSteps();
+        $questionnaire->renameStep('personal', 'About you');
+        $questionnaire->removeStep('income');
+
+        self::assertSame('About you', $questionnaire->findStep('personal')?->title());
+        self::assertNull($questionnaire->findStep('income'));
+        self::assertSame(1, $questionnaire->steps()[0]->position());
+    }
+
+    public function testAStepCanBeRemovedWhenVisibilityOnlyLivesOnThatStep(): void
+    {
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
+        $questionnaire->addStep('personal', 'Personal');
+        $questionnaire->addQuestion('personal', 'q-married', 'married', 'Married?', QuestionType::YesNo);
+        $questionnaire->addQuestion(
+            'personal',
+            'q-spouse',
+            'spouse_name',
+            'Spouse name',
+            QuestionType::ShortText,
+            visibility: new VisibilityRule([
+                new VisibilityCondition('married', VisibilityOperator::Equals, 'yes'),
+            ]),
+        );
+
+        $questionnaire->removeStep('personal');
+
+        self::assertSame([], $questionnaire->steps());
+    }
+
+    public function testAQuestionCannotBeRemovedWhileVisibilityOrMappingsReferenceIt(): void
+    {
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
+        $questionnaire->addStep('step-1', 'Personal');
+        $questionnaire->addQuestion('step-1', 'q-married', 'married', 'Married?', QuestionType::YesNo);
+        $questionnaire->addQuestion(
+            'step-1',
+            'q-spouse',
+            'spouse_name',
+            'Spouse name',
+            QuestionType::ShortText,
+            visibility: new VisibilityRule([
+                new VisibilityCondition('married', VisibilityOperator::Equals, 'yes'),
+            ]),
+        );
+
+        try {
+            $questionnaire->removeQuestion('q-married');
+            self::fail('Expected a referenced question to stay.');
+        } catch (InvalidQuestionnaire $exception) {
+            self::assertSame(
+                'Question "married" cannot be removed while other questions or PDF mappings still reference it.',
+                $exception->getMessage(),
+            );
+        }
+
+        $questionnaire->removeQuestion('q-spouse');
+        $questionnaire->addMapping(QuestionMapping::forQuestion(
+            'map-1',
+            'married',
+            new PdfCoordinates(1, 20.0, 40.0, 10),
+        ));
+
+        $this->expectException(InvalidQuestionnaire::class);
+        $questionnaire->removeQuestion('q-married');
+    }
+
+    public function testVisibilityCannotDependOnAnUnknownQuestionKey(): void
+    {
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
+        $questionnaire->addStep('step-1', 'Personal');
+
+        $this->expectException(InvalidQuestionnaire::class);
+        $this->expectExceptionMessage('Visibility cannot depend on unknown question key "missing".');
+        $questionnaire->addQuestion(
+            'step-1',
+            'q-spouse',
+            'spouse_name',
+            'Spouse name',
+            QuestionType::ShortText,
+            visibility: new VisibilityRule([
+                new VisibilityCondition('missing', VisibilityOperator::Equals, 'yes'),
+            ]),
+        );
     }
 
     private function questionnaireWithPersonalAndIncomeSteps(): Questionnaire

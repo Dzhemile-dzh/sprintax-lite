@@ -144,7 +144,7 @@ final class GenerateSubmissionPdf
             return $this->formatComputed($calculation->value($source->reference));
         }
 
-        $question = $questionnaire->findQuestion($source->reference);
+        $question = $questionnaire->findQuestionByKey($source->reference);
 
         if ($question === null) {
             throw PdfGenerationFailed::unknownQuestion($source->reference);

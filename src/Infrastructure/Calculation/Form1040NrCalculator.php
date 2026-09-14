@@ -30,6 +30,19 @@ final class Form1040NrCalculator implements CalculatorInterface
         return $formType === FormType::Form1040Nr;
     }
 
+    public function outputFields(): array
+    {
+        return [
+            self::FIELD_TOTAL_INCOME,
+            self::FIELD_TREATY_EXEMPTION,
+            self::FIELD_TAXABLE_INCOME,
+            self::FIELD_TAX_OWED,
+            self::FIELD_TAX_WITHHELD,
+            self::FIELD_AMOUNT_OWED,
+            self::FIELD_AMOUNT_OVERPAID,
+        ];
+    }
+
     public function calculate(CalculationInput $input): CalculationResult
     {
         $wages = $this->number($input->answers, 'income_wages');

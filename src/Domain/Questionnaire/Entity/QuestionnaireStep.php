@@ -94,6 +94,15 @@ final class QuestionnaireStep
         $this->title = $title;
     }
 
+    public function reposition(int $position): void
+    {
+        if ($position < 1) {
+            throw InvalidQuestionnaire::blank('step position');
+        }
+
+        $this->position = $position;
+    }
+
     /**
      * @return list<Question>
      */
@@ -114,9 +123,20 @@ final class QuestionnaireStep
         $this->questions->add($question);
     }
 
+    public function removeQuestion(Question $question): void
+    {
+        $this->questions->removeElement($question);
+    }
+
     public function nextQuestionPosition(): int
     {
-        return $this->questions->count() + 1;
+        $position = 0;
+
+        foreach ($this->questions as $question) {
+            $position = max($position, $question->position());
+        }
+
+        return $position + 1;
     }
 
     public function hasQuestion(string $questionId): bool

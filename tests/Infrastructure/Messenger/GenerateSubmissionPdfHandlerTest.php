@@ -142,7 +142,7 @@ final class GenerateSubmissionPdfHandlerTest extends TestCase
         );
         $questionnaire->addMapping(QuestionMapping::forQuestion(
             'map-name',
-            $firstName->id(),
+            $firstName->key(),
             new PdfCoordinates(1, 20.5, 40.25, 11),
         ));
 

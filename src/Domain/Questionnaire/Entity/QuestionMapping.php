@@ -49,10 +49,10 @@ final class QuestionMapping
 
     public static function forQuestion(
         string $id,
-        string $questionId,
+        string $questionKey,
         PdfCoordinates $coordinates,
     ): self {
-        return new self($id, MappingSource::question($questionId), $coordinates);
+        return new self($id, MappingSource::question($questionKey), $coordinates);
     }
 
     public static function forComputedField(
@@ -85,5 +85,10 @@ final class QuestionMapping
     public function coordinates(): PdfCoordinates
     {
         return $this->coordinates;
+    }
+
+    public function relocate(PdfCoordinates $coordinates): void
+    {
+        $this->coordinates = $coordinates;
     }
 }

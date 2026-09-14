@@ -180,4 +180,9 @@ final class MatchingCalculator implements CalculatorInterface
     {
         return new CalculationResult($this->values);
     }
+
+    public function outputFields(): array
+    {
+        return array_keys($this->values);
+    }
 }

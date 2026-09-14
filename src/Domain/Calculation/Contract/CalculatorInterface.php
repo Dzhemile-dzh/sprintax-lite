@@ -12,5 +12,10 @@ interface CalculatorInterface
 {
     public function supports(FormType $formType): bool;
 
+    /**
+     * @return list<string>
+     */
+    public function outputFields(): array;
+
     public function calculate(CalculationInput $input): CalculationResult;
 }

@@ -6,6 +6,7 @@ namespace App\Domain\Questionnaire\Entity;
 
 use App\Domain\Questionnaire\Exception\InvalidQuestionnaire;
 use App\Domain\Questionnaire\ValueObject\FormType;
+use App\Domain\Questionnaire\ValueObject\PdfCoordinates;
 use App\Domain\Questionnaire\ValueObject\QuestionType;
 use App\Domain\Questionnaire\ValueObject\QuestionValidation;
 use App\Domain\Questionnaire\ValueObject\VisibilityRule;
@@ -138,7 +139,13 @@ final class Questionnaire
 
     public function addStep(string $id, string $title): QuestionnaireStep
     {
-        $step = QuestionnaireStep::create($id, $title, $this->steps->count() + 1, $this);
+        $position = 0;
+
+        foreach ($this->steps as $step) {
+            $position = max($position, $step->position());
+        }
+
+        $step = QuestionnaireStep::create($id, $title, $position + 1, $this);
         $this->steps->add($step);
 
         return $step;
@@ -170,6 +177,7 @@ final class Questionnaire
             $validation,
             $visibility,
         );
+        $this->assertVisibilityQuestionsExist($question->visibility(), $question->id());
         $step->addQuestion($question);
 
         return $question;
@@ -177,7 +185,7 @@ final class Questionnaire
 
     public function addMapping(QuestionMapping $mapping): void
     {
-        if ($mapping->source()->isQuestion() && !$this->hasQuestion($mapping->source()->reference)) {
+        if ($mapping->source()->isQuestion() && $this->findQuestionByKey($mapping->source()->reference) === null) {
             throw InvalidQuestionnaire::questionNotFound($mapping->source()->reference);
         }
 
@@ -301,6 +309,148 @@ final class Questionnaire
         }
 
         return null;
+    }
+
+    public function renameStep(string $stepId, string $title): void
+    {
+        $this->step($stepId)->rename($title);
+    }
+
+    public function removeStep(string $stepId): void
+    {
+        $step = $this->step($stepId);
+        $stepQuestionIds = [];
+
+        foreach ($step->questions() as $question) {
+            $stepQuestionIds[] = $question->id();
+        }
+
+        foreach ($step->questions() as $question) {
+            $this->assertQuestionNotReferenced($question, $stepQuestionIds);
+        }
+
+        $this->steps->removeElement($step);
+    }
+
+    public function updateQuestion(
+        string $questionId,
+        string $label,
+        ?string $helpText,
+        QuestionValidation $validation,
+        VisibilityRule $visibility,
+    ): void {
+        $question = $this->findQuestion($questionId);
+
+        if ($question === null) {
+            throw InvalidQuestionnaire::questionNotFound($questionId);
+        }
+
+        $this->assertVisibilityQuestionsExist($visibility, $question->id());
+        $question->relabel($label);
+        $question->changeHelpText($helpText);
+        $question->configureValidation($validation);
+        $question->configureVisibility($visibility);
+    }
+
+    public function removeQuestion(string $questionId): void
+    {
+        $question = $this->findQuestion($questionId);
+
+        if ($question === null) {
+            throw InvalidQuestionnaire::questionNotFound($questionId);
+        }
+
+        $this->assertQuestionNotReferenced($question);
+        $question->step()->removeQuestion($question);
+    }
+
+    public function updateOption(string $questionId, string $optionId, string $label, string $value): void
+    {
+        $this->question($questionId)->updateOption($optionId, $label, $value);
+    }
+
+    public function removeOption(string $questionId, string $optionId): void
+    {
+        $this->question($questionId)->removeOption($optionId);
+    }
+
+    public function findMapping(string $mappingId): ?QuestionMapping
+    {
+        foreach ($this->mappings as $mapping) {
+            if ($mapping->id() === $mappingId) {
+                return $mapping;
+            }
+        }
+
+        return null;
+    }
+
+    public function relocateMapping(string $mappingId, PdfCoordinates $coordinates): void
+    {
+        $mapping = $this->findMapping($mappingId);
+
+        if ($mapping === null) {
+            throw InvalidQuestionnaire::mappingNotFound($mappingId);
+        }
+
+        $mapping->relocate($coordinates);
+    }
+
+    public function removeMapping(string $mappingId): void
+    {
+        $mapping = $this->findMapping($mappingId);
+
+        if ($mapping === null) {
+            throw InvalidQuestionnaire::mappingNotFound($mappingId);
+        }
+
+        $this->mappings->removeElement($mapping);
+    }
+
+    private function question(string $questionId): Question
+    {
+        $question = $this->findQuestion($questionId);
+
+        if ($question === null) {
+            throw InvalidQuestionnaire::questionNotFound($questionId);
+        }
+
+        return $question;
+    }
+
+    private function assertVisibilityQuestionsExist(VisibilityRule $visibility, string $excludedQuestionId): void
+    {
+        foreach ($visibility->conditions as $condition) {
+            $target = $this->findQuestionByKey($condition->questionKey);
+
+            if ($target === null || $target->id() === $excludedQuestionId) {
+                throw InvalidQuestionnaire::unknownVisibilityQuestion($condition->questionKey);
+            }
+        }
+    }
+
+    /**
+     * @param list<string> $ignoredQuestionIds
+     */
+    private function assertQuestionNotReferenced(Question $question, array $ignoredQuestionIds = []): void
+    {
+        foreach ($this->allQuestions() as $other) {
+            if ($other->id() === $question->id() || in_array($other->id(), $ignoredQuestionIds, true)) {
+                continue;
+            }
+
+            foreach ($other->visibility()->conditions as $condition) {
+                if ($condition->questionKey === $question->key()) {
+                    throw InvalidQuestionnaire::questionReferenced($question->key());
+                }
+            }
+        }
+
+        foreach ($this->mappings as $mapping) {
+            if ($mapping->source()->isQuestion() && $mapping->source()->reference === $question->key()) {
+                throw InvalidQuestionnaire::questionReferenced($question->key());
+            }
+        }
     }
 
     private function step(string $stepId): QuestionnaireStep

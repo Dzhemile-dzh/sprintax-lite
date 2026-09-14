@@ -17,9 +17,9 @@ final readonly class MappingSource
         }
     }
 
-    public static function question(string $questionId): self
+    public static function question(string $questionKey): self
     {
-        return new self(MappingSourceType::Question, $questionId);
+        return new self(MappingSourceType::Question, $questionKey);
     }
 
     public static function computedField(string $fieldName): self

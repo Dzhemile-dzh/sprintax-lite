@@ -53,7 +53,7 @@ final class DoctrineQuestionnaireRepositoryTest extends DatabaseTestCase
         $status->addOption(QuestionOption::create('opt-1', 'Single', 'single', 1));
         $questionnaire->addMapping(QuestionMapping::forQuestion(
             'map-1',
-            'question-1',
+            'married',
             new PdfCoordinates(1, 20.5, 40.0, 10),
         ));
 
