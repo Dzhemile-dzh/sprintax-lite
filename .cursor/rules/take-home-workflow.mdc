@@ -1,0 +1,14 @@
+---
+description: Stop after each take-home phase for review and commit as Dzhemile-dzh
+alwaysApply: true
+---
+
+# Take-home workflow
+
+Implement one assignment phase at a time. After a phase, stop so the user can review.
+
+Do not commit unless the user asks. When committing, author and committer must be `Dzhemile-dzh <dzhemile_ahmet@abv.bg>`, never Cursor Agent.
+
+Run the `review` subagent (`.cursor/agents/review.md`) when the user asks for review.
+
+PHP 8.4, no `empty()`, Twig macros, thin controllers, no generic manager abstractions.
