@@ -48,6 +48,30 @@ final class QuestionnaireSubmissionTest extends TestCase
         self::assertSame('no', $submission->answerFor($married->id())?->value()->raw());
     }
 
+    public function testDiscardAnswersNotInRemovesHiddenAnswers(): void
+    {
+        $questionnaire = $this->questionnaire();
+        $married = $questionnaire->findQuestionByKey('married');
+        self::assertNotNull($married);
+        $note = $questionnaire->addQuestion('step-1', 'q-2', 'note', 'Note', QuestionType::ShortText);
+
+        $submission = QuestionnaireSubmission::start(
+            'sub-1',
+            $questionnaire,
+            $this->client(),
+            new DateTimeImmutable('2026-01-01T10:00:00+00:00'),
+        );
+        $now = new DateTimeImmutable('2026-01-01T10:05:00+00:00');
+        $submission->recordAnswer($married, AnswerValue::text('yes'), $now);
+        $submission->recordAnswer($note, AnswerValue::text('keep me'), $now);
+
+        $submission->discardAnswersNotIn([$note->id()], $now);
+
+        self::assertNull($submission->answerFor($married->id()));
+        self::assertSame('keep me', $submission->answerFor($note->id())?->value()->raw());
+        self::assertArrayNotHasKey('married', $submission->answersByQuestionKey());
+    }
+
     public function testFinalizeRequiresInProgressAndPdfReadyRequiresFinalized(): void
     {
         $submission = QuestionnaireSubmission::start(

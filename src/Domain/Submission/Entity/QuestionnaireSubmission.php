@@ -199,6 +199,21 @@ final class QuestionnaireSubmission
         $this->updatedAt = $recordedAt;
     }
 
+    /**
+     * @param list<string> $visibleQuestionIds
+     */
+    public function discardAnswersNotIn(array $visibleQuestionIds, DateTimeImmutable $discardedAt): void
+    {
+        foreach ($this->answers->toArray() as $answer) {
+            if (in_array($answer->question()->id(), $visibleQuestionIds, true)) {
+                continue;
+            }
+
+            $this->answers->removeElement($answer);
+            $this->updatedAt = $discardedAt;
+        }
+    }
+
     public function moveToStep(string $stepId, DateTimeImmutable $movedAt): void
     {
         foreach ($this->questionnaire->steps() as $step) {
