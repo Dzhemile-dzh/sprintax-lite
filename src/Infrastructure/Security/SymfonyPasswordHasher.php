@@ -6,7 +6,6 @@ namespace App\Infrastructure\Security;
 
 use App\Application\User\PasswordHasherInterface;
 use Symfony\Component\PasswordHasher\Hasher\PasswordHasherFactoryInterface;
-use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 
 final class SymfonyPasswordHasher implements PasswordHasherInterface
 {
@@ -18,7 +17,7 @@ final class SymfonyPasswordHasher implements PasswordHasherInterface
     public function hash(string $plainPassword): string
     {
         return $this->passwordHasherFactory
-            ->getPasswordHasher(PasswordAuthenticatedUserInterface::class)
+            ->getPasswordHasher(SecurityUser::class)
             ->hash($plainPassword);
     }
 }
