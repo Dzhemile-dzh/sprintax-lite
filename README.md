@@ -2,7 +2,7 @@
 
 Symfony questionnaire engine and IRS Form 1040-NR PDF generator (take-home assignment).
 
-Domain model, Doctrine persistence, server-side visibility, a pluggable calculation engine, coordinate-based PDF overlay, Symfony Security, the admin questionnaire builder, and the client multi-page wizard are in place. Finalizing a submission queues PDF generation on Messenger. A worker consumes that job, writes `var/pdf/{submissionId}.pdf`, stores the path, and marks the submission `pdf_ready`. Secure HTTP download lands in a later commit.
+Domain model, Doctrine persistence, server-side visibility, a pluggable calculation engine, coordinate-based PDF overlay, Symfony Security, the admin questionnaire builder, and the client multi-page wizard are in place. Finalizing a submission queues PDF generation on Messenger. A worker consumes that job, writes `var/pdf/{submissionId}.pdf`, stores the path, and marks the submission `pdf_ready`. Owners and admins download the file at `/submissions/{id}/pdf`.
 
 ## Architecture
 
@@ -34,13 +34,13 @@ There are no generic managers, base CRUD services, or abstract domain service cl
 
 Calculation is pluggable: `CalculateSubmission` picks a `CalculatorInterface` by questionnaire name. `Form1040NrCalculator` is a simplified 10% tax stand-in whose output keys (`taxable_income`, `tax_owed`, …) are meant for PDF mappings, not IRS tables.
 
-PDF overlay goes through `PdfGeneratorInterface`. File checks and directory creation go through `FileStorageInterface` rather than scattered `is_file` / `mkdir` calls. `GenerateSubmissionPdf` resolves the template as `resources/pdf/{form-name}.pdf`, maps visible answers and computed fields through admin `QuestionMapping` coordinates (mm), and `FpdiPdfGenerator` stamps those values. The generator has no hardcoded field positions. Finalizing a submission dispatches `GenerateSubmissionPdfMessage` on the async transport. The worker is idempotent: a second delivery of the same message does not write another PDF if the file is already there. Failed jobs retry, then land on the `failed` transport. HTTP download comes later.
+PDF overlay goes through `PdfGeneratorInterface`. File checks and directory creation go through `FileStorageInterface` rather than scattered `is_file` / `mkdir` calls. `GenerateSubmissionPdf` resolves the template as `resources/pdf/{form-name}.pdf`, maps visible answers and computed fields through admin `QuestionMapping` coordinates (mm), and `FpdiPdfGenerator` stamps those values. The generator has no hardcoded field positions. Finalizing a submission dispatches `GenerateSubmissionPdfMessage` on the async transport. The worker is idempotent: a second delivery of the same message does not write another PDF if the file is already there. Failed jobs retry, then land on the `failed` transport. Download uses `BinaryFileResponse` and `SubmissionVoter::DOWNLOAD`: another client gets 403, and a PDF that is not ready returns 404.
 
 Security uses a `SecurityUser` adapter so the domain `User` stays free of Symfony. Clients register at `/register` (always `ROLE_CLIENT`). Admins cannot self-register. `SubmissionVoter` allows a client to view/edit/download only their own submission; admins can access any submission.
 
 Admins manage questionnaires at `/admin`: ordered steps, questions (types, validation, visibility), choice options, and PDF mappings. Forms go through application use cases; clients receive 403.
 
-Clients start and resume questionnaires at `/client`. Each step is its own route, saved with POST/redirect/GET. Hidden questions are ignored server-side, including extra POST fields, and answers are dropped when a condition hides them. Clients can go back to earlier steps but cannot skip ahead of `current_step`. Review is shown before submit; finalize marks the submission finalized and dispatches a Messenger message for PDF generation. The PDF is not built during the HTTP request.
+Clients start and resume questionnaires at `/client`. Each step is its own route, saved with POST/redirect/GET. Hidden questions are ignored server-side, including extra POST fields, and answers are dropped when a condition hides them. Clients can go back to earlier steps but cannot skip ahead of `current_step`. Review is shown before submit; finalize marks the submission finalized and dispatches a Messenger message for PDF generation. The PDF is not built during the HTTP request. When the worker marks it `pdf_ready`, the owner (and any admin) can download it.
 
 ## Domain model
 
@@ -146,7 +146,7 @@ After a client finalizes a submission, consume the async transport so the PDF is
 php bin/console messenger:consume async
 ```
 
-Docker Compose runs that command in the `worker` service. Jobs retry up to three times, then move to the `failed` transport (`doctrine://default?queue_name=failed`). Generated files are written to `var/pdf/{submissionId}.pdf`.
+Docker Compose runs that command in the `worker` service. Jobs retry up to three times, then move to the `failed` transport (`doctrine://default?queue_name=failed`). Generated files are written to `var/pdf/{submissionId}.pdf`. Download is `GET /submissions/{id}/pdf`.
 
 ## Repository
 

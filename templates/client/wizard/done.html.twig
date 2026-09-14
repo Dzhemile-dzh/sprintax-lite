@@ -5,7 +5,11 @@
 
 {% block body %}
     <h1>Submitted</h1>
-    <p>{{ questionnaire.name }} has been submitted. The PDF will be prepared in the background.</p>
+    {% if submission.status.value == 'pdf_ready' %}
+        <p>{{ questionnaire.name }} is ready. {{ ui.pdf_download(submission) }}</p>
+    {% else %}
+        <p>{{ questionnaire.name }} has been submitted. The PDF will be prepared in the background.</p>
+    {% endif %}
     <p>{{ ui.link(path('client_wizard_review', {id: submission.id}), 'View answers') }}</p>
     <p>{{ ui.link(path('client_home'), 'Back to client area') }}</p>
 {% endblock %}

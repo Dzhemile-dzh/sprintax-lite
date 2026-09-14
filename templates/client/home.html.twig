@@ -19,6 +19,7 @@
                             {{ ui.link(path('client_wizard_step', {id: submission.id, stepId: submission.currentStep.id}), 'Continue') }}
                         {% else %}
                             {{ ui.link(path('client_wizard_review', {id: submission.id}), 'View answers') }}
+                            {{ ui.pdf_download(submission) }}
                         {% endif %}
                     {% else %}
                         <form method="post" action="{{ path('client_wizard_start', {questionnaireId: questionnaire.id}) }}" class="inline">

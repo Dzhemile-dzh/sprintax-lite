@@ -1,4 +1,5 @@
 {% extends 'base.html.twig' %}
+{% import 'macros/ui.html.twig' as ui %}
 
 {% block title %}Submission{% endblock %}
 
@@ -6,4 +7,5 @@
     <h1>Submission</h1>
     <p>Questionnaire: {{ submission.questionnaire.name }}</p>
     <p>Status: {{ submission.status.value }}</p>
+    {{ ui.pdf_download(submission) }}
 {% endblock %}

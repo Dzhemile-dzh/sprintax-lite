@@ -59,8 +59,13 @@ final class InvalidSubmission extends RuntimeException
         return new self(sprintf('Question "%s" is invalid: %s.', $questionKey, $reason));
     }
 
-    public static function incomplete(): self
+    public static function pdfNotReady(SubmissionStatus $status): self
     {
-        return new self('The submission cannot be finalized until all required applicable questions are answered.');
+        return new self(sprintf('The PDF is not ready for download from status "%s".', $status->value));
+    }
+
+    public static function pdfFileMissing(): self
+    {
+        return new self('The generated PDF file is not available.');
     }
 }

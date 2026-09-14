@@ -29,5 +29,6 @@
         </form>
     {% else %}
         <p>{{ ui.link(path('client_wizard_done', {id: submission.id}), 'View confirmation') }}</p>
+        <p>{{ ui.pdf_download(submission) }}</p>
     {% endif %}
 {% endblock %}
