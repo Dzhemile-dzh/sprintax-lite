@@ -22,6 +22,20 @@ services:
             - '../src/Domain/**/ValueObject/'
             - '../src/Domain/**/DTO/'
             - '../src/Domain/**/Exception/'
+            - '../src/Infrastructure/Persistence/Doctrine/Type/'
 
-    # add more service definitions when explicit configuration is needed
-    # please note that last definitions always *replace* previous ones
+    App\Domain\Questionnaire\Repository\QuestionnaireRepositoryInterface:
+        alias: App\Infrastructure\Persistence\Doctrine\DoctrineQuestionnaireRepository
+        public: true
+
+    App\Domain\Submission\Repository\SubmissionRepositoryInterface:
+        alias: App\Infrastructure\Persistence\Doctrine\DoctrineSubmissionRepository
+        public: true
+
+    App\Domain\User\Repository\UserRepositoryInterface:
+        alias: App\Infrastructure\Persistence\Doctrine\DoctrineUserRepository
+        public: true
+
+    Doctrine\DBAL\Driver\AbstractSQLiteDriver\Middleware\EnableForeignKeys:
+        tags:
+            - { name: doctrine.middleware }

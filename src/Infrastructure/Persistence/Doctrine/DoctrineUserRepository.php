@@ -7,20 +7,29 @@ namespace App\Infrastructure\Persistence\Doctrine;
 use App\Domain\User\Entity\User;
 use App\Domain\User\Exception\UserNotFound;
 use App\Domain\User\Repository\UserRepositoryInterface;
-use LogicException;
+use Doctrine\ORM\EntityManagerInterface;
 
 final class DoctrineUserRepository implements UserRepositoryInterface
 {
+    public function __construct(
+        private readonly EntityManagerInterface $entityManager,
+    ) {
+    }
+
     public function get(string $id): User
     {
-        throw UserNotFound::withId($id);
+        $user = $this->entityManager->find(User::class, $id);
+
+        if (!$user instanceof User) {
+            throw UserNotFound::withId($id);
+        }
+
+        return $user;
     }
 
     public function save(User $user): void
     {
-        throw new LogicException(sprintf(
-            'Doctrine persistence is not implemented yet for %s.',
-            $user::class,
-        ));
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
     }
 }

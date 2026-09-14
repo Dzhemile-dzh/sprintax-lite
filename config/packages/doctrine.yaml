@@ -2,18 +2,24 @@ doctrine:
     dbal:
         url: '%env(resolve:DATABASE_URL)%'
         profiling_collect_backtrace: '%kernel.debug%'
+        types:
+            email: App\Infrastructure\Persistence\Doctrine\Type\EmailType
+            question_validation: App\Infrastructure\Persistence\Doctrine\Type\QuestionValidationType
+            visibility_rule: App\Infrastructure\Persistence\Doctrine\Type\VisibilityRuleType
+            answer_value: App\Infrastructure\Persistence\Doctrine\Type\AnswerValueType
+            pdf_coordinates: App\Infrastructure\Persistence\Doctrine\Type\PdfCoordinatesType
+            datetime_immutable: App\Infrastructure\Persistence\Doctrine\Type\UtcDateTimeImmutableType
     orm:
         validate_xml_mapping: true
         naming_strategy: doctrine.orm.naming_strategy.underscore_number_aware
         auto_mapping: true
         mappings:
-            App:
+            Domain:
                 type: attribute
                 is_bundle: false
-                dir: '%kernel.project_dir%/src/Entity'
-                prefix: 'App\Entity'
-                alias: App
-            # Domain entity mapping is added when Doctrine persistence is implemented.
+                dir: '%kernel.project_dir%/src/Domain'
+                prefix: 'App\Domain'
+                alias: Domain
 
 when@test:
     doctrine:

@@ -7,20 +7,42 @@ namespace App\Infrastructure\Persistence\Doctrine;
 use App\Domain\Questionnaire\Entity\Questionnaire;
 use App\Domain\Questionnaire\Exception\QuestionnaireNotFound;
 use App\Domain\Questionnaire\Repository\QuestionnaireRepositoryInterface;
-use LogicException;
+use Doctrine\ORM\EntityManagerInterface;
 
 final class DoctrineQuestionnaireRepository implements QuestionnaireRepositoryInterface
 {
+    public function __construct(
+        private readonly EntityManagerInterface $entityManager,
+    ) {
+    }
+
     public function get(string $id): Questionnaire
     {
-        throw QuestionnaireNotFound::withId($id);
+        /** @var list<Questionnaire> $questionnaires */
+        $questionnaires = $this->entityManager->createQueryBuilder()
+            ->select('questionnaire', 'step', 'question', 'questionOption', 'mapping')
+            ->from(Questionnaire::class, 'questionnaire')
+            ->leftJoin('questionnaire.steps', 'step')
+            ->leftJoin('step.questions', 'question')
+            ->leftJoin('question.options', 'questionOption')
+            ->leftJoin('questionnaire.mappings', 'mapping')
+            ->where('questionnaire.id = :id')
+            ->setParameter('id', $id)
+            ->getQuery()
+            ->getResult();
+
+        $questionnaire = $questionnaires[0] ?? null;
+
+        if (!$questionnaire instanceof Questionnaire) {
+            throw QuestionnaireNotFound::withId($id);
+        }
+
+        return $questionnaire;
     }
 
     public function save(Questionnaire $questionnaire): void
     {
-        throw new LogicException(sprintf(
-            'Doctrine persistence is not implemented yet for %s.',
-            $questionnaire::class,
-        ));
+        $this->entityManager->persist($questionnaire);
+        $this->entityManager->flush();
     }
 }
