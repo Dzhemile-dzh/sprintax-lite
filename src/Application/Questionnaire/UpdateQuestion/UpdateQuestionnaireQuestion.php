@@ -2,14 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Questionnaire\AddQuestion;
+namespace App\Application\Questionnaire\UpdateQuestion;
 
 use App\Application\Questionnaire\QuestionFormMapping;
-use App\Domain\Questionnaire\Entity\Question;
+use App\Domain\Questionnaire\Exception\InvalidQuestionnaire;
 use App\Domain\Questionnaire\Repository\QuestionnaireRepositoryInterface;
-use App\Domain\Questionnaire\ValueObject\QuestionType;
 
-final class AddQuestionnaireQuestion
+final class UpdateQuestionnaireQuestion
 {
     public function __construct(
         private readonly QuestionnaireRepositoryInterface $questionnaires,
@@ -18,10 +17,8 @@ final class AddQuestionnaireQuestion
 
     public function execute(
         string $questionnaireId,
-        string $stepId,
-        string $key,
+        string $questionId,
         string $label,
-        QuestionType $type,
         ?string $helpText,
         bool $required,
         mixed $min,
@@ -30,20 +27,20 @@ final class AddQuestionnaireQuestion
         mixed $visibilityQuestionKey,
         mixed $visibilityOperator,
         mixed $visibilityExpectedValue,
-    ): Question {
+    ): void {
         $questionnaire = $this->questionnaires->get($questionnaireId);
-        $question = $questionnaire->addQuestion(
-            $stepId,
-            bin2hex(random_bytes(16)),
-            $key,
+
+        if ($questionnaire->findQuestion($questionId) === null) {
+            throw InvalidQuestionnaire::questionNotFound($questionId);
+        }
+
+        $questionnaire->updateQuestion(
+            $questionId,
             $label,
-            $type,
             $helpText,
             QuestionFormMapping::validation($required, $min, $max, $regex),
             QuestionFormMapping::visibility($visibilityQuestionKey, $visibilityOperator, $visibilityExpectedValue),
         );
         $this->questionnaires->save($questionnaire);
-
-        return $question;
     }
 }

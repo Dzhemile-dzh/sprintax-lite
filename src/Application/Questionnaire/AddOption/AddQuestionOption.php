@@ -32,7 +32,7 @@ final class AddQuestionOption
             bin2hex(random_bytes(16)),
             $label,
             $value,
-            count($question->options()) + 1,
+            $question->nextOptionPosition(),
         );
         $question->addOption($option);
         $this->questionnaires->save($questionnaire);
