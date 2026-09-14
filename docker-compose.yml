@@ -13,6 +13,8 @@ services:
       DATABASE_URL: sqlite:////var/www/html/var/data/app.db
       DEFAULT_URI: http://localhost:8080
       MESSENGER_TRANSPORT_DSN: doctrine://default?auto_setup=1
+      MAILER_DSN: ${MAILER_DSN:-null://null}
+      MAILER_FROM: ${MAILER_FROM:-noreply@localhost}
     volumes: &app-volumes
       - .:/var/www/html
       - vendor_data:/var/www/html/vendor

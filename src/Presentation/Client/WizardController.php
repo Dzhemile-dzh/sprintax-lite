@@ -19,6 +19,7 @@ use App\Domain\Submission\ValueObject\SubmissionStatus;
 use App\Infrastructure\Security\SecurityUser;
 use App\Infrastructure\Security\SubmissionVoter;
 use App\Presentation\Client\Form\WizardStepFormType;
+use App\Presentation\Http\RendersPdfWaitingPage;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\Request;
@@ -30,6 +31,8 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_CLIENT')]
 final class WizardController extends AbstractController
 {
+    use RendersPdfWaitingPage;
+
     public function __construct(
         private readonly ListClientHome $listClientHome,
         private readonly StartSubmission $startSubmission,
@@ -46,10 +49,10 @@ final class WizardController extends AbstractController
     {
         $home = $this->listClientHome->execute($this->securityUser()->id());
 
-        return $this->render('client/home.html.twig', [
+        return $this->renderPdfWaiting('client/home.html.twig', [
             'questionnaires' => $home->questionnaires,
             'submissions' => $home->submissionsByQuestionnaireId,
-        ]);
+        ], $home->hasAwaitingPdf());
     }
 
     #[Route('/questionnaires/{questionnaireId}/start', name: 'client_wizard_start', methods: ['POST'])]
@@ -172,12 +175,12 @@ final class WizardController extends AbstractController
             ]);
         }
 
-        return $this->render('client/wizard/review.html.twig', [
+        return $this->renderPdfWaiting('client/wizard/review.html.twig', [
             'submission' => $review->submission,
             'questionnaire' => $review->submission->questionnaire(),
             'steps' => $review->steps,
             'canFinalize' => $review->canFinalize,
-        ]);
+        ], $review->submission->status()->isAwaitingPdf());
     }
 
     #[Route('/submissions/{id}/finalize', name: 'client_wizard_finalize', methods: ['POST'])]
@@ -211,10 +214,10 @@ final class WizardController extends AbstractController
             return $this->redirectToRoute('client_wizard_review', ['id' => $id]);
         }
 
-        return $this->render('client/wizard/done.html.twig', [
+        return $this->renderPdfWaiting('client/wizard/done.html.twig', [
             'submission' => $submission,
             'questionnaire' => $submission->questionnaire(),
-        ]);
+        ], $submission->status()->isAwaitingPdf());
     }
 
     private function redirectAfterStart(QuestionnaireSubmission $submission): Response

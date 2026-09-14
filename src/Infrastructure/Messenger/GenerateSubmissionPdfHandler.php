@@ -25,7 +25,13 @@ final class GenerateSubmissionPdfHandler
     {
         try {
             $this->generateSubmissionPdf->execute($message->submissionId);
-        } catch (SubmissionNotFound|InvalidSubmission $exception) {
+        } catch (SubmissionNotFound $exception) {
+            throw new UnrecoverableMessageHandlingException($exception->getMessage(), 0, $exception);
+        } catch (InvalidSubmission $exception) {
+            if ($exception->isRetryable()) {
+                throw $exception;
+            }
+
             throw new UnrecoverableMessageHandlingException($exception->getMessage(), 0, $exception);
         } catch (PdfGenerationFailed $exception) {
             if (!$exception->isRetryable()) {

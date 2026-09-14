@@ -18,4 +18,15 @@ final readonly class ClientHome
         public array $submissionsByQuestionnaireId,
     ) {
     }
+
+    public function hasAwaitingPdf(): bool
+    {
+        foreach ($this->submissionsByQuestionnaireId as $submission) {
+            if ($submission->status()->isAwaitingPdf()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

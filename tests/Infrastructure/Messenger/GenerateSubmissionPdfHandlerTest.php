@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Infrastructure\Messenger;
 
 use App\Application\Calculation\CalculateSubmission;
+use App\Application\Pdf\EmailSubmissionPdf;
 use App\Application\Pdf\GenerateSubmissionPdf;
+use App\Application\Pdf\SubmissionPdfMailer;
 use App\Domain\Pdf\Contract\PdfGeneratorInterface;
 use App\Domain\Pdf\Exception\PdfGenerationFailed;
 use App\Domain\Questionnaire\Entity\QuestionMapping;
@@ -24,8 +26,10 @@ use App\Infrastructure\Filesystem\LocalFileStorage;
 use App\Infrastructure\Messenger\GenerateSubmissionPdfHandler;
 use App\Infrastructure\Messenger\Message\GenerateSubmissionPdfMessage;
 use App\Tests\Support\FailingPdfGenerator;
+use App\Tests\Support\FailingSubmissionPdfMailer;
 use App\Tests\Support\InMemorySubmissionRepository;
 use App\Tests\Support\RecordingPdfGenerator;
+use App\Tests\Support\RecordingSubmissionPdfMailer;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Messenger\Exception\UnrecoverableMessageHandlingException;
@@ -47,8 +51,9 @@ final class GenerateSubmissionPdfHandlerTest extends TestCase
         self::assertSame(SubmissionStatus::PdfReady, $submission->status());
         self::assertSame('sub-1.pdf', $submission->pdfPath());
         self::assertSame(1, $recorder->calls);
-        self::assertSame(1, $this->submissions->saveCount);
+        self::assertSame(2, $this->submissions->saveCount);
         self::assertFileExists($this->outputDirectory.DIRECTORY_SEPARATOR.'sub-1.pdf');
+        self::assertTrue($submission->pdfWasEmailed());
     }
 
     public function testItIsIdempotentWhenProcessedTwice(): void
@@ -61,8 +66,9 @@ final class GenerateSubmissionPdfHandlerTest extends TestCase
         $handler(new GenerateSubmissionPdfMessage('sub-1'));
 
         self::assertSame(1, $recorder->calls);
-        self::assertSame(1, $this->submissions->saveCount);
+        self::assertSame(2, $this->submissions->saveCount);
         self::assertSame(SubmissionStatus::PdfReady, $submission->status());
+        self::assertTrue($submission->pdfWasEmailed());
     }
 
     public function testMissingSubmissionIsUnrecoverable(): void
@@ -101,10 +107,32 @@ final class GenerateSubmissionPdfHandlerTest extends TestCase
         $handler(new GenerateSubmissionPdfMessage('sub-1'));
     }
 
+    public function testAMailerFailureIsRetryableAndLeavesThePdfReady(): void
+    {
+        $submission = $this->finalizedSubmission();
+        $handler = $this->handler(
+            $submission,
+            new RecordingPdfGenerator(),
+            mailer: new FailingSubmissionPdfMailer(),
+        );
+
+        try {
+            $handler(new GenerateSubmissionPdfMessage('sub-1'));
+            self::fail('Expected the mailer failure to bubble for retry.');
+        } catch (\RuntimeException $exception) {
+            self::assertSame('Mail transport failed.', $exception->getMessage());
+            self::assertNotInstanceOf(UnrecoverableMessageHandlingException::class, $exception);
+            self::assertSame(SubmissionStatus::PdfReady, $submission->status());
+            self::assertFalse($submission->pdfWasEmailed());
+            self::assertFileExists($this->outputDirectory.DIRECTORY_SEPARATOR.'sub-1.pdf');
+        }
+    }
+
     private function handler(
         QuestionnaireSubmission $submission,
         PdfGeneratorInterface $generator,
         ?string $templatesDirectory = null,
+        SubmissionPdfMailer $mailer = new RecordingSubmissionPdfMailer(),
     ): GenerateSubmissionPdfHandler {
         $this->submissions = InMemorySubmissionRepository::with($submission);
         $this->outputDirectory = sys_get_temp_dir().DIRECTORY_SEPARATOR.'sprintax-pdf-out-'.uniqid('', true);
@@ -116,6 +144,12 @@ final class GenerateSubmissionPdfHandlerTest extends TestCase
             $generator,
             new QuestionVisibilityEvaluator(),
             new LocalFileStorage(),
+            new EmailSubmissionPdf(
+                $this->submissions,
+                new LocalFileStorage(),
+                $mailer,
+                $this->outputDirectory,
+            ),
             $templates,
             $this->outputDirectory,
         ));

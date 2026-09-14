@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Application\Pdf;
 
 use App\Application\Calculation\CalculateSubmission;
+use App\Application\Pdf\EmailSubmissionPdf;
 use App\Application\Pdf\GenerateSubmissionPdf;
+use App\Application\Pdf\SubmissionPdfMailer;
 use App\Domain\Calculation\Contract\CalculatorInterface;
 use App\Domain\Calculation\DTO\CalculationInput;
 use App\Domain\Calculation\DTO\CalculationResult;
@@ -29,8 +31,10 @@ use App\Domain\User\ValueObject\Email;
 use App\Infrastructure\Calculation\Form1040NrCalculator;
 use App\Infrastructure\Filesystem\LocalFileStorage;
 use App\Tests\Support\FailingPdfGenerator;
+use App\Tests\Support\FailingSubmissionPdfMailer;
 use App\Tests\Support\InMemorySubmissionRepository;
 use App\Tests\Support\RecordingPdfGenerator;
+use App\Tests\Support\RecordingSubmissionPdfMailer;
 use DateTimeImmutable;
 use LogicException;
 use PHPUnit\Framework\TestCase;
@@ -38,6 +42,8 @@ use PHPUnit\Framework\TestCase;
 final class GenerateSubmissionPdfTest extends TestCase
 {
     private InMemorySubmissionRepository $submissions;
+
+    private RecordingSubmissionPdfMailer $mailer;
 
     public function testItOverlaysVisibleAnswersAndComputedFieldsUsingMappingCoordinates(): void
     {
@@ -154,14 +160,16 @@ final class GenerateSubmissionPdfTest extends TestCase
 
         $recorder = new RecordingPdfGenerator();
         $repository = InMemorySubmissionRepository::with($submission);
+        $outputDirectory = sys_get_temp_dir().DIRECTORY_SEPARATOR.'sprintax-pdf-out-'.uniqid('', true);
         $useCase = new GenerateSubmissionPdf(
             $repository,
             new CalculateSubmission($repository, [$calculator]),
             $recorder,
             new QuestionVisibilityEvaluator(),
             new LocalFileStorage(),
+            $this->emailer($repository, $outputDirectory, new RecordingSubmissionPdfMailer()),
             $this->templatesDirectoryWith('1040-nr.pdf'),
-            sys_get_temp_dir().DIRECTORY_SEPARATOR.'sprintax-pdf-out-'.uniqid('', true),
+            $outputDirectory,
         );
 
         $useCase->execute('sub-1');
@@ -209,7 +217,13 @@ final class GenerateSubmissionPdfTest extends TestCase
         self::assertSame('sub-1.pdf', $submission->pdfPath());
         self::assertSame($outputDirectory.DIRECTORY_SEPARATOR.'sub-1.pdf', $outputPath);
         self::assertFileExists($outputPath);
-        self::assertSame(1, $this->submissions->saveCount);
+        self::assertSame(2, $this->submissions->saveCount);
+        self::assertTrue($submission->pdfWasEmailed());
+        self::assertCount(1, $this->mailer->sent);
+        self::assertSame('client@example.test', $this->mailer->sent[0]['recipientEmail']);
+        self::assertSame('1040-NR', $this->mailer->sent[0]['questionnaireName']);
+        self::assertSame($outputPath, $this->mailer->sent[0]['absolutePdfPath']);
+        self::assertSame('sub-1.pdf', $this->mailer->sent[0]['downloadFileName']);
     }
 
     public function testItDoesNotRegenerateWhenThePdfIsAlreadyReady(): void
@@ -230,7 +244,9 @@ final class GenerateSubmissionPdfTest extends TestCase
         self::assertSame($firstPath, $secondPath);
         self::assertSame('sub-1.pdf', $submission->pdfPath());
         self::assertSame(SubmissionStatus::PdfReady, $submission->status());
-        self::assertSame(1, $this->submissions->saveCount);
+        self::assertSame(2, $this->submissions->saveCount);
+        self::assertCount(1, $this->mailer->sent);
+        self::assertTrue($submission->pdfWasEmailed());
     }
 
     public function testItRegeneratesWhenTheStoredPdfFileIsMissing(): void
@@ -254,7 +270,8 @@ final class GenerateSubmissionPdfTest extends TestCase
         self::assertSame(SubmissionStatus::PdfReady, $submission->status());
         self::assertSame('sub-1.pdf', $submission->pdfPath());
         self::assertFileExists($regenerated);
-        self::assertSame(2, $this->submissions->saveCount);
+        self::assertSame(3, $this->submissions->saveCount);
+        self::assertCount(1, $this->mailer->sent);
     }
 
     public function testItResolvesTheTemplateFromFormTypeAfterARename(): void
@@ -311,13 +328,66 @@ final class GenerateSubmissionPdfTest extends TestCase
         $useCase->execute('sub-1');
     }
 
+    public function testAMailerFailureLeavesThePdfReadyForDownload(): void
+    {
+        $submission = $this->finalized($this->submission());
+        $outputDirectory = sys_get_temp_dir().DIRECTORY_SEPARATOR.'sprintax-pdf-out-'.uniqid('', true);
+        $useCase = $this->useCase(
+            $submission,
+            new RecordingPdfGenerator(),
+            $this->templatesDirectoryWith('1040-nr.pdf'),
+            $outputDirectory,
+            new FailingSubmissionPdfMailer(),
+        );
+
+        try {
+            $useCase->execute('sub-1');
+            self::fail('Expected emailing the PDF to fail.');
+        } catch (\RuntimeException $exception) {
+            self::assertSame('Mail transport failed.', $exception->getMessage());
+            self::assertSame(SubmissionStatus::PdfReady, $submission->status());
+            self::assertSame('sub-1.pdf', $submission->pdfPath());
+            self::assertFalse($submission->pdfWasEmailed());
+            self::assertFileExists($outputDirectory.DIRECTORY_SEPARATOR.'sub-1.pdf');
+            self::assertSame(1, $this->submissions->saveCount);
+        }
+    }
+
+    public function testItEmailsWhenThePdfAlreadyExistsButWasNotSent(): void
+    {
+        $submission = $this->finalized($this->submission());
+        $outputDirectory = sys_get_temp_dir().DIRECTORY_SEPARATOR.'sprintax-pdf-out-'.uniqid('', true);
+        mkdir($outputDirectory, 0775, true);
+        $outputPath = $outputDirectory.DIRECTORY_SEPARATOR.'sub-1.pdf';
+        file_put_contents($outputPath, '%PDF-1.4');
+        $submission->markPdfReady(new DateTimeImmutable('2026-01-01T11:05:00+00:00'), 'sub-1.pdf');
+        $recorder = new RecordingPdfGenerator();
+        $useCase = $this->useCase(
+            $submission,
+            $recorder,
+            $this->templatesDirectoryWith('1040-nr.pdf'),
+            $outputDirectory,
+        );
+
+        $useCase->execute('sub-1');
+
+        self::assertSame(0, $recorder->calls);
+        self::assertCount(1, $this->mailer->sent);
+        self::assertTrue($submission->pdfWasEmailed());
+        self::assertSame($outputPath, $this->mailer->sent[0]['absolutePdfPath']);
+    }
+
     private function useCase(
         QuestionnaireSubmission $submission,
         PdfGeneratorInterface $generator,
         string $templatesDirectory,
         string $outputDirectory,
+        ?SubmissionPdfMailer $mailer = null,
     ): GenerateSubmissionPdf {
         $this->submissions = InMemorySubmissionRepository::with($submission);
+        $this->mailer = $mailer instanceof RecordingSubmissionPdfMailer
+            ? $mailer
+            : new RecordingSubmissionPdfMailer();
 
         return new GenerateSubmissionPdf(
             $this->submissions,
@@ -325,7 +395,21 @@ final class GenerateSubmissionPdfTest extends TestCase
             $generator,
             new QuestionVisibilityEvaluator(),
             new LocalFileStorage(),
+            $this->emailer($this->submissions, $outputDirectory, $mailer ?? $this->mailer),
             $templatesDirectory,
+            $outputDirectory,
+        );
+    }
+
+    private function emailer(
+        InMemorySubmissionRepository $submissions,
+        string $outputDirectory,
+        SubmissionPdfMailer $mailer,
+    ): EmailSubmissionPdf {
+        return new EmailSubmissionPdf(
+            $submissions,
+            new LocalFileStorage(),
+            $mailer,
             $outputDirectory,
         );
     }

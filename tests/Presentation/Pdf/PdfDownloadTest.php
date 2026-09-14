@@ -111,10 +111,26 @@ final class PdfDownloadTest extends WebDatabaseTestCase
         $this->client->request('GET', '/submissions/'.$submission->id().'/pdf');
         self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
 
-        $this->client->request('GET', '/client/submissions/'.$submission->id().'/done');
-        self::assertResponseIsSuccessful();
-        self::assertSelectorTextContains('body', 'prepared in the background');
-        self::assertSelectorTextNotContains('body', 'Download PDF');
+        $this->assertAwaitingPdfOn('/client/submissions/'.$submission->id().'/done');
+        $this->assertAwaitingPdfOn('/client/submissions/'.$submission->id().'/review');
+        $this->assertAwaitingPdfOn('/client');
+        $this->assertAwaitingPdfOn('/submissions/'.$submission->id());
+    }
+
+    public function testReadyPdfPagesShowTheDownloadLinkAndDoNotRefresh(): void
+    {
+        $owner = $this->persistUser(User::registerClient(
+            'u-owner',
+            new Email('owner@example.test'),
+            $this->hash('password1'),
+        ));
+        $submission = $this->persistReadySubmission('dl-ready-ux', $owner);
+
+        $this->client->loginUser(SecurityUser::fromUser($owner));
+        $this->assertReadyPdfOn('/client/submissions/'.$submission->id().'/done');
+        $this->assertReadyPdfOn('/client/submissions/'.$submission->id().'/review');
+        $this->assertReadyPdfOn('/client');
+        $this->assertReadyPdfOn('/submissions/'.$submission->id());
     }
 
     public function testAReadySubmissionWithAMissingFileReturnsNotFound(): void
@@ -134,19 +150,24 @@ final class PdfDownloadTest extends WebDatabaseTestCase
         self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
     }
 
-    public function testTheClientHomeOffersADownloadWhenThePdfIsReady(): void
+    private function assertAwaitingPdfOn(string $path): void
     {
-        $owner = $this->persistUser(User::registerClient(
-            'u-owner',
-            new Email('owner@example.test'),
-            $this->hash('password1'),
-        ));
-        $this->persistReadySubmission('dl-home', $owner);
+        $crawler = $this->client->request('GET', $path);
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', 'prepared in the background');
+        self::assertSelectorTextContains('body', 'Check now');
+        self::assertSelectorTextNotContains('body', 'Download PDF');
+        self::assertSame('5', $crawler->filter('meta[http-equiv="refresh"]')->attr('content'));
+        self::assertStringContainsString('no-store', (string) $this->client->getResponse()->headers->get('cache-control'));
+    }
 
-        $this->client->loginUser(SecurityUser::fromUser($owner));
-        $this->client->request('GET', '/client');
+    private function assertReadyPdfOn(string $path): void
+    {
+        $this->client->request('GET', $path);
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('body', 'Download PDF');
+        self::assertSelectorTextNotContains('body', 'prepared in the background');
+        self::assertCount(0, $this->client->getCrawler()->filter('meta[http-equiv="refresh"]'));
     }
 
     private function persistReadySubmission(

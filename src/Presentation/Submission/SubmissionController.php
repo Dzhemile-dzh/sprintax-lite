@@ -11,6 +11,7 @@ use App\Domain\Submission\Exception\InvalidSubmission;
 use App\Domain\Submission\Exception\SubmissionNotFound;
 use App\Infrastructure\Security\SecurityUser;
 use App\Infrastructure\Security\SubmissionVoter;
+use App\Presentation\Http\RendersPdfWaitingPage;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -19,6 +20,8 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('IS_AUTHENTICATED')]
 final class SubmissionController extends AbstractController
 {
+    use RendersPdfWaitingPage;
+
     public function __construct(
         private readonly GetSubmission $getSubmission,
         private readonly DownloadSubmissionPdf $downloadSubmissionPdf,
@@ -30,9 +33,9 @@ final class SubmissionController extends AbstractController
     {
         $submission = $this->authorizedSubmission($id, SubmissionVoter::VIEW);
 
-        return $this->render('submission/show.html.twig', [
+        return $this->renderPdfWaiting('submission/show.html.twig', [
             'submission' => $submission,
-        ]);
+        ], $submission->status()->isAwaitingPdf());
     }
 
     #[Route('/submissions/{id}/pdf', name: 'submission_pdf', methods: ['GET'])]

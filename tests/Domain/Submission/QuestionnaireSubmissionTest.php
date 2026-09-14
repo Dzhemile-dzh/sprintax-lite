@@ -32,6 +32,7 @@ final class QuestionnaireSubmissionTest extends TestCase
         );
 
         self::assertSame(SubmissionStatus::InProgress, $submission->status());
+        self::assertFalse($submission->status()->isAwaitingPdf());
         self::assertSame('step-1', $submission->currentStepId());
 
         $submission->recordAnswer(
@@ -84,6 +85,7 @@ final class QuestionnaireSubmissionTest extends TestCase
 
         $submission->finalize(new DateTimeImmutable('2026-01-01T11:00:00+00:00'));
         self::assertSame(SubmissionStatus::Finalized, $submission->status());
+        self::assertTrue($submission->status()->isAwaitingPdf());
 
         $this->expectException(InvalidSubmission::class);
         $submission->finalize(new DateTimeImmutable('2026-01-01T11:01:00+00:00'));
@@ -121,6 +123,7 @@ final class QuestionnaireSubmissionTest extends TestCase
         );
 
         self::assertSame(SubmissionStatus::PdfReady, $submission->status());
+        self::assertFalse($submission->status()->isAwaitingPdf());
         self::assertSame('/tmp/sub-1.pdf', $submission->pdfPath());
 
         $submission->markPdfReady(
@@ -130,6 +133,44 @@ final class QuestionnaireSubmissionTest extends TestCase
 
         self::assertSame(SubmissionStatus::PdfReady, $submission->status());
         self::assertSame('/tmp/sub-1-again.pdf', $submission->pdfPath());
+    }
+
+    public function testMarkPdfEmailedRejectsInProgressSubmissions(): void
+    {
+        $submission = QuestionnaireSubmission::start(
+            'sub-1',
+            $this->questionnaire(),
+            $this->client(),
+            new DateTimeImmutable('2026-01-01T10:00:00+00:00'),
+        );
+
+        $this->expectException(InvalidSubmission::class);
+        $submission->markPdfEmailed(new DateTimeImmutable('2026-01-01T11:00:00+00:00'));
+    }
+
+    public function testMarkPdfEmailedStoresTheTimestampOnce(): void
+    {
+        $submission = QuestionnaireSubmission::start(
+            'sub-1',
+            $this->questionnaire(),
+            $this->client(),
+            new DateTimeImmutable('2026-01-01T10:00:00+00:00'),
+        );
+        $submission->finalize(new DateTimeImmutable('2026-01-01T11:00:00+00:00'));
+        $submission->markPdfReady(
+            new DateTimeImmutable('2026-01-01T11:05:00+00:00'),
+            '/tmp/sub-1.pdf',
+        );
+
+        self::assertFalse($submission->pdfWasEmailed());
+
+        $first = new DateTimeImmutable('2026-01-01T11:06:00+00:00');
+        $submission->markPdfEmailed($first);
+        self::assertTrue($submission->pdfWasEmailed());
+        self::assertEquals($first, $submission->pdfEmailedAt());
+
+        $submission->markPdfEmailed(new DateTimeImmutable('2026-01-01T11:07:00+00:00'));
+        self::assertEquals($first, $submission->pdfEmailedAt());
     }
 
     public function testCannotStartWhenQuestionnaireHasNoSteps(): void

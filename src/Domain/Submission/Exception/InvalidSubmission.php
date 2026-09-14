@@ -11,6 +11,8 @@ final class InvalidSubmission extends RuntimeException
 {
     private bool $deniesAccess = false;
 
+    private bool $retryable = false;
+
     public static function questionnaireHasNoSteps(): self
     {
         return new self('A submission cannot start because the questionnaire has no steps.');
@@ -36,6 +38,16 @@ final class InvalidSubmission extends RuntimeException
         return new self(sprintf('A PDF cannot be generated from status "%s".', $status->value));
     }
 
+    public static function cannotMarkPdfEmailed(SubmissionStatus $status): self
+    {
+        return new self(sprintf('A PDF cannot be emailed from status "%s".', $status->value));
+    }
+
+    public static function cannotEmailPdf(SubmissionStatus $status): self
+    {
+        return new self(sprintf('The PDF cannot be emailed from status "%s".', $status->value));
+    }
+
     public static function unknownStep(string $stepId): self
     {
         return new self(sprintf('Step "%s" is not part of this submission questionnaire.', $stepId));
@@ -52,6 +64,11 @@ final class InvalidSubmission extends RuntimeException
     public function deniesAccess(): bool
     {
         return $this->deniesAccess;
+    }
+
+    public function isRetryable(): bool
+    {
+        return $this->retryable;
     }
 
     public static function blankAnswerValue(): self
@@ -81,7 +98,10 @@ final class InvalidSubmission extends RuntimeException
 
     public static function pdfFileMissing(): self
     {
-        return new self('The generated PDF file is not available.');
+        $exception = new self('The generated PDF file is not available.');
+        $exception->retryable = true;
+
+        return $exception;
     }
 
     public static function unsafePdfPath(): self

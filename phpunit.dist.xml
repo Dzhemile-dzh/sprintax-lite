@@ -17,6 +17,8 @@
         <server name="KERNEL_CLASS" value="App\Kernel" force="true" />
         <server name="APP_SECRET" value="test-secret" force="true" />
         <server name="DATABASE_URL" value="sqlite:///%kernel.project_dir%/var/test.db" force="true" />
+        <server name="MAILER_DSN" value="null://null" force="true" />
+        <server name="MAILER_FROM" value="noreply@example.test" force="true" />
         <server name="SHELL_VERBOSITY" value="-1" />
     </php>
 
@@ -26,6 +28,7 @@
             <directory>tests/Application</directory>
             <directory>tests/Architecture</directory>
             <directory>tests/Infrastructure/Calculation</directory>
+            <directory>tests/Infrastructure/Mail</directory>
             <directory>tests/Infrastructure/Pdf</directory>
             <directory>tests/Infrastructure/Security</directory>
             <exclude>tests/Application/KernelBootTest.php</exclude>

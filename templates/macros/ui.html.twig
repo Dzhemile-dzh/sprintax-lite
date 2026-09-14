@@ -41,6 +41,9 @@
 {% macro pdf_download(submission) %}
     {% if submission.status.value == 'pdf_ready' and is_granted('submission_download', submission) %}
         {{ _self.link(path('submission_pdf', {id: submission.id}), 'Download PDF') }}
+    {% elseif submission.status.awaitingPdf %}
+        <span role="status" aria-live="polite">The PDF is being prepared in the background. This page refreshes automatically.</span>
+        {{ _self.link(app.request.uri, 'Check now') }}
     {% endif %}
 {% endmacro %}
 

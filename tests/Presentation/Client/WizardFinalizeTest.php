@@ -42,9 +42,12 @@ final class WizardFinalizeTest extends WebDatabaseTestCase
 
         $this->client->submit($crawler->selectButton('Submit')->form());
         self::assertResponseRedirects();
-        $this->client->followRedirect();
+        $crawler = $this->client->followRedirect();
         self::assertSelectorTextContains('h1', 'Submitted');
         self::assertSelectorTextContains('body', 'prepared in the background');
+        self::assertSelectorTextContains('body', 'Check now');
+        self::assertSame('5', $crawler->filter('meta[http-equiv="refresh"]')->attr('content'));
+        self::assertStringContainsString('no-store', (string) $this->client->getResponse()->headers->get('cache-control'));
 
         $submission = $this->submissions()->findForUser($clientUser->id())[0];
         self::assertSame(SubmissionStatus::Finalized, $submission->status());

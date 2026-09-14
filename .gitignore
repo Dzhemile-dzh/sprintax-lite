@@ -22,5 +22,6 @@
 ###< phpstan/phpstan ###
 
 .idea/
+/compose.override.yaml
 /identifier.sqlite
 /AGENTS.md

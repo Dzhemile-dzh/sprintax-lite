@@ -20,6 +20,8 @@ jobs:
       APP_SECRET: test-secret
       MESSENGER_TRANSPORT_DSN: 'doctrine://default?auto_setup=1'
       DEFAULT_URI: 'http://localhost'
+      MAILER_DSN: 'null://null'
+      MAILER_FROM: 'noreply@example.test'
     steps:
       - name: Checkout
         uses: actions/checkout@v4

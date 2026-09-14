@@ -109,6 +109,8 @@ On Windows use `copy .env.example .env`. Docker Compose injects its own environm
 | `APP_SECRET` | Symfony secret |
 | `DATABASE_URL` | SQLite path |
 | `MESSENGER_TRANSPORT_DSN` | Async Messenger transport (Doctrine queue by default) |
+| `MAILER_DSN` | Mailer transport (`null://null` discards mail) |
+| `MAILER_FROM` | From address for the client PDF email |
 
 ## Database migration
 
@@ -165,7 +167,7 @@ Finalize does **not** build the PDF in the HTTP request. It marks the submission
 php bin/console messenger:consume async
 ```
 
-Docker Compose already runs that in the `worker` service (`docker compose logs -f worker`). Jobs retry up to three times, then move to `failed` (`doctrine://default?queue_name=failed`). The handler is idempotent: a second delivery does not write another file if the PDF is already there.
+Docker Compose already runs that in the `worker` service (`docker compose logs -f worker`). Jobs retry up to three times, then move to `failed` (`doctrine://default?queue_name=failed`). The handler is idempotent: a second delivery does not write another file if the PDF is already there. After the file is stored, the worker emails it to the client (`MAILER_FROM`) with the PDF attached. A second delivery does not send another email. Mailer uses `MAILER_DSN` (`null://null` locally, so messages are discarded unless you point it at SMTP). Email send runs inside the PDF worker (`message_bus: false`) so `pdf_emailed_at` is recorded only after the transport accepts the message. If sending fails, the PDF stays `pdf_ready` for download and the job retries the email.
 
 ## Running tests
 
@@ -180,7 +182,7 @@ composer lint
 | Suite | Covers |
 | --- | --- |
 | unit | Visibility, calculation, domain rules, PDF orchestration, voters, architecture |
-| functional | Register, login, admin builder, wizard, resume, conditionals, review, finalize, authorization, PDF download |
+| functional | Register, login, admin builder, wizard, resume, conditionals, review, finalize, authorization, PDF download, waiting UX, PDF email |
 | messenger | Handler behavior and idempotency |
 
 `composer test` runs all three. PHPUnit uses SQLite at `var/test.db`.
@@ -209,11 +211,13 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on push to `main` and on pull r
 
 ## PDF generation
 
-Overlay goes through `PdfGeneratorInterface`. `GenerateSubmissionPdf` resolves `resources/pdf/{formType}.pdf` from the questionnaire's `FormType` (locked after a client starts; for Form 1040-NR, `resources/pdf/1040-nr.pdf`). It maps **visible** answers and computed fields through admin `QuestionMapping` coordinates (mm), and `FpdiPdfGenerator` stamps those values. The generator has no hardcoded field positions. File checks and directory creation go through `FileStorageInterface`. The worker writes the file under `var/pdf/` and stores `{id}.pdf` on the submission. The display name can be renamed without changing the template.
+Overlay goes through `PdfGeneratorInterface`. `GenerateSubmissionPdf` resolves `resources/pdf/{formType}.pdf` from the questionnaire's `FormType` (locked after a client starts; for Form 1040-NR, `resources/pdf/1040-nr.pdf`). It maps **visible** answers and computed fields through admin `QuestionMapping` coordinates (mm), and `FpdiPdfGenerator` stamps those values. The generator has no hardcoded field positions. File checks and directory creation go through `FileStorageInterface`. The worker writes the file under `var/pdf/` and stores `{id}.pdf` on the submission. It then emails that file to the client. The display name can be renamed without changing the template.
 
 The official IRS form is **not** in this repository (`resources/pdf/` is empty aside from `.gitkeep`). Download a blank Form 1040-NR and save it as `resources/pdf/1040-nr.pdf` before generating a real overlay. Tests use their own dummy PDFs.
 
 Download is `GET /submissions/{id}/pdf` (`BinaryFileResponse`). `SubmissionVoter::DOWNLOAD`: another client gets 403; a PDF that is not ready returns 404.
+
+While status is `finalized`, the confirmation, review, client home, and submission pages refresh every 5 seconds, send `Cache-Control: no-store`, and show a preparing message with a **Check now** link. Refresh stops when the status becomes `pdf_ready` and the download link appears.
 
 ## Conditional visibility
 
@@ -240,6 +244,7 @@ Rules live on the question (`equals` / `not_equals`). `QuestionVisibilityEvaluat
 - The IRS 1040-NR blank is not shipped. Without `resources/pdf/1040-nr.pdf`, Messenger PDF jobs fail. Overlay is coordinate-based; there is no interactive form-field fill.
 - Messenger `messenger_messages` is created by Doctrine transport auto-setup in `dev`, not by migrations.
 - Demo passwords are fixtures for local/CI use, not a production identity store.
+- `MAILER_DSN=null://null` discards PDF emails until you configure SMTP.
 
 ## AI assistance
 

@@ -53,6 +53,9 @@ final class QuestionnaireSubmission
     #[ORM\Column(name: 'pdf_path', type: 'string', length: 512, nullable: true)]
     private ?string $pdfPath = null;
 
+    #[ORM\Column(name: 'pdf_emailed_at', type: 'datetime_immutable', nullable: true)]
+    private ?DateTimeImmutable $pdfEmailedAt = null;
+
     /**
      * @var Collection<int, Answer>
      */
@@ -79,6 +82,7 @@ final class QuestionnaireSubmission
         $this->updatedAt = $updatedAt;
         $this->finalizedAt = $finalizedAt;
         $this->pdfPath = $pdfPath;
+        $this->pdfEmailedAt = null;
         $this->answers = new ArrayCollection();
     }
 
@@ -154,6 +158,16 @@ final class QuestionnaireSubmission
     public function pdfPath(): ?string
     {
         return $this->pdfPath;
+    }
+
+    public function pdfEmailedAt(): ?DateTimeImmutable
+    {
+        return $this->pdfEmailedAt;
+    }
+
+    public function pdfWasEmailed(): bool
+    {
+        return $this->pdfEmailedAt !== null;
     }
 
     /**
@@ -258,5 +272,19 @@ final class QuestionnaireSubmission
         $this->status = SubmissionStatus::PdfReady;
         $this->pdfPath = $pdfPath;
         $this->updatedAt = $readyAt;
+    }
+
+    public function markPdfEmailed(DateTimeImmutable $emailedAt): void
+    {
+        if ($this->status !== SubmissionStatus::PdfReady) {
+            throw InvalidSubmission::cannotMarkPdfEmailed($this->status);
+        }
+
+        if ($this->pdfEmailedAt !== null) {
+            return;
+        }
+
+        $this->pdfEmailedAt = $emailedAt;
+        $this->updatedAt = $emailedAt;
     }
 }

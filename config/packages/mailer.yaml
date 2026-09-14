@@ -1,0 +1,6 @@
+framework:
+    mailer:
+        dsn: '%env(MAILER_DSN)%'
+        # The PDF worker is already async. Send the message here so pdf_emailed_at
+        # is recorded only after the transport accepts it.
+        message_bus: false

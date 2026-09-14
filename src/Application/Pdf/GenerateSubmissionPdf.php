@@ -30,6 +30,7 @@ final class GenerateSubmissionPdf
         private readonly PdfGeneratorInterface $pdfGenerator,
         private readonly QuestionVisibilityEvaluator $visibility,
         private readonly FileStorageInterface $fileStorage,
+        private readonly EmailSubmissionPdf $emailSubmissionPdf,
         private readonly string $templatesDirectory,
         private readonly string $outputDirectory,
     ) {
@@ -47,6 +48,8 @@ final class GenerateSubmissionPdf
         $existingPath = $this->existingPdfPath($submission, $outputPath);
 
         if ($existingPath !== null) {
+            $this->emailSubmissionPdf->execute($submissionId);
+
             return $existingPath;
         }
 
@@ -62,6 +65,7 @@ final class GenerateSubmissionPdf
 
         $submission->markPdfReady(new DateTimeImmutable(), $this->storedPdfPath($submission->id()));
         $this->submissions->save($submission);
+        $this->emailSubmissionPdf->execute($submissionId);
 
         return $outputPath;
     }

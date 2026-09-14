@@ -44,9 +44,20 @@ services:
             $templatesDirectory: '%app.pdf.templates_dir%'
             $outputDirectory: '%app.pdf.output_dir%'
 
+    App\Application\Pdf\EmailSubmissionPdf:
+        arguments:
+            $outputDirectory: '%app.pdf.output_dir%'
+
     App\Application\Pdf\DownloadSubmissionPdf:
         arguments:
             $outputDirectory: '%app.pdf.output_dir%'
+
+    App\Application\Pdf\SubmissionPdfMailer:
+        alias: App\Infrastructure\Mail\SymfonySubmissionPdfMailer
+
+    App\Infrastructure\Mail\SymfonySubmissionPdfMailer:
+        arguments:
+            $fromAddress: '%env(MAILER_FROM)%'
 
     App\Domain\Filesystem\Contract\FileStorageInterface:
         alias: App\Infrastructure\Filesystem\LocalFileStorage
