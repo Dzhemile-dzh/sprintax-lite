@@ -14,6 +14,7 @@ use App\Domain\Questionnaire\ValueObject\VisibilityCondition;
 use App\Domain\Questionnaire\ValueObject\VisibilityOperator;
 use App\Domain\Questionnaire\ValueObject\VisibilityRule;
 use App\Domain\Submission\Entity\QuestionnaireSubmission;
+use App\Domain\Submission\Exception\InvalidSubmission;
 use App\Domain\Submission\Exception\SubmissionNotFound;
 use App\Domain\Submission\QuestionAnswerValidator;
 use App\Domain\Submission\Repository\SubmissionRepositoryInterface;
@@ -65,6 +66,44 @@ final class SaveStepTest extends TestCase
         self::assertSame('yes', $submission->answersByQuestionKey()['married']->raw());
         self::assertArrayNotHasKey('spouse_name', $submission->answersByQuestionKey());
         self::assertSame('step-1', $submission->currentStepId());
+    }
+
+    public function testItRejectsAMissingRequiredAnswerWhenAdvancing(): void
+    {
+        $submission = $this->submission();
+
+        $this->expectException(InvalidSubmission::class);
+        $this->expectExceptionMessage('Question "married" is required.');
+        $this->saveStep($submission)->execute('sub-1', 'step-1', [
+            'married' => '',
+        ], true);
+    }
+
+    public function testItRejectsAnInvalidDate(): void
+    {
+        $questionnaire = Questionnaire::create('q-1', '1040-NR');
+        $questionnaire->addStep('step-1', 'Personal');
+        $questionnaire->addQuestion(
+            'step-1',
+            'q-birth',
+            'birth_date',
+            'Birth date',
+            QuestionType::Date,
+            null,
+            QuestionValidation::required(),
+        );
+        $submission = QuestionnaireSubmission::start(
+            'sub-1',
+            $questionnaire,
+            User::registerClient('user-1', new Email('client@example.test'), 'hashed-password'),
+            new DateTimeImmutable('2026-01-01T10:00:00+00:00'),
+        );
+
+        $this->expectException(InvalidSubmission::class);
+        $this->expectExceptionMessage('must be a valid date');
+        $this->saveStep($submission)->execute('sub-1', 'step-1', [
+            'birth_date' => '13/13/1990',
+        ], true);
     }
 
     private function saveStep(QuestionnaireSubmission $submission): SaveStep
