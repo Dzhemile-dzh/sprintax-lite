@@ -96,7 +96,20 @@ Conditional visibility lives on the question (`equals` / `not_equals`). `Questio
 docker compose up --build
 ```
 
-The app listens on [http://localhost:8080](http://localhost:8080). Compose also starts a `worker` service that consumes async PDF jobs.
+The app listens on [http://localhost:8080](http://localhost:8080). Compose also starts a `worker` service that waits until `var/data` is writable, then consumes async PDF jobs as `www-data`.
+
+After the containers are up, apply the schema and demo data (as `www-data` so Apache can write the SQLite file):
+
+```bash
+docker compose exec --user www-data app php bin/console doctrine:migrations:migrate --no-interaction
+docker compose exec --user www-data app php bin/console doctrine:fixtures:load --no-interaction
+```
+
+If login fails with a readonly-database error, the data volume was created as root. Fix it with:
+
+```bash
+docker compose exec app chown -R www-data:www-data /var/www/html/var/data
+```
 
 SQLite data is stored in a Docker volume. Linux vendor packages are isolated from the host `vendor/` directory so Windows and container PHP builds do not mix.
 
@@ -105,6 +118,8 @@ SQLite data is stored in a Docker volume. Linux vendor packages are isolated fro
 ```bash
 composer install
 copy .env.example .env
+php bin/console doctrine:migrations:migrate --no-interaction
+php bin/console doctrine:fixtures:load --no-interaction
 php -S 127.0.0.1:8000 -t public
 ```
 
@@ -137,6 +152,15 @@ Warm the Symfony cache before PHPStan so the compiled container XML exists:
 php bin/console cache:warmup
 composer phpstan
 ```
+
+## Demo accounts
+
+| Role | Email | Password |
+| --- | --- | --- |
+| Admin | `admin@example.test` | `admin123` |
+| Client | `client@example.test` | `client123` |
+
+Admins open `/admin`. Clients open `/client` (or register a new client at `/register`). The fixtures also load a two-step **1040-NR** questionnaire with a married/spouse visibility rule, income choices, and PDF mappings including computed `tax_owed`.
 
 ## PDF worker
 
