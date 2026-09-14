@@ -25,21 +25,59 @@ final class DownloadSubmissionPdfTest extends TestCase
         $path = $outputDirectory.DIRECTORY_SEPARATOR.'sub-1.pdf';
         file_put_contents($path, '%PDF-1.4');
 
-        $resolved = $this->useCase($this->readySubmission(), $outputDirectory)->execute('sub-1');
+        $resolved = $this->useCase($this->readySubmission(), $outputDirectory)->execute('sub-1', 'user-1', false);
 
         self::assertSame($path, $resolved);
+    }
+
+    public function testAnAdminCanDownloadAnotherUsersPdf(): void
+    {
+        $outputDirectory = $this->outputDirectory();
+        $path = $outputDirectory.DIRECTORY_SEPARATOR.'sub-1.pdf';
+        file_put_contents($path, '%PDF-1.4');
+
+        $resolved = $this->useCase($this->readySubmission(), $outputDirectory)->execute('sub-1', 'admin-1', true);
+
+        self::assertSame($path, $resolved);
+    }
+
+    public function testItRejectsADifferentClient(): void
+    {
+        $this->expectException(InvalidSubmission::class);
+        $this->useCase($this->readySubmission(), $this->outputDirectory())->execute('sub-1', 'user-other', false);
+    }
+
+    public function testItRejectsATraversalSubmissionId(): void
+    {
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
+        $questionnaire->addStep('step-1', 'Personal');
+        $questionnaire->addQuestion('step-1', 'q-name', 'first_name', 'First name', QuestionType::ShortText);
+        $submission = QuestionnaireSubmission::start(
+            '../secret',
+            $questionnaire,
+            User::registerClient('user-1', new Email('client@example.test'), 'hashed-password'),
+            new DateTimeImmutable('2026-01-01T10:00:00+00:00'),
+        );
+        $submission->finalize(new DateTimeImmutable('2026-01-01T11:00:00+00:00'));
+        $submission->markPdfReady(
+            new DateTimeImmutable('2026-01-01T11:05:00+00:00'),
+            '../secret.pdf',
+        );
+
+        $this->expectException(InvalidSubmission::class);
+        $this->useCase($submission, $this->outputDirectory())->execute('../secret', 'user-1', false);
     }
 
     public function testItRejectsSubmissionsThatAreNotPdfReady(): void
     {
         $this->expectException(InvalidSubmission::class);
-        $this->useCase($this->finalizedSubmission(), $this->outputDirectory())->execute('sub-1');
+        $this->useCase($this->finalizedSubmission(), $this->outputDirectory())->execute('sub-1', 'user-1', false);
     }
 
     public function testItRejectsAMissingPdfFile(): void
     {
         $this->expectException(InvalidSubmission::class);
-        $this->useCase($this->readySubmission(), $this->outputDirectory())->execute('sub-1');
+        $this->useCase($this->readySubmission(), $this->outputDirectory())->execute('sub-1', 'user-1', false);
     }
 
     public function testItIgnoresAStoredPathThatDoesNotMatchTheSubmission(): void
@@ -54,7 +92,7 @@ final class DownloadSubmissionPdfTest extends TestCase
         );
 
         $this->expectException(InvalidSubmission::class);
-        $this->useCase($submission, $outputDirectory)->execute('sub-1');
+        $this->useCase($submission, $outputDirectory)->execute('sub-1', 'user-1', false);
     }
 
     private function useCase(

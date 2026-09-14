@@ -67,6 +67,8 @@ docker compose up --build
 
 Apache and the Messenger worker start together. The app is [http://localhost:8080](http://localhost:8080). On first boot the app container runs migrations and loads demo fixtures. SQLite lives in the `sqlite_data` volume. Linux `vendor/` packages live in `vendor_data` so Windows and container PHP builds do not mix.
 
+This stack is for local use (`APP_ENV=dev`). `/_profiler` and `/_wdt` require `ROLE_ADMIN`. Do not publish port 8080 on a shared host without `APP_ENV=prod`, `APP_DEBUG=0`, and a unique `APP_SECRET`.
+
 Commands that write SQLite or `var/cache` should run as `www-data`:
 
 ```bash

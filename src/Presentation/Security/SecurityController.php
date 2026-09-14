@@ -13,6 +13,8 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 
@@ -20,6 +22,7 @@ final class SecurityController extends AbstractController
 {
     public function __construct(
         private readonly RegisterClient $registerClient,
+        private readonly RateLimiterFactory $registrationLimiter,
     ) {
     }
 
@@ -69,13 +72,19 @@ final class SecurityController extends AbstractController
             if (!is_string($email) || !is_string($password)) {
                 $form->addError(new FormError('Registration details are invalid.'));
             } else {
+                $limit = $this->registrationLimiter->create($request->getClientIp() ?? 'unknown')->consume();
+
+                if (!$limit->isAccepted()) {
+                    throw new TooManyRequestsHttpException(60);
+                }
+
                 try {
                     $this->registerClient->execute($email, $password);
                     $this->addFlash('success', 'Your account was created. You can now sign in.');
 
                     return $this->redirectToRoute('app_login');
                 } catch (EmailAlreadyRegistered) {
-                    $form->get('email')->addError(new FormError('This email is already registered.'));
+                    $form->addError(new FormError('Invalid email or password.'));
                 }
             }
         }

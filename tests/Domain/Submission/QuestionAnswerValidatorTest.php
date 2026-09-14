@@ -129,6 +129,21 @@ final class QuestionAnswerValidatorTest extends TestCase
         $this->validator()->validate($question, AnswerValue::text('ab'));
     }
 
+    public function testRegexRulesAllowASlashWithoutDelimiterCollision(): void
+    {
+        $question = $this->question(
+            'code',
+            QuestionType::ShortText,
+            new QuestionValidation(regex: '^[A-Z]/[0-9]$'),
+        );
+
+        $this->validator()->validate($question, AnswerValue::text('A/1'));
+
+        $this->expectException(InvalidSubmission::class);
+        $this->expectExceptionMessage('does not match the expected format');
+        $this->validator()->validate($question, AnswerValue::text('A1'));
+    }
+
     private function validator(): QuestionAnswerValidator
     {
         return new QuestionAnswerValidator();

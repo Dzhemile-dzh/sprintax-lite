@@ -83,4 +83,17 @@ final class InvalidSubmission extends RuntimeException
     {
         return new self('The generated PDF file is not available.');
     }
+
+    public static function unsafePdfPath(): self
+    {
+        return new self('The PDF path is not valid for this submission.');
+    }
+
+    public static function notOwner(): self
+    {
+        $exception = new self('This submission does not belong to the current user.');
+        $exception->deniesAccess = true;
+
+        return $exception;
+    }
 }

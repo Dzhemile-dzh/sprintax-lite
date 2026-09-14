@@ -191,9 +191,54 @@ final class WizardTest extends WebDatabaseTestCase
 
         $this->client->loginUser(SecurityUser::fromUser($other));
         $this->client->request('GET', '/client/submissions/'.$submissionId.'/steps/'.$stepId);
-        self::assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
+        self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
         $this->client->request('GET', '/client/submissions/'.$submissionId.'/review');
+        self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
+        $this->client->request('GET', '/client/submissions/'.$submissionId.'/done');
+        self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
+
+        $this->client->request(
+            'POST',
+            '/client/submissions/'.$submissionId.'/steps/'.$stepId,
+            ['wizard_step' => [
+                'first_name' => 'Eve',
+                'birth_date' => '1990-01-01',
+                'married' => 'no',
+            ]],
+        );
+        self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
+        self::assertArrayNotHasKey('first_name', $this->submissions()->get($submissionId)->answersByQuestionKey());
+
+        $this->client->request('POST', '/client/submissions/'.$submissionId.'/finalize', [
+            '_csrf_token' => 'irrelevant',
+        ]);
+        self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
+        self::assertSame(SubmissionStatus::InProgress, $this->submissions()->get($submissionId)->status());
+    }
+
+    public function testStartingAndFinalizingRequireAValidCsrfToken(): void
+    {
+        $clientUser = $this->loginClient();
+        $this->persistWizardQuestionnaire();
+
+        $this->client->request('POST', '/client/questionnaires/q-1/start');
         self::assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
+        self::assertSame([], $this->submissions()->findForUser($clientUser->id()));
+
+        $this->client->request('POST', '/client/questionnaires/q-1/start', [
+            '_csrf_token' => 'invalid',
+        ]);
+        self::assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
+        self::assertSame([], $this->submissions()->findForUser($clientUser->id()));
+
+        $crawler = $this->client->request('GET', '/client');
+        $this->client->submit($crawler->selectButton('Start')->form());
+        $submissionId = $this->submissionId($clientUser->id());
+        self::assertSame(SubmissionStatus::InProgress, $this->submissions()->get($submissionId)->status());
+
+        $this->client->request('POST', '/client/submissions/'.$submissionId.'/finalize');
+        self::assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
+        self::assertSame(SubmissionStatus::InProgress, $this->submissions()->get($submissionId)->status());
     }
 
     private function loginClient(): User

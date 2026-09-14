@@ -32,6 +32,7 @@ final class RegisterClient
         }
 
         $emailAddress = new Email($email);
+        $passwordHash = $this->passwordHasher->hash($plainPassword);
 
         if ($this->users->findByEmail($emailAddress) !== null) {
             throw EmailAlreadyRegistered::for($emailAddress);
@@ -40,7 +41,7 @@ final class RegisterClient
         $user = User::registerClient(
             bin2hex(random_bytes(16)),
             $emailAddress,
-            $this->passwordHasher->hash($plainPassword),
+            $passwordHash,
         );
         $this->users->save($user);
 

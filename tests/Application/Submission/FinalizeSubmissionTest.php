@@ -36,7 +36,7 @@ final class FinalizeSubmissionTest extends TestCase
 
         $this->expectException(InvalidSubmission::class);
         try {
-            $this->useCase($submission, $scheduler)->execute('sub-1');
+            $this->useCase($submission, $scheduler)->execute('sub-1', 'user-1', false);
         } finally {
             self::assertSame([], $scheduler->submissionIds);
             self::assertSame(SubmissionStatus::InProgress, $submission->status());
@@ -57,7 +57,7 @@ final class FinalizeSubmissionTest extends TestCase
 
         $this->expectException(InvalidSubmission::class);
         try {
-            $this->useCase($submission, $scheduler)->execute('sub-1');
+            $this->useCase($submission, $scheduler)->execute('sub-1', 'user-1', false);
         } finally {
             self::assertSame([], $scheduler->submissionIds);
             self::assertSame(SubmissionStatus::InProgress, $submission->status());
@@ -69,7 +69,7 @@ final class FinalizeSubmissionTest extends TestCase
         $submission = $this->complete($this->submission());
         $scheduler = new RecordingPdfGenerationScheduler();
 
-        $this->useCase($submission, $scheduler)->execute('sub-1');
+        $this->useCase($submission, $scheduler)->execute('sub-1', 'user-1', false);
 
         self::assertSame(SubmissionStatus::Finalized, $submission->status());
         self::assertSame(['sub-1'], $scheduler->submissionIds);
@@ -90,11 +90,25 @@ final class FinalizeSubmissionTest extends TestCase
         $submission->recordAnswer($wages, AnswerValue::text('50'), $now);
         $scheduler = new RecordingPdfGenerationScheduler();
 
-        $this->useCase($submission, $scheduler)->execute('sub-1');
+        $this->useCase($submission, $scheduler)->execute('sub-1', 'user-1', false);
 
         self::assertSame(SubmissionStatus::Finalized, $submission->status());
         self::assertSame(['sub-1'], $scheduler->submissionIds);
         self::assertArrayNotHasKey('spouse_name', $submission->answersByQuestionKey());
+    }
+
+    public function testItRejectsADifferentClientAndDoesNotSchedulePdfGeneration(): void
+    {
+        $submission = $this->complete($this->submission());
+        $scheduler = new RecordingPdfGenerationScheduler();
+
+        $this->expectException(InvalidSubmission::class);
+        try {
+            $this->useCase($submission, $scheduler)->execute('sub-1', 'user-other', false);
+        } finally {
+            self::assertSame([], $scheduler->submissionIds);
+            self::assertSame(SubmissionStatus::InProgress, $submission->status());
+        }
     }
 
     private function useCase(

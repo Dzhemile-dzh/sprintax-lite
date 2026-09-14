@@ -21,6 +21,30 @@ final readonly class QuestionValidation
         if ($this->regex !== null && trim($this->regex) === '') {
             throw InvalidQuestionnaire::blank('validation regex');
         }
+
+        if ($this->regex !== null && @preg_match(self::delimitedPattern($this->regex), '') === false) {
+            throw InvalidQuestionnaire::invalidValidationRegex();
+        }
+    }
+
+    public function matchesPattern(string $raw): bool
+    {
+        if ($this->regex === null) {
+            return true;
+        }
+
+        return @preg_match(self::delimitedPattern($this->regex), $raw) === 1;
+    }
+
+    private static function delimitedPattern(string $regex): string
+    {
+        foreach (['/', '#', '~', '%', '@', '!', ';'] as $delimiter) {
+            if (!str_contains($regex, $delimiter)) {
+                return $delimiter.$regex.$delimiter.'u';
+            }
+        }
+
+        return "\x01".$regex."\x01u";
     }
 
     public static function none(): self

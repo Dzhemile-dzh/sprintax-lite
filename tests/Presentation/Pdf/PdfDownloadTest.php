@@ -71,7 +71,7 @@ final class PdfDownloadTest extends WebDatabaseTestCase
 
         $this->client->loginUser(SecurityUser::fromUser($other));
         $this->client->request('GET', '/submissions/'.$submission->id().'/pdf');
-        self::assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
+        self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
     }
 
     public function testAnAdminCanDownloadAnotherUsersPdf(): void

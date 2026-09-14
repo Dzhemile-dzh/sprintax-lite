@@ -4,9 +4,12 @@ services:
     ports:
       - "8080:80"
     environment: &app-environment
-      APP_ENV: dev
-      APP_DEBUG: "1"
-      APP_SECRET: ${APP_SECRET:-f4aca114fe4323f54c9b7fdd214278ba}
+      # Local defaults. Do not publish port 8080 on a shared network with these values.
+      # Profiler and WDT require ROLE_ADMIN. For a shared demo use APP_ENV=prod, APP_DEBUG=0,
+      # and a unique APP_SECRET.
+      APP_ENV: ${APP_ENV:-dev}
+      APP_DEBUG: ${APP_DEBUG:-1}
+      APP_SECRET: ${APP_SECRET:-change-me-local-only}
       DATABASE_URL: sqlite:////var/www/html/var/data/app.db
       DEFAULT_URI: http://localhost:8080
       MESSENGER_TRANSPORT_DSN: doctrine://default?auto_setup=1

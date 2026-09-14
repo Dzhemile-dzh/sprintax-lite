@@ -77,10 +77,13 @@ final class WizardController extends AbstractController
     #[Route('/submissions/{id}/steps/{stepId}', name: 'client_wizard_step', methods: ['GET', 'POST'])]
     public function step(Request $request, string $id, string $stepId): Response
     {
+        $this->authorizedSubmission(
+            $id,
+            $request->isMethod('POST') ? SubmissionVoter::EDIT : SubmissionVoter::VIEW,
+        );
+
         try {
             $view = $this->getWizardStep->execute($id, $stepId);
-        } catch (SubmissionNotFound) {
-            throw $this->createNotFoundException();
         } catch (InvalidSubmission $exception) {
             if ($exception->deniesAccess()) {
                 throw $this->createAccessDeniedException();
@@ -88,11 +91,6 @@ final class WizardController extends AbstractController
 
             throw $this->createNotFoundException();
         }
-
-        $this->denyAccessUnlessGranted(
-            $request->isMethod('POST') ? SubmissionVoter::EDIT : SubmissionVoter::VIEW,
-            $view->submission,
-        );
 
         if (!$view->openForEditing) {
             if ($request->isMethod('POST')) {
@@ -159,13 +157,13 @@ final class WizardController extends AbstractController
     #[Route('/submissions/{id}/review', name: 'client_wizard_review', methods: ['GET'])]
     public function review(string $id): Response
     {
+        $this->authorizedSubmission($id, SubmissionVoter::VIEW);
+
         try {
             $review = $this->reviewSubmission->execute($id);
         } catch (SubmissionNotFound) {
             throw $this->createNotFoundException();
         }
-
-        $this->denyAccessUnlessGranted(SubmissionVoter::VIEW, $review->submission);
 
         if ($review->resumeStepId !== null) {
             return $this->redirectToRoute('client_wizard_step', [
@@ -185,15 +183,16 @@ final class WizardController extends AbstractController
     #[Route('/submissions/{id}/finalize', name: 'client_wizard_finalize', methods: ['POST'])]
     public function finalize(Request $request, string $id): Response
     {
+        $this->authorizedSubmission($id, SubmissionVoter::EDIT);
+
         if (!$this->isCsrfTokenValid('finalize-'.$id, $request->request->getString('_csrf_token'))) {
             throw $this->createAccessDeniedException('Invalid CSRF token.');
         }
 
-        $submission = $this->submission($id);
-        $this->denyAccessUnlessGranted(SubmissionVoter::EDIT, $submission);
+        $actor = $this->securityUser();
 
         try {
-            $this->finalizeSubmission->execute($id);
+            $this->finalizeSubmission->execute($id, $actor->id(), $actor->isAdmin());
         } catch (InvalidSubmission $exception) {
             $this->addFlash('error', $exception->getMessage());
 
@@ -206,8 +205,7 @@ final class WizardController extends AbstractController
     #[Route('/submissions/{id}/done', name: 'client_wizard_done', methods: ['GET'])]
     public function done(string $id): Response
     {
-        $submission = $this->submission($id);
-        $this->denyAccessUnlessGranted(SubmissionVoter::VIEW, $submission);
+        $submission = $this->authorizedSubmission($id, SubmissionVoter::VIEW);
 
         if ($submission->status() === SubmissionStatus::InProgress) {
             return $this->redirectToRoute('client_wizard_review', ['id' => $id]);
@@ -231,13 +229,19 @@ final class WizardController extends AbstractController
         ]);
     }
 
-    private function submission(string $id): QuestionnaireSubmission
+    private function authorizedSubmission(string $id, string $attribute): QuestionnaireSubmission
     {
         try {
-            return $this->getSubmission->execute($id);
+            $submission = $this->getSubmission->execute($id);
         } catch (SubmissionNotFound) {
             throw $this->createNotFoundException();
         }
+
+        if (!$this->isGranted($attribute, $submission)) {
+            throw $this->createNotFoundException();
+        }
+
+        return $submission;
     }
 
     private function securityUser(): SecurityUser

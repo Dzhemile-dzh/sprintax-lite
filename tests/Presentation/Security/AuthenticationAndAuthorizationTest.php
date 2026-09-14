@@ -64,7 +64,8 @@ final class AuthenticationAndAuthorizationTest extends WebDatabaseTestCase
         $this->client->submit($form);
 
         self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
-        self::assertSelectorTextContains('body', 'already registered');
+        self::assertSelectorTextContains('body', 'Invalid email or password.');
+        self::assertSelectorTextNotContains('body', 'already registered');
 
         $users = static::getContainer()->get(UserRepositoryInterface::class);
         self::assertInstanceOf(UserRepositoryInterface::class, $users);
@@ -139,7 +140,7 @@ final class AuthenticationAndAuthorizationTest extends WebDatabaseTestCase
         self::assertSelectorTextContains('h1', 'Submission');
 
         $this->client->request('GET', '/submissions/'.$theirs->id());
-        self::assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
+        self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
 
         $this->client->loginUser(SecurityUser::fromUser($admin));
         $this->client->request('GET', '/submissions/'.$theirs->id());

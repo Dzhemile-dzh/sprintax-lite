@@ -63,6 +63,11 @@ final class InvalidQuestionnaire extends RuntimeException
         return new self('Validation min cannot be greater than max.');
     }
 
+    public static function invalidValidationRegex(): self
+    {
+        return new self('Validation regex is not a valid pattern.');
+    }
+
     public static function mappingNotFound(string $mappingId): self
     {
         return new self(sprintf('PDF mapping "%s" does not belong to this questionnaire.', $mappingId));

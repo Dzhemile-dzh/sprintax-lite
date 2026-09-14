@@ -9,7 +9,7 @@ security:
 
     firewalls:
         dev:
-            pattern: ^/(_profiler|_wdt|assets|build)/
+            pattern: ^/(assets|build)/
             security: false
         main:
             lazy: true
@@ -21,6 +21,9 @@ security:
                 password_parameter: _password
                 enable_csrf: true
                 default_target_path: app_home
+            login_throttling:
+                max_attempts: 5
+                interval: '15 minutes'
             logout:
                 path: app_logout
                 enable_csrf: true
@@ -29,12 +32,18 @@ security:
     access_control:
         - { path: ^/login, roles: PUBLIC_ACCESS }
         - { path: ^/register, roles: PUBLIC_ACCESS }
+        - { path: ^/(_profiler|_wdt), roles: ROLE_ADMIN }
         - { path: ^/admin, roles: ROLE_ADMIN }
         - { path: ^/client, roles: ROLE_CLIENT }
         - { path: ^/submissions, roles: IS_AUTHENTICATED }
 
 when@test:
     security:
+        firewalls:
+            main:
+                login_throttling:
+                    max_attempts: 1000
+                    interval: '1 minute'
         password_hashers:
             Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface:
                 algorithm: auto

@@ -81,12 +81,12 @@ final class GenerateSubmissionPdf
 
     private function storedPdfPath(string $submissionId): string
     {
-        return $submissionId.'.pdf';
+        return PdfOutputPath::fileName($submissionId);
     }
 
     private function outputPathFor(string $submissionId): string
     {
-        return $this->outputDirectory.DIRECTORY_SEPARATOR.$this->storedPdfPath($submissionId);
+        return PdfOutputPath::absolute($this->outputDirectory, $submissionId);
     }
 
     /**

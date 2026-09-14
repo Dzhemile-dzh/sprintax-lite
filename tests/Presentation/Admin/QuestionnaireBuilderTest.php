@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Presentation\Admin;
 
 use App\Application\User\PasswordHasherInterface;
+use App\Domain\Questionnaire\Entity\Questionnaire;
 use App\Domain\Questionnaire\Repository\QuestionnaireRepositoryInterface;
 use App\Domain\Questionnaire\ValueObject\FormType;
 use App\Domain\Questionnaire\ValueObject\MappingSourceType;
@@ -36,6 +37,38 @@ final class QuestionnaireBuilderTest extends WebDatabaseTestCase
 
         $this->client->request('GET', '/admin/questionnaires/new');
         self::assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
+
+        $this->client->request('POST', '/admin/questionnaires/q-missing/questions/q-missing/delete', [
+            '_csrf_token' => 'invalid',
+        ]);
+        self::assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
+    }
+
+    public function testDeletingAQuestionRequiresAValidCsrfToken(): void
+    {
+        $this->loginAdmin();
+
+        $questionnaire = Questionnaire::create(
+            'q-csrf',
+            '1040-NR',
+            FormType::Form1040Nr,
+        );
+        $questionnaire->addStep('step-1', 'Personal');
+        $question = $questionnaire->addQuestion(
+            'step-1',
+            'q-name',
+            'first_name',
+            'First name',
+            QuestionType::ShortText,
+        );
+        $this->questionnaires()->save($questionnaire);
+
+        $this->client->request(
+            'POST',
+            '/admin/questionnaires/'.$questionnaire->id().'/questions/'.$question->id().'/delete',
+        );
+        self::assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
+        self::assertNotNull($this->questionnaires()->get($questionnaire->id())->findQuestionByKey('first_name'));
     }
 
     public function testAnAdminCanBuildAQuestionnaireWithStepsQuestionsOptionsAndMappings(): void

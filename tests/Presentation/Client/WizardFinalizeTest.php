@@ -74,7 +74,7 @@ final class WizardFinalizeTest extends WebDatabaseTestCase
 
         $finalize = static::getContainer()->get(FinalizeSubmission::class);
         self::assertInstanceOf(FinalizeSubmission::class, $finalize);
-        $finalize->execute($submission->id());
+        $finalize->execute($submission->id(), $clientUser->id(), false);
 
         $transport = static::getContainer()->get('messenger.transport.async');
         self::assertInstanceOf(InMemoryTransport::class, $transport);

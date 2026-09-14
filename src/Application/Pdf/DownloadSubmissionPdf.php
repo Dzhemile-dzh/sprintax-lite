@@ -18,15 +18,19 @@ final class DownloadSubmissionPdf
     ) {
     }
 
-    public function execute(string $submissionId): string
+    public function execute(string $submissionId, string $actorUserId, bool $actorIsAdmin): string
     {
         $submission = $this->submissions->get($submissionId);
+
+        if (!$actorIsAdmin && $submission->user()->id() !== $actorUserId) {
+            throw InvalidSubmission::notOwner();
+        }
 
         if ($submission->status() !== SubmissionStatus::PdfReady) {
             throw InvalidSubmission::pdfNotReady($submission->status());
         }
 
-        $path = $this->outputDirectory.DIRECTORY_SEPARATOR.$submission->id().'.pdf';
+        $path = PdfOutputPath::absolute($this->outputDirectory, $submission->id());
 
         if (!$this->fileStorage->isReadable($path)) {
             throw InvalidSubmission::pdfFileMissing();

@@ -6,6 +6,7 @@ namespace App\Domain\Submission;
 
 use App\Domain\Questionnaire\Entity\Question;
 use App\Domain\Questionnaire\ValueObject\QuestionType;
+use App\Domain\Questionnaire\ValueObject\QuestionValidation;
 use App\Domain\Submission\Exception\InvalidSubmission;
 use App\Domain\Submission\ValueObject\AnswerValue;
 use DateTimeImmutable;
@@ -32,7 +33,7 @@ final class QuestionAnswerValidator
             return;
         }
 
-        $this->assertScalar($question, $raw, $rules->min, $rules->max, $rules->regex);
+        $this->assertScalar($question, $raw, $rules);
     }
 
     /**
@@ -57,13 +58,8 @@ final class QuestionAnswerValidator
         }
     }
 
-    private function assertScalar(
-        Question $question,
-        string $raw,
-        ?int $min,
-        ?int $max,
-        ?string $regex,
-    ): void {
+    private function assertScalar(Question $question, string $raw, QuestionValidation $rules): void
+    {
         if ($question->type() === QuestionType::YesNo && !in_array($raw, ['yes', 'no'], true)) {
             throw InvalidSubmission::invalidAnswer($question->key(), 'must be yes or no');
         }
@@ -83,11 +79,11 @@ final class QuestionAnswerValidator
 
             $number = (float) $raw;
 
-            if ($min !== null && $number < $min) {
+            if ($rules->min !== null && $number < $rules->min) {
                 throw InvalidSubmission::invalidAnswer($question->key(), 'is below the minimum');
             }
 
-            if ($max !== null && $number > $max) {
+            if ($rules->max !== null && $number > $rules->max) {
                 throw InvalidSubmission::invalidAnswer($question->key(), 'is above the maximum');
             }
 
@@ -100,20 +96,16 @@ final class QuestionAnswerValidator
 
         $length = strlen($raw);
 
-        if ($min !== null && $length < $min) {
+        if ($rules->min !== null && $length < $rules->min) {
             throw InvalidSubmission::invalidAnswer($question->key(), 'is too short');
         }
 
-        if ($max !== null && $length > $max) {
+        if ($rules->max !== null && $length > $rules->max) {
             throw InvalidSubmission::invalidAnswer($question->key(), 'is too long');
         }
 
-        if ($regex !== null) {
-            $matched = @preg_match('/'.$regex.'/', $raw);
-
-            if ($matched !== 1) {
-                throw InvalidSubmission::invalidAnswer($question->key(), 'does not match the expected format');
-            }
+        if ($rules->regex !== null && !$rules->matchesPattern($raw)) {
+            throw InvalidSubmission::invalidAnswer($question->key(), 'does not match the expected format');
         }
     }
 }
