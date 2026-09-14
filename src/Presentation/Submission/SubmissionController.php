@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Presentation\Submission;
 
 use App\Application\Pdf\DownloadSubmissionPdf;
+use App\Application\Submission\Get\GetSubmission;
 use App\Domain\Submission\Entity\QuestionnaireSubmission;
 use App\Domain\Submission\Exception\InvalidSubmission;
 use App\Domain\Submission\Exception\SubmissionNotFound;
-use App\Domain\Submission\Repository\SubmissionRepositoryInterface;
 use App\Infrastructure\Security\SubmissionVoter;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
@@ -17,7 +17,7 @@ use Symfony\Component\Routing\Attribute\Route;
 final class SubmissionController extends AbstractController
 {
     public function __construct(
-        private readonly SubmissionRepositoryInterface $submissions,
+        private readonly GetSubmission $getSubmission,
         private readonly DownloadSubmissionPdf $downloadSubmissionPdf,
     ) {
     }
@@ -56,7 +56,7 @@ final class SubmissionController extends AbstractController
     private function submission(string $id): QuestionnaireSubmission
     {
         try {
-            return $this->submissions->get($id);
+            return $this->getSubmission->execute($id);
         } catch (SubmissionNotFound) {
             throw $this->createNotFoundException();
         }

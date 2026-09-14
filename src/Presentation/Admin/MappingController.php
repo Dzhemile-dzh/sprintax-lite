@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Presentation\Admin;
 
 use App\Application\Questionnaire\AddMapping\AddQuestionMapping;
+use App\Application\Questionnaire\Get\GetQuestionnaire;
 use App\Domain\Questionnaire\Exception\InvalidQuestionnaire;
 use App\Domain\Questionnaire\Exception\QuestionnaireNotFound;
-use App\Domain\Questionnaire\Repository\QuestionnaireRepositoryInterface;
 use App\Domain\Questionnaire\ValueObject\MappingSourceType;
 use App\Presentation\Admin\Form\MappingFormType;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -23,7 +23,7 @@ final class MappingController extends AbstractController
 {
     public function __construct(
         private readonly AddQuestionMapping $addQuestionMapping,
-        private readonly QuestionnaireRepositoryInterface $questionnaires,
+        private readonly GetQuestionnaire $getQuestionnaire,
     ) {
     }
 
@@ -31,7 +31,7 @@ final class MappingController extends AbstractController
     public function new(Request $request, string $id): Response
     {
         try {
-            $this->questionnaires->get($id);
+            $this->getQuestionnaire->execute($id);
         } catch (QuestionnaireNotFound) {
             throw $this->createNotFoundException();
         }

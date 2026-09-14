@@ -5,15 +5,14 @@ declare(strict_types=1);
 namespace App\Presentation\Admin;
 
 use App\Application\Questionnaire\Create\CreateQuestionnaire;
+use App\Application\Questionnaire\Get\GetQuestionnaire;
 use App\Application\Questionnaire\List\ListQuestionnaires;
 use App\Application\Questionnaire\Preview\PreviewQuestionnaire;
 use App\Application\Questionnaire\Update\UpdateQuestionnaire;
 use App\Domain\Questionnaire\Entity\Questionnaire;
 use App\Domain\Questionnaire\Exception\InvalidQuestionnaire;
 use App\Domain\Questionnaire\Exception\QuestionnaireNotFound;
-use App\Domain\Questionnaire\Repository\QuestionnaireRepositoryInterface;
 use App\Domain\Questionnaire\ValueObject\FormType;
-use App\Domain\Submission\Repository\SubmissionRepositoryInterface;
 use App\Presentation\Admin\Form\QuestionnaireFormType;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\FormError;
@@ -31,8 +30,7 @@ final class QuestionnaireController extends AbstractController
         private readonly CreateQuestionnaire $createQuestionnaire,
         private readonly UpdateQuestionnaire $updateQuestionnaire,
         private readonly PreviewQuestionnaire $previewQuestionnaire,
-        private readonly QuestionnaireRepositoryInterface $questionnaires,
-        private readonly SubmissionRepositoryInterface $submissions,
+        private readonly GetQuestionnaire $getQuestionnaire,
     ) {
     }
 
@@ -83,13 +81,19 @@ final class QuestionnaireController extends AbstractController
     #[Route('/questionnaires/{id}/edit', name: 'admin_questionnaire_edit', methods: ['GET', 'POST'])]
     public function edit(Request $request, string $id): Response
     {
-        $questionnaire = $this->questionnaire($id);
+        try {
+            $loaded = $this->getQuestionnaire->execute($id);
+        } catch (QuestionnaireNotFound) {
+            throw $this->createNotFoundException();
+        }
+
+        $questionnaire = $loaded->questionnaire;
         $form = $this->createForm(QuestionnaireFormType::class, [
             'name' => $questionnaire->name(),
             'formType' => $questionnaire->formType(),
             'description' => $questionnaire->description(),
         ], [
-            'form_type_locked' => $this->submissions->existsForQuestionnaire($id),
+            'form_type_locked' => $loaded->formTypeLocked,
         ]);
         $form->handleRequest($request);
 
@@ -132,7 +136,7 @@ final class QuestionnaireController extends AbstractController
     private function questionnaire(string $id): Questionnaire
     {
         try {
-            return $this->questionnaires->get($id);
+            return $this->getQuestionnaire->execute($id)->questionnaire;
         } catch (QuestionnaireNotFound) {
             throw $this->createNotFoundException();
         }

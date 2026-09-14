@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Presentation\Admin;
 
 use App\Application\Questionnaire\AddStep\AddQuestionnaireStep;
+use App\Application\Questionnaire\Get\GetQuestionnaire;
 use App\Domain\Questionnaire\Exception\InvalidQuestionnaire;
 use App\Domain\Questionnaire\Exception\QuestionnaireNotFound;
-use App\Domain\Questionnaire\Repository\QuestionnaireRepositoryInterface;
 use App\Presentation\Admin\Form\StepFormType;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\FormError;
@@ -22,14 +22,19 @@ final class StepController extends AbstractController
 {
     public function __construct(
         private readonly AddQuestionnaireStep $addQuestionnaireStep,
-        private readonly QuestionnaireRepositoryInterface $questionnaires,
+        private readonly GetQuestionnaire $getQuestionnaire,
     ) {
     }
 
     #[Route('/questionnaires/{id}/steps/new', name: 'admin_step_new', methods: ['GET', 'POST'])]
     public function new(Request $request, string $id): Response
     {
-        $this->questionnaire($id);
+        try {
+            $this->getQuestionnaire->execute($id);
+        } catch (QuestionnaireNotFound) {
+            throw $this->createNotFoundException();
+        }
+
         $form = $this->createForm(StepFormType::class);
         $form->handleRequest($request);
 
@@ -51,14 +56,5 @@ final class StepController extends AbstractController
             'form' => $form,
             'title' => 'Add step',
         ]);
-    }
-
-    private function questionnaire(string $id): void
-    {
-        try {
-            $this->questionnaires->get($id);
-        } catch (QuestionnaireNotFound) {
-            throw $this->createNotFoundException();
-        }
     }
 }

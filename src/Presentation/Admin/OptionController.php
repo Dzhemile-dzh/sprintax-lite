@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Presentation\Admin;
 
 use App\Application\Questionnaire\AddOption\AddQuestionOption;
+use App\Application\Questionnaire\Get\GetQuestionnaire;
 use App\Domain\Questionnaire\Exception\InvalidQuestionnaire;
 use App\Domain\Questionnaire\Exception\QuestionnaireNotFound;
-use App\Domain\Questionnaire\Repository\QuestionnaireRepositoryInterface;
 use App\Presentation\Admin\Form\OptionFormType;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\FormError;
@@ -22,7 +22,7 @@ final class OptionController extends AbstractController
 {
     public function __construct(
         private readonly AddQuestionOption $addQuestionOption,
-        private readonly QuestionnaireRepositoryInterface $questionnaires,
+        private readonly GetQuestionnaire $getQuestionnaire,
     ) {
     }
 
@@ -30,14 +30,12 @@ final class OptionController extends AbstractController
     public function new(Request $request, string $id, string $questionId): Response
     {
         try {
-            $questionnaire = $this->questionnaires->get($id);
+            $questionnaire = $this->getQuestionnaire->execute($id)->questionnaire;
         } catch (QuestionnaireNotFound) {
             throw $this->createNotFoundException();
         }
 
-        $question = $questionnaire->findQuestion($questionId);
-
-        if ($question === null) {
+        if ($questionnaire->findQuestion($questionId) === null) {
             throw $this->createNotFoundException();
         }
 
