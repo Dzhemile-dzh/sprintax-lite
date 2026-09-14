@@ -6,11 +6,12 @@
         <title>{% block title %}Sprintax-Lite{% endblock %}</title>
         <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.2em%22 font-size=%2296%22>⚫️</text><text y=%221.3em%22 x=%220.2em%22 font-size=%2276%22 fill=%22%23fff%22>sf</text></svg>">
         <style>
-            body { font-family: system-ui, sans-serif; margin: 2rem auto; max-width: 40rem; line-height: 1.4; }
-            nav { display: flex; gap: 1rem; align-items: center; margin-bottom: 1.5rem; }
+            body { font-family: system-ui, sans-serif; margin: 2rem auto; max-width: 52rem; line-height: 1.4; }
+            nav { display: flex; gap: 1rem; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; }
             .field { margin-bottom: 1rem; }
             .field label { display: block; margin-bottom: 0.25rem; }
-            .field input { width: 100%; box-sizing: border-box; padding: 0.4rem; }
+            .field input, .field select, .field textarea { width: 100%; box-sizing: border-box; padding: 0.4rem; }
+            .field input[type="checkbox"] { width: auto; }
             .flash { padding: 0.5rem 0.75rem; border-radius: 0.25rem; }
             .flash-success { background: #e8f5e9; }
             .error { color: #b00020; }
@@ -21,12 +22,20 @@
     </head>
     <body>
         {% import 'macros/ui.html.twig' as ui %}
+        {% set extra_links = {} %}
+        {% if is_granted('ROLE_ADMIN') %}
+            {% set extra_links = extra_links|merge({'Admin': path('admin_home')}) %}
+        {% endif %}
+        {% if is_granted('ROLE_CLIENT') %}
+            {% set extra_links = extra_links|merge({'Client area': path('client_home')}) %}
+        {% endif %}
         {{ ui.nav(
             app.user,
             path('app_login'),
             path('app_register'),
             path('app_logout'),
-            csrf_token('logout')
+            csrf_token('logout'),
+            extra_links
         ) }}
         {{ ui.flashes(app.flashes()) }}
         {% block body %}{% endblock %}

@@ -1,0 +1,71 @@
+{% extends 'base.html.twig' %}
+{% import 'macros/ui.html.twig' as ui %}
+
+{% block title %}{{ questionnaire.name }}{% endblock %}
+
+{% block body %}
+    <h1>{{ questionnaire.name }}</h1>
+    {% if questionnaire.description %}
+        <p>{{ questionnaire.description }}</p>
+    {% endif %}
+
+    <p>
+        {{ ui.link(path('admin_questionnaire_edit', {id: questionnaire.id}), 'Edit') }}
+        ·
+        {{ ui.link(path('admin_questionnaire_preview', {id: questionnaire.id}), 'Preview') }}
+        ·
+        {{ ui.link(path('admin_step_new', {id: questionnaire.id}), 'Add step') }}
+        ·
+        {{ ui.link(path('admin_mapping_new', {id: questionnaire.id}), 'Add PDF mapping') }}
+    </p>
+
+    <h2>Steps</h2>
+    {% if questionnaire.steps is empty %}
+        <p>No steps yet.</p>
+    {% else %}
+        {% for step in questionnaire.steps %}
+            <section>
+                <h3>{{ step.position }}. {{ step.title }}</h3>
+                <p>{{ ui.link(path('admin_question_new', {id: questionnaire.id, stepId: step.id}), 'Add question') }}</p>
+                {% if step.questions is empty %}
+                    <p>No questions on this step.</p>
+                {% else %}
+                    <ul>
+                        {% for question in step.questions %}
+                            <li>
+                                <strong>{{ question.label }}</strong>
+                                ({{ question.key }}, {{ question.type.value }})
+                                {% if question.type.allowsOptions %}
+                                    · {{ ui.link(path('admin_option_new', {id: questionnaire.id, questionId: question.id}), 'Add option') }}
+                                    {% if question.options is not empty %}
+                                        <ul>
+                                            {% for option in question.options %}
+                                                <li>{{ option.label }} = {{ option.value }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% endif %}
+                                {% endif %}
+                                <div>id: {{ question.id }}</div>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </section>
+        {% endfor %}
+    {% endif %}
+
+    <h2>PDF mappings</h2>
+    {% if questionnaire.mappings is empty %}
+        <p>No mappings yet.</p>
+    {% else %}
+        <ul>
+            {% for mapping in questionnaire.mappings %}
+                <li>
+                    {{ mapping.source.type.value }}: {{ mapping.source.reference }}
+                    · page {{ mapping.coordinates.page }}
+                    · {{ mapping.coordinates.xMm }}mm, {{ mapping.coordinates.yMm }}mm
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+{% endblock %}

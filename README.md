@@ -2,7 +2,7 @@
 
 Symfony questionnaire engine and IRS Form 1040-NR PDF generator (take-home assignment).
 
-Domain model, Doctrine persistence, server-side visibility, a pluggable calculation engine, coordinate-based PDF overlay, and Symfony Security (login, client registration, `SubmissionVoter`) are in place. The client wizard and admin builder land in later commits.
+Domain model, Doctrine persistence, server-side visibility, a pluggable calculation engine, coordinate-based PDF overlay, Symfony Security, and the admin questionnaire builder are in place. The client wizard lands in a later commit.
 
 ## Architecture
 
@@ -37,6 +37,8 @@ Calculation is pluggable: `CalculateSubmission` picks a `CalculatorInterface` by
 PDF overlay goes through `PdfGeneratorInterface`. `GenerateSubmissionPdf` resolves the template as `resources/pdf/{form-name}.pdf`, maps visible answers and computed fields through admin `QuestionMapping` coordinates (mm), and `FpdiPdfGenerator` stamps those values. The generator has no hardcoded field positions. Async Messenger generation and HTTP download come later.
 
 Security uses a `SecurityUser` adapter so the domain `User` stays free of Symfony. Clients register at `/register` (always `ROLE_CLIENT`). Admins cannot self-register. `SubmissionVoter` allows a client to view/edit/download only their own submission; admins can access any submission.
+
+Admins manage questionnaires at `/admin`: ordered steps, questions (types, validation, visibility), choice options, and PDF mappings. Forms go through application use cases; clients receive 403.
 
 ## Domain model
 

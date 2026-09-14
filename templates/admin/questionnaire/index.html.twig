@@ -1,0 +1,21 @@
+{% extends 'base.html.twig' %}
+{% import 'macros/ui.html.twig' as ui %}
+
+{% block title %}Admin questionnaires{% endblock %}
+
+{% block body %}
+    <h1>Questionnaires</h1>
+    <p>{{ ui.link(path('admin_questionnaire_new'), 'New questionnaire') }}</p>
+
+    {% if questionnaires is empty %}
+        <p>No questionnaires yet.</p>
+    {% else %}
+        <ul>
+            {% for questionnaire in questionnaires %}
+                <li>
+                    {{ ui.link(path('admin_questionnaire_show', {id: questionnaire.id}), questionnaire.name) }}
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+{% endblock %}

@@ -10,6 +10,10 @@
     <button type="submit">{{ label }}</button>
 {% endmacro %}
 
+{% macro link(href, label) %}
+    <a href="{{ href }}">{{ label }}</a>
+{% endmacro %}
+
 {% macro flashes(messages) %}
     {% for type, typeMessages in messages %}
         {% for message in typeMessages %}
@@ -18,8 +22,11 @@
     {% endfor %}
 {% endmacro %}
 
-{% macro nav(user, login_path, register_path, logout_path, logout_csrf) %}
+{% macro nav(user, login_path, register_path, logout_path, logout_csrf, extra_links) %}
     <nav>
+        {% for label, href in extra_links|default({}) %}
+            <a href="{{ href }}">{{ label }}</a>
+        {% endfor %}
         {% if user %}
             <span>{{ user.userIdentifier }}</span>
             <form method="post" action="{{ logout_path }}" class="inline">

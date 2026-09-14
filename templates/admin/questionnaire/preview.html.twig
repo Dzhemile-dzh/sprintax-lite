@@ -1,0 +1,29 @@
+{% extends 'base.html.twig' %}
+{% import 'macros/ui.html.twig' as ui %}
+
+{% block title %}Preview {{ questionnaire.name }}{% endblock %}
+
+{% block body %}
+    <h1>Preview: {{ questionnaire.name }}</h1>
+    <p>{{ ui.link(path('admin_questionnaire_show', {id: questionnaire.id}), 'Back to builder') }}</p>
+
+    {% for step in questionnaire.steps %}
+        <section>
+            <h2>{{ step.position }}. {{ step.title }}</h2>
+            <ol>
+                {% for question in step.questions %}
+                    <li>
+                        {{ question.label }}
+                        <span>({{ question.type.value }})</span>
+                        {% if question.validation.required %}
+                            <span>required</span>
+                        {% endif %}
+                        {% if not question.visibility.alwaysVisible %}
+                            <span>conditional</span>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ol>
+        </section>
+    {% endfor %}
+{% endblock %}
