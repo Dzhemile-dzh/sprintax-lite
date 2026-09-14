@@ -1,12 +1,12 @@
 # Sprintax-Lite
 
-Symfony questionnaire engine and IRS Form 1040-NR PDF generator (take-home assignment).
+Symfony questionnaire engine that collects answers, runs a pluggable calculation, and overlays the result onto IRS Form 1040-NR as a PDF.
 
-Domain model, Doctrine persistence, server-side visibility, a pluggable calculation engine, coordinate-based PDF overlay, Symfony Security, the admin questionnaire builder, and the client multi-page wizard are in place. Finalizing a submission queues PDF generation on Messenger. A worker consumes that job, writes `var/pdf/{submissionId}.pdf`, stores the path, and marks the submission `pdf_ready`. Owners and admins download the file at `/submissions/{id}/pdf`.
+A client walks a multi-page wizard. Finalize queues PDF generation on Messenger. A worker writes `var/pdf/{id}.pdf`, stores `{id}.pdf` on the submission, and marks it `pdf_ready`. The owner or an admin downloads it at `/submissions/{id}/pdf`.
 
 ## Architecture
 
-The app uses a pragmatic Clean Architecture / hexagonal layout. HTTP never talks to Doctrine or PDF libraries directly.
+Pragmatic Clean Architecture / hexagonal layout. HTTP never talks to Doctrine or PDF libraries directly.
 
 ```
 Controller (Presentation)
@@ -21,26 +21,13 @@ Infrastructure implementations
 | Layer | Namespace | Responsibility |
 | --- | --- | --- |
 | Domain | `App\Domain` | Entities, value objects, repository interfaces, calculation/PDF contracts. No Symfony, HTTP, Forms, or Twig. Doctrine mapping attributes and collections only. |
-| Application | `App\Application` | Use cases that orchestrate starting a submission, saving a step, calculating, generating a PDF. |
-| Infrastructure | `App\Infrastructure` | Doctrine repositories, FPDI PDF adapter, local filesystem, 1040-NR calculator, Messenger. |
-| Presentation | `App\Presentation` | Thin controllers, forms, and other HTTP concerns for admin, client, and security. |
+| Application | `App\Application` | Use cases: start/save/finalize a submission, calculate, generate and download a PDF. |
+| Infrastructure | `App\Infrastructure` | Doctrine repositories, FPDI adapter, local filesystem, 1040-NR calculator, Messenger. |
+| Presentation | `App\Presentation` | Thin controllers and forms for admin, client, and security. |
 
-Meaningful boundaries:
+Ports: `CalculatorInterface`, `PdfGeneratorInterface`, `FileStorageInterface`, `QuestionnaireRepositoryInterface`, `SubmissionRepositoryInterface`, `UserRepositoryInterface`.
 
-- `CalculatorInterface` / `PdfGeneratorInterface` / `FileStorageInterface`
-- `QuestionnaireRepositoryInterface` / `SubmissionRepositoryInterface` / `UserRepositoryInterface`
-
-There are no generic managers, base CRUD services, or abstract domain service classes. Business rules must not live in controllers or Twig.
-
-Calculation is pluggable: `CalculateSubmission` picks a `CalculatorInterface` by questionnaire name. `Form1040NrCalculator` is a simplified 10% tax stand-in whose output keys (`taxable_income`, `tax_owed`, …) are meant for PDF mappings, not IRS tables.
-
-PDF overlay goes through `PdfGeneratorInterface`. File checks and directory creation go through `FileStorageInterface` rather than scattered `is_file` / `mkdir` calls. `GenerateSubmissionPdf` resolves the template as `resources/pdf/{form-name}.pdf`, maps visible answers and computed fields through admin `QuestionMapping` coordinates (mm), and `FpdiPdfGenerator` stamps those values. The generator has no hardcoded field positions. Finalizing a submission dispatches `GenerateSubmissionPdfMessage` on the async transport. The worker is idempotent: a second delivery of the same message does not write another PDF if the file is already there. Failed jobs retry, then land on the `failed` transport. Download uses `BinaryFileResponse` and `SubmissionVoter::DOWNLOAD`: another client gets 403, and a PDF that is not ready returns 404.
-
-Security uses a `SecurityUser` adapter so the domain `User` stays free of Symfony. Clients register at `/register` (always `ROLE_CLIENT`). Admins cannot self-register. `SubmissionVoter` allows a client to view/edit/download only their own submission; admins can access any submission.
-
-Admins manage questionnaires at `/admin`: ordered steps, questions (types, validation, visibility), choice options, and PDF mappings. Forms go through application use cases; clients receive 403.
-
-Clients start and resume questionnaires at `/client`. Each step is its own route, saved with POST/redirect/GET. Hidden questions are ignored server-side, including extra POST fields, and answers are dropped when a condition hides them. Clients can go back to earlier steps but cannot skip ahead of `current_step`. Review is shown before submit; finalize marks the submission finalized and dispatches a Messenger message for PDF generation. The PDF is not built during the HTTP request. When the worker marks it `pdf_ready`, the owner (and any admin) can download it.
+There are no generic managers, base CRUD services, or abstract domain service classes. Business rules do not live in controllers or Twig.
 
 ## Domain model
 
@@ -56,94 +43,63 @@ User
 
 `QuestionMapping` belongs to the questionnaire and points at a question **or** a computed field (page + X/Y mm + optional font size).
 
-### Invariants
+Invariants:
 
-- Steps and questions keep a 1-based position within their parent; `Questionnaire` is the aggregate root for structure.
+- Steps and questions keep a 1-based position within their parent. `Questionnaire` is the aggregate root for structure.
 - Question `key` values are unique inside a questionnaire.
 - Choice questions (`single_choice`, `multi_choice`) may have options; other types may not.
-- `yes_no` is a dedicated type, not a choice list configured by the admin.
+- `yes_no` is a dedicated type, not an admin-configured choice list.
 - PDF mappings cannot reference a question that is not on the questionnaire.
 - A submission starts on the first step, belongs to one client and one questionnaire, and keeps at most one answer per question.
 - Status only moves `in_progress` → `finalized` → `pdf_ready`. The generated file path is stored when the submission becomes `pdf_ready`.
-- Clients are registered through `User::registerClient()`; admins are provisioned through `User::provisionAdmin()`.
-
-Conditional visibility lives on the question (`equals` / `not_equals`). `QuestionVisibilityEvaluator` applies those rules server-side against answers keyed by question key:
-
-- Every condition on a question must hold (AND).
-- Missing or blank text answers hide both `equals` and `not_equals` dependents.
-- An empty multi-choice list is “none selected”; `equals` / `not_equals` mean contains / does not contain.
-- A hidden or missing controller hides its dependents. Cyclic rules hide both sides.
-
-## Stack
-
-- PHP 8.4+
-- Symfony 7.4 LTS
-- Doctrine ORM + migrations
-- SQLite
-- Twig, Forms, Validator, Security, Messenger
-- FPDI + FPDF (coordinate overlay)
-- PHPUnit + WebTestCase
-- PHPStan
-- GitHub Actions
-- Docker
+- Clients are created with `User::registerClient()`; admins with `User::provisionAdmin()`.
 
 ## Requirements
 
-- Docker Desktop, or local PHP 8.4+ with the `pdo_sqlite` extension and Composer 2
+- Docker Desktop, **or** PHP 8.4+ with `pdo_sqlite` and Composer 2
+- PHP 8.4+, Symfony 7.4, Doctrine ORM, SQLite, Twig, Forms, Security, Messenger, FPDI/FPDF, PHPUnit, PHPStan
 
-## Docker
+## Docker setup
 
 ```bash
 docker compose up --build
 ```
 
-That starts Apache and the Messenger worker. The app is at [http://localhost:8080](http://localhost:8080). On first boot the app container runs migrations and loads demo fixtures. SQLite is stored in the `sqlite_data` volume (not the bind-mounted working tree). Linux `vendor/` packages live in a separate volume so Windows and container PHP builds do not mix.
+Apache and the Messenger worker start together. The app is [http://localhost:8080](http://localhost:8080). On first boot the app container runs migrations and loads demo fixtures. SQLite lives in the `sqlite_data` volume. Linux `vendor/` packages live in `vendor_data` so Windows and container PHP builds do not mix.
 
-Console commands that write to SQLite or `var/cache` should run as `www-data`:
+Commands that write SQLite or `var/cache` should run as `www-data`:
 
 ```bash
 docker compose exec --user www-data app php bin/console doctrine:migrations:migrate --no-interaction
 docker compose exec --user www-data app php bin/console doctrine:fixtures:load --no-interaction
-```
-
-`doctrine:fixtures:load` purges existing data. If demo logins fail after a partial first boot, run that fixtures command or reset volumes with `docker compose down -v`.
-
-```bash
 docker compose exec app composer test
-docker compose exec --user www-data app php bin/console cache:warmup
-docker compose exec --user www-data app composer phpstan
+docker compose exec --user www-data app php bin/console cache:warmup --env=dev --no-interaction
+docker compose exec app composer phpstan
 docker compose logs -f worker
 ```
 
-The worker service already consumes `async`. If that service is not running:
+`doctrine:fixtures:load` purges data. If demo logins fail after a partial first boot, run fixtures again or `docker compose down -v`.
+
+If the worker service is not running:
 
 ```bash
 docker compose run --rm --user www-data worker php bin/console messenger:consume async
 ```
 
-If login fails with a readonly-database error, the data volume was created as root:
+Readonly-database after a root-owned volume:
 
 ```bash
 docker compose exec app chown -R www-data:www-data /var/www/html/var/data
 ```
 
-Reset SQLite (and vendor) volumes with `docker compose down -v`.
-
-## Local PHP
+## Installation (local PHP)
 
 ```bash
 composer install
-copy .env.example .env
-php bin/console doctrine:migrations:migrate --no-interaction
-php bin/console doctrine:fixtures:load --no-interaction
-php -S 127.0.0.1:8000 -t public
+cp .env.example .env
 ```
 
-On Linux or macOS use `cp .env.example .env` instead of `copy`.
-
-## Configuration
-
-Runtime settings come from environment variables. Copy `.env.example` to `.env` for local PHP. Docker Compose sets its own values. Use `.env.local` for machine-specific secrets; `.env` files are not committed.
+On Windows use `copy .env.example .env`. Docker Compose injects its own environment and does not need a committed `.env`. Put machine secrets in `.env.local`.
 
 | Variable | Purpose |
 | --- | --- |
@@ -152,51 +108,140 @@ Runtime settings come from environment variables. Copy `.env.example` to `.env` 
 | `DATABASE_URL` | SQLite path |
 | `MESSENGER_TRANSPORT_DSN` | Async Messenger transport (Doctrine queue by default) |
 
-## Quality commands
+## Database migration
+
+Local schema (default env):
+
+```bash
+php bin/console doctrine:migrations:migrate --no-interaction
+```
+
+Mapping and sync check, same as CI (`--env=test`):
+
+```bash
+php bin/console doctrine:migrations:migrate --no-interaction --env=test
+php bin/console doctrine:schema:validate --env=test
+php bin/console doctrine:migrations:up-to-date --env=test
+```
+
+In `dev`, Messenger uses the Doctrine transport and expects `messenger_messages`, which migrations do not create.
+
+## Fixtures
+
+```bash
+php bin/console doctrine:fixtures:load --no-interaction
+```
+
+Seeds demo users and a two-step **1040-NR** questionnaire (married → spouse visibility, income choices, PDF mappings including computed `tax_owed`). This command purges existing data.
+
+## Demo credentials
+
+| Role | Email | Password | Entry |
+| --- | --- | --- | --- |
+| Admin | `admin@example.test` | `admin123` | `/admin` |
+| Client | `client@example.test` | `client123` | `/client` |
+
+New clients register at `/register` (`ROLE_CLIENT` only). Admins cannot self-register.
+
+## Running Symfony
+
+Local PHP built-in server:
+
+```bash
+php -S 127.0.0.1:8000 -t public
+```
+
+Docker: [http://localhost:8080](http://localhost:8080) after `docker compose up --build`.
+
+Admins manage questionnaires at `/admin`: ordered steps, questions (types, validation, visibility), choice options, and PDF mappings. Clients start and resume at `/client`. Each wizard step is its own route, saved with POST/redirect/GET. Clients can go back but cannot skip ahead of `current_step`. Review is shown before submit.
+
+## Running the Messenger worker
+
+Finalize does **not** build the PDF in the HTTP request. It marks the submission finalized and dispatches `GenerateSubmissionPdfMessage` on the `async` transport.
+
+```bash
+php bin/console messenger:consume async
+```
+
+Docker Compose already runs that in the `worker` service (`docker compose logs -f worker`). Jobs retry up to three times, then move to `failed` (`doctrine://default?queue_name=failed`). The handler is idempotent: a second delivery does not write another file if the PDF is already there.
+
+## Running tests
 
 ```bash
 composer test
 composer test:unit
 composer test:functional
 composer test:messenger
-composer phpstan
 composer lint
-php bin/console doctrine:schema:validate --env=test
-php bin/console doctrine:migrations:up-to-date --env=test
-php bin/console debug:container --env=dev >/dev/null
 ```
 
-PHPUnit suites follow the assignment layers: **unit** (visibility, calculation, domain rules, PDF orchestration, voters), **functional** (kernel/HTTP smoke, persistence, register, login, admin builder, wizard, resume, conditionals, review, finalize, authorization, PDF download), and **messenger** (handler behavior and idempotency). `composer test` runs all three.
+| Suite | Covers |
+| --- | --- |
+| unit | Visibility, calculation, domain rules, PDF orchestration, voters, architecture |
+| functional | Register, login, admin builder, wizard, resume, conditionals, review, finalize, authorization, PDF download |
+| messenger | Handler behavior and idempotency |
 
-PHPStan runs at level 8 against `src/` and `tests/` (PHP 8.4). There is no baseline: type issues are fixed in code. Warm the Symfony cache before PHPStan so the compiled container XML exists:
+`composer test` runs all three. PHPUnit uses SQLite at `var/test.db`.
+
+Docker: `docker compose exec app composer test`.
+
+## Running PHPStan
+
+Level 8, `src/` and `tests/`, PHP 8.4, no baseline. Warm the container XML first:
 
 ```bash
 php bin/console cache:warmup
 composer phpstan
 ```
 
-## Demo accounts
-
-| Role | Email | Password |
-| --- | --- | --- |
-| Admin | `admin@example.test` | `admin123` |
-| Client | `client@example.test` | `client123` |
-
-Admins open `/admin`. Clients open `/client` (or register a new client at `/register`). The fixtures also load a two-step **1040-NR** questionnaire with a married/spouse visibility rule, income choices, and PDF mappings including computed `tax_owed`.
-
-## PDF worker
-
-After a client finalizes a submission, consume the async transport so the PDF is generated:
+Docker: warm the **dev** cache as `www-data`, then run PHPStan as the default user so it can write `var/phpstan`:
 
 ```bash
-php bin/console messenger:consume async
+docker compose exec --user www-data app php bin/console cache:warmup --env=dev --no-interaction
+docker compose exec app composer phpstan
 ```
 
-Docker Compose runs that command in the `worker` service (`docker compose logs -f worker`). Jobs retry up to three times, then move to the `failed` transport (`doctrine://default?queue_name=failed`). Generated files are written to `var/pdf/{submissionId}.pdf`. Download is `GET /submissions/{id}/pdf`.
+## CI
 
-## Continuous integration
+GitHub Actions (`.github/workflows/ci.yml`) runs on push to `main` and on pull requests. PHP 8.4 and SQLite only — no MySQL/PostgreSQL. The job fails if Composer install, Symfony lint (test + prod), PHP syntax, PHPUnit, PHPStan, Doctrine mapping, or migrations fail.
 
-GitHub Actions (`.github/workflows/ci.yml`) runs on every push to `main` and on pull requests. The job uses PHP 8.4 and SQLite only. It fails if Composer install, Symfony lint, PHP syntax, PHPUnit, PHPStan, Doctrine mapping, or migrations fail.
+## PDF generation
+
+Overlay goes through `PdfGeneratorInterface`. `GenerateSubmissionPdf` resolves `resources/pdf/{strtolower(questionnaire name)}.pdf` (for the demo questionnaire, `resources/pdf/1040-nr.pdf`), maps **visible** answers and computed fields through admin `QuestionMapping` coordinates (mm), and `FpdiPdfGenerator` stamps those values. The generator has no hardcoded field positions. File checks and directory creation go through `FileStorageInterface`. The worker writes the file under `var/pdf/` and stores `{id}.pdf` on the submission.
+
+The official IRS form is **not** in this repository (`resources/pdf/` is empty aside from `.gitkeep`). Download a blank Form 1040-NR and save it as `resources/pdf/1040-nr.pdf` before generating a real overlay. Tests use their own dummy PDFs.
+
+Download is `GET /submissions/{id}/pdf` (`BinaryFileResponse`). `SubmissionVoter::DOWNLOAD`: another client gets 403; a PDF that is not ready returns 404.
+
+## Conditional visibility
+
+Rules live on the question (`equals` / `not_equals`). `QuestionVisibilityEvaluator` applies them **server-side** against answers keyed by question key — not JavaScript.
+
+- Every condition on a question must hold (AND).
+- Missing or blank text answers hide both `equals` and `not_equals` dependents.
+- An empty multi-choice list is “none selected”; `equals` / `not_equals` mean contains / does not contain.
+- A hidden or missing controller hides its dependents. Cyclic rules hide both sides.
+- Extra POST fields for a hidden question are not stored. When a condition hides a question, its previous answer is dropped. Finalize does not require hidden questions.
+
+## Authorization
+
+`SecurityUser` adapts the domain `User` so the domain stays free of Symfony. Routes use `#[IsGranted('ROLE_ADMIN')]` / `ROLE_CLIENT`. `SubmissionVoter` allows a client to view/edit/download only their own submission; admins can access any submission.
+
+## Calculation architecture
+
+`CalculateSubmission` picks a `CalculatorInterface` by questionnaire name. `Form1040NrCalculator` is a simplified 10% tax stand-in (`taxable_income = max(0, wages − treaty)`, `tax_owed = 10%`). Output keys (`taxable_income`, `tax_owed`, …) are for PDF mappings, not IRS rate tables.
+
+## Known limitations
+
+- Tax figures are a stand-in, not IRS Publication 519 / 1040-NR worksheets.
+- SQLite is the only supported database; the schema is not tuned for concurrent production traffic.
+- The IRS 1040-NR blank is not shipped. Without `resources/pdf/1040-nr.pdf`, Messenger PDF jobs fail. Overlay is coordinate-based; there is no interactive form-field fill.
+- Messenger `messenger_messages` is created by Doctrine transport auto-setup in `dev`, not by migrations.
+- Demo passwords are fixtures for local/CI use, not a production identity store.
+
+## AI assistance
+
+Cursor/AI assistance was used on tests and review of that written code. I directed each assignment phase and decided what to keep in the repository.
 
 ## Repository
 
