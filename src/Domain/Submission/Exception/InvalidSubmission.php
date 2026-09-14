@@ -1,0 +1,41 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Domain\Submission\Exception;
+
+use App\Domain\Submission\ValueObject\SubmissionStatus;
+use RuntimeException;
+
+final class InvalidSubmission extends RuntimeException
+{
+    public static function questionnaireHasNoSteps(): self
+    {
+        return new self('A submission cannot start because the questionnaire has no steps.');
+    }
+
+    public static function questionNotInQuestionnaire(): self
+    {
+        return new self('Cannot answer a question that does not belong to this submission questionnaire.');
+    }
+
+    public static function cannotFinalize(SubmissionStatus $status): self
+    {
+        return new self(sprintf('A submission cannot be finalized from status "%s".', $status->value));
+    }
+
+    public static function cannotMarkPdfReady(SubmissionStatus $status): self
+    {
+        return new self(sprintf('A PDF cannot be marked ready from status "%s".', $status->value));
+    }
+
+    public static function unknownStep(string $stepId): self
+    {
+        return new self(sprintf('Step "%s" is not part of this submission questionnaire.', $stepId));
+    }
+
+    public static function blankAnswerValue(): self
+    {
+        return new self('Answer values cannot be blank.');
+    }
+}

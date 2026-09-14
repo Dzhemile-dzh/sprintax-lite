@@ -32,7 +32,34 @@ Meaningful boundaries:
 
 There are no generic managers, base CRUD services, or abstract domain service classes. Business rules must not live in controllers or Twig.
 
-Placeholder classes exist so the namespaces and dependency direction are in place. Behavior is added in later phases.
+Placeholder infrastructure adapters exist for Doctrine, calculation, and PDF. Domain entities now model the questionnaire aggregate; persistence mapping comes later.
+
+## Domain model
+
+```
+User
+ └── QuestionnaireSubmission
+       ├── Questionnaire
+       │      └── QuestionnaireStep
+       │            └── Question
+       │                  └── QuestionOption
+       └── Answer
+```
+
+`QuestionMapping` belongs to the questionnaire and points at a question **or** a computed field (page + X/Y mm + optional font size).
+
+### Invariants
+
+- Steps and questions keep a 1-based position within their parent; `Questionnaire` is the aggregate root for structure.
+- Question `key` values are unique inside a questionnaire.
+- Choice questions (`single_choice`, `multi_choice`) may have options; other types may not.
+- `yes_no` is a dedicated type, not a choice list configured by the admin.
+- PDF mappings cannot reference a question that is not on the questionnaire.
+- A submission starts on the first step, belongs to one client and one questionnaire, and keeps at most one answer per question.
+- Status only moves `in_progress` → `finalized` → `pdf_ready`.
+- Clients are registered through `User::registerClient()`; admins are provisioned through `User::provisionAdmin()`.
+
+Conditional visibility configuration lives on the question (`equals` / `not_equals`). Evaluation is a later domain service.
 
 ## Stack
 
