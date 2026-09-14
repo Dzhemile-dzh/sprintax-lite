@@ -121,6 +121,32 @@ final class QuestionnaireBuilderTest extends WebDatabaseTestCase
         self::assertCount(1, $stored->mappings());
     }
 
+    public function testAnAdminCanRenameAQuestionnaire(): void
+    {
+        $this->loginAdmin();
+
+        $crawler = $this->client->request('GET', '/admin/questionnaires/new');
+        $this->client->submit($crawler->selectButton('Save')->form([
+            'questionnaire[name]' => '1040-NR',
+            'questionnaire[description]' => 'Original',
+        ]));
+        $crawler = $this->client->followRedirect();
+
+        $crawler = $this->client->click($crawler->selectLink('Edit')->link());
+        $this->client->submit($crawler->selectButton('Save')->form([
+            'questionnaire[name]' => '1040-NR Demo',
+            'questionnaire[description]' => 'Updated copy',
+        ]));
+        $crawler = $this->client->followRedirect();
+        self::assertSelectorTextContains('h1', '1040-NR Demo');
+        self::assertSelectorTextContains('body', 'Updated copy');
+
+        $stored = $this->questionnaires()->all()[0] ?? null;
+        self::assertNotNull($stored);
+        self::assertSame('1040-NR Demo', $stored->name());
+        self::assertSame('Updated copy', $stored->description());
+    }
+
     private function loginAdmin(): void
     {
         $admin = User::provisionAdmin(

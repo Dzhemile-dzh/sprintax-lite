@@ -88,6 +88,26 @@ final class AuthenticationAndAuthorizationTest extends WebDatabaseTestCase
         self::assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
     }
 
+    public function testLoginRejectsAnUnknownPassword(): void
+    {
+        $this->persistUser(User::registerClient(
+            'u-client',
+            new Email('client@example.test'),
+            $this->hash('password1'),
+        ));
+
+        $crawler = $this->client->request('GET', '/login');
+        $this->client->submit($crawler->selectButton('Sign in')->form([
+            '_username' => 'client@example.test',
+            '_password' => 'wrong-password',
+        ]));
+        self::assertResponseRedirects('/login');
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('body', 'Invalid email or password.');
+        $this->client->request('GET', '/client');
+        self::assertResponseRedirects('/login');
+    }
+
     public function testAClientCannotViewAnotherClientsSubmission(): void
     {
         $owner = $this->persistUser(User::registerClient(

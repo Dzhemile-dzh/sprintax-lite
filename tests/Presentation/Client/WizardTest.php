@@ -145,6 +145,28 @@ final class WizardTest extends WebDatabaseTestCase
         self::assertSame('Charles', $stored->answersByQuestionKey()['spouse_name']->raw());
     }
 
+    public function testAMissingRequiredAnswerKeepsTheClientOnTheStep(): void
+    {
+        $clientUser = $this->loginClient();
+        $questionnaire = $this->persistWizardQuestionnaire();
+        $firstStepId = $questionnaire->steps()[0]->id();
+
+        $crawler = $this->client->request('GET', '/client');
+        $this->client->submit($crawler->selectButton('Start')->form());
+        $submissionId = $this->submissionId($clientUser->id());
+        $crawler = $this->client->followRedirect();
+
+        $this->client->submit($crawler->selectButton('Continue')->form([
+            'wizard_step[first_name]' => '',
+            'wizard_step[birth_date]' => '1990-05-01',
+            'wizard_step[married]' => 'no',
+        ]));
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSelectorTextContains('h2', '1. Personal');
+        self::assertSame($firstStepId, $this->submissions()->get($submissionId)->currentStepId());
+        self::assertArrayNotHasKey('first_name', $this->submissions()->get($submissionId)->answersByQuestionKey());
+    }
+
     public function testAClientCannotOpenAnotherClientsWizard(): void
     {
         $owner = $this->persistUser(User::registerClient(
