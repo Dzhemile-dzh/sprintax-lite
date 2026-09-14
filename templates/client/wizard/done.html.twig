@@ -5,7 +5,7 @@
 
 {% block body %}
     <h1>Submitted</h1>
-    <p>{{ questionnaire.name }} has been submitted.</p>
+    <p>{{ questionnaire.name }} has been submitted. The PDF will be prepared in the background.</p>
     <p>{{ ui.link(path('client_wizard_review', {id: submission.id}), 'View answers') }}</p>
     <p>{{ ui.link(path('client_home'), 'Back to client area') }}</p>
 {% endblock %}

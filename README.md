@@ -2,7 +2,7 @@
 
 Symfony questionnaire engine and IRS Form 1040-NR PDF generator (take-home assignment).
 
-Domain model, Doctrine persistence, server-side visibility, a pluggable calculation engine, coordinate-based PDF overlay, Symfony Security, the admin questionnaire builder, and the client multi-page wizard are in place. Async PDF generation lands in a later commit.
+Domain model, Doctrine persistence, server-side visibility, a pluggable calculation engine, coordinate-based PDF overlay, Symfony Security, the admin questionnaire builder, and the client multi-page wizard are in place. Finalizing a submission queues PDF generation on Messenger. Secure PDF download lands in a later commit.
 
 ## Architecture
 
@@ -34,13 +34,13 @@ There are no generic managers, base CRUD services, or abstract domain service cl
 
 Calculation is pluggable: `CalculateSubmission` picks a `CalculatorInterface` by questionnaire name. `Form1040NrCalculator` is a simplified 10% tax stand-in whose output keys (`taxable_income`, `tax_owed`, …) are meant for PDF mappings, not IRS tables.
 
-PDF overlay goes through `PdfGeneratorInterface`. `GenerateSubmissionPdf` resolves the template as `resources/pdf/{form-name}.pdf`, maps visible answers and computed fields through admin `QuestionMapping` coordinates (mm), and `FpdiPdfGenerator` stamps those values. The generator has no hardcoded field positions. Async Messenger generation and HTTP download come later.
+PDF overlay goes through `PdfGeneratorInterface`. `GenerateSubmissionPdf` resolves the template as `resources/pdf/{form-name}.pdf`, maps visible answers and computed fields through admin `QuestionMapping` coordinates (mm), and `FpdiPdfGenerator` stamps those values. The generator has no hardcoded field positions. Finalizing a submission dispatches `GenerateSubmissionPdfMessage` on the async Messenger transport; HTTP download comes later.
 
 Security uses a `SecurityUser` adapter so the domain `User` stays free of Symfony. Clients register at `/register` (always `ROLE_CLIENT`). Admins cannot self-register. `SubmissionVoter` allows a client to view/edit/download only their own submission; admins can access any submission.
 
 Admins manage questionnaires at `/admin`: ordered steps, questions (types, validation, visibility), choice options, and PDF mappings. Forms go through application use cases; clients receive 403.
 
-Clients start and resume questionnaires at `/client`. Each step is its own route, saved with POST/redirect/GET. Hidden questions are ignored server-side, including extra POST fields, and answers are dropped when a condition hides them. Clients can go back to earlier steps but cannot skip ahead of `current_step`. Review is shown before submit; finalize only marks the submission finalized (PDF generation comes later).
+Clients start and resume questionnaires at `/client`. Each step is its own route, saved with POST/redirect/GET. Hidden questions are ignored server-side, including extra POST fields, and answers are dropped when a condition hides them. Clients can go back to earlier steps but cannot skip ahead of `current_step`. Review is shown before submit; finalize marks the submission finalized and dispatches a Messenger message for PDF generation. The PDF is not built during the HTTP request.
 
 ## Domain model
 

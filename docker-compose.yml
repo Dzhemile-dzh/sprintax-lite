@@ -9,7 +9,7 @@ services:
       APP_SECRET: ${APP_SECRET:-f4aca114fe4323f54c9b7fdd214278ba}
       DATABASE_URL: sqlite:////var/www/html/var/data/app.db
       DEFAULT_URI: http://localhost:8080
-      MESSENGER_TRANSPORT_DSN: doctrine://default?auto_setup=0
+      MESSENGER_TRANSPORT_DSN: doctrine://default?auto_setup=1
     volumes:
       - .:/var/www/html
       - vendor_data:/var/www/html/vendor

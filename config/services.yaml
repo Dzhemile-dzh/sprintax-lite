@@ -29,6 +29,7 @@ services:
             - '../src/Domain/**/DTO/'
             - '../src/Domain/**/Exception/'
             - '../src/Infrastructure/Persistence/Doctrine/Type/'
+            - '../src/Infrastructure/Messenger/Message/'
 
     App\Application\Calculation\CalculateSubmission:
         arguments:
