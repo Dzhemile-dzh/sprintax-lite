@@ -84,6 +84,7 @@ Conditional visibility lives on the question (`equals` / `not_equals`). `Questio
 - FPDI + FPDF (coordinate overlay)
 - PHPUnit + WebTestCase
 - PHPStan
+- GitHub Actions
 - Docker
 
 ## Requirements
@@ -145,7 +146,8 @@ composer test:functional
 composer test:messenger
 composer phpstan
 composer lint
-php bin/console doctrine:schema:validate --skip-mapping
+php bin/console doctrine:schema:validate --env=test
+php bin/console doctrine:migrations:up-to-date --env=test
 php bin/console debug:container --env=dev >/dev/null
 ```
 
@@ -176,6 +178,10 @@ php bin/console messenger:consume async
 ```
 
 Docker Compose runs that command in the `worker` service. Jobs retry up to three times, then move to the `failed` transport (`doctrine://default?queue_name=failed`). Generated files are written to `var/pdf/{submissionId}.pdf`. Download is `GET /submissions/{id}/pdf`.
+
+## Continuous integration
+
+GitHub Actions (`.github/workflows/ci.yml`) runs on every push to `main` and on pull requests. The job uses PHP 8.4 and SQLite only. It fails if Composer install, Symfony lint, PHP syntax, PHPUnit, PHPStan, Doctrine mapping, or migrations fail.
 
 ## Repository
 
