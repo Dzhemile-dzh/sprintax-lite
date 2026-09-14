@@ -17,7 +17,7 @@ services:
     command:
       - bash
       - -lc
-      - composer install --prefer-dist --no-interaction && mkdir -p var/cache var/log var/data && apache2-foreground
+      - composer install --prefer-dist --no-interaction && mkdir -p var/cache var/log var/data && { test -f .env || cp .env.example .env; } && apache2-foreground
 
 volumes:
   vendor_data:

@@ -104,12 +104,15 @@ SQLite data is stored in a Docker volume. Linux vendor packages are isolated fro
 
 ```bash
 composer install
+copy .env.example .env
 php -S 127.0.0.1:8000 -t public
 ```
 
+On Linux or macOS use `cp .env.example .env` instead of `copy`.
+
 ## Configuration
 
-Runtime settings come from environment variables. Defaults live in `.env` and `.env.test`. Use `.env.local` for machine-specific overrides.
+Runtime settings come from environment variables. Copy `.env.example` to `.env` for local PHP. Docker Compose sets its own values. Use `.env.local` for machine-specific secrets; `.env` files are not committed.
 
 | Variable | Purpose |
 | --- | --- |

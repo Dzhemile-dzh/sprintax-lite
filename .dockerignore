@@ -5,5 +5,8 @@ var
 vendor
 node_modules
 *.md
+.env
+.env.dev
+.env.test
 .env.local
 .env.*.local
