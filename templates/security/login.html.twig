@@ -1,0 +1,21 @@
+{% extends 'base.html.twig' %}
+{% import 'macros/ui.html.twig' as ui %}
+
+{% block title %}Sign in{% endblock %}
+
+{% block body %}
+    <h1>Sign in</h1>
+
+    {% if error %}
+        <p class="error" role="alert">Invalid email or password.</p>
+    {% endif %}
+
+    <form method="post" action="{{ path('app_login') }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+        {{ ui.text_input('_username', 'email', 'Email', last_username, 'username') }}
+        {{ ui.text_input('_password', 'password', 'Password', '', 'current-password') }}
+        {{ ui.submit('Sign in') }}
+    </form>
+
+    <p><a href="{{ path('app_register') }}">Create a client account</a></p>
+{% endblock %}

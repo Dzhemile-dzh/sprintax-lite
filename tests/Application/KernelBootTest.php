@@ -27,7 +27,7 @@ final class KernelBootTest extends WebTestCase
 
         self::assertContains(
             $statusCode,
-            [Response::HTTP_OK, Response::HTTP_NOT_FOUND],
+            [Response::HTTP_OK, Response::HTTP_NOT_FOUND, Response::HTTP_FOUND],
             'The application must boot and handle an HTTP request without a 500.',
         );
     }

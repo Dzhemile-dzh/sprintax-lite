@@ -1,23 +1,34 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
     <head>
         <meta charset="UTF-8">
-        <title>{% block title %}Welcome!{% endblock %}</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>{% block title %}Sprintax-Lite{% endblock %}</title>
         <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.2em%22 font-size=%2296%22>⚫️</text><text y=%221.3em%22 x=%220.2em%22 font-size=%2276%22 fill=%22%23fff%22>sf</text></svg>">
-        {% block stylesheets %}
-        {% endblock %}
-
-        {% block javascripts %}
-        {% endblock %}
-
-        {% set frankenphp_hot_reload = app.request.server.get('FRANKENPHP_HOT_RELOAD') %}
-        {% if frankenphp_hot_reload %}
-        <meta name="frankenphp-hot-reload:url" content="{{ frankenphp_hot_reload }}">
-        <script src="https://cdn.jsdelivr.net/npm/idiomorph"></script>
-        <script src="https://cdn.jsdelivr.net/npm/frankenphp-hot-reload/+esm" type="module"></script>
-        {% endif %}
+        <style>
+            body { font-family: system-ui, sans-serif; margin: 2rem auto; max-width: 40rem; line-height: 1.4; }
+            nav { display: flex; gap: 1rem; align-items: center; margin-bottom: 1.5rem; }
+            .field { margin-bottom: 1rem; }
+            .field label { display: block; margin-bottom: 0.25rem; }
+            .field input { width: 100%; box-sizing: border-box; padding: 0.4rem; }
+            .flash { padding: 0.5rem 0.75rem; border-radius: 0.25rem; }
+            .flash-success { background: #e8f5e9; }
+            .error { color: #b00020; }
+            form.inline { display: inline; }
+        </style>
+        {% block stylesheets %}{% endblock %}
+        {% block javascripts %}{% endblock %}
     </head>
     <body>
+        {% import 'macros/ui.html.twig' as ui %}
+        {{ ui.nav(
+            app.user,
+            path('app_login'),
+            path('app_register'),
+            path('app_logout'),
+            csrf_token('logout')
+        ) }}
+        {{ ui.flashes(app.flashes()) }}
         {% block body %}{% endblock %}
     </body>
 </html>

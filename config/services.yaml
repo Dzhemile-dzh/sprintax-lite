@@ -54,6 +54,9 @@ services:
         alias: App\Infrastructure\Persistence\Doctrine\DoctrineUserRepository
         public: true
 
+    App\Application\User\PasswordHasherInterface:
+        alias: App\Infrastructure\Security\SymfonyPasswordHasher
+
     Doctrine\DBAL\Driver\AbstractSQLiteDriver\Middleware\EnableForeignKeys:
         tags:
             - { name: doctrine.middleware }

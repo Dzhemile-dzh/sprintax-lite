@@ -1,0 +1,9 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Submission{% endblock %}
+
+{% block body %}
+    <h1>Submission</h1>
+    <p>Questionnaire: {{ submission.questionnaire.name }}</p>
+    <p>Status: {{ submission.status.value }}</p>
+{% endblock %}

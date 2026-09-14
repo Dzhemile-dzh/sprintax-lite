@@ -1,0 +1,48 @@
+{% macro field(form_field) %}
+    <div class="field">
+        {{ form_label(form_field) }}
+        {{ form_widget(form_field) }}
+        {{ form_errors(form_field) }}
+    </div>
+{% endmacro %}
+
+{% macro submit(label) %}
+    <button type="submit">{{ label }}</button>
+{% endmacro %}
+
+{% macro flashes(messages) %}
+    {% for type, typeMessages in messages %}
+        {% for message in typeMessages %}
+            <p class="flash flash-{{ type }}" role="status">{{ message }}</p>
+        {% endfor %}
+    {% endfor %}
+{% endmacro %}
+
+{% macro nav(user, login_path, register_path, logout_path, logout_csrf) %}
+    <nav>
+        {% if user %}
+            <span>{{ user.userIdentifier }}</span>
+            <form method="post" action="{{ logout_path }}" class="inline">
+                <input type="hidden" name="_csrf_token" value="{{ logout_csrf }}">
+                {{ _self.submit('Log out') }}
+            </form>
+        {% else %}
+            <a href="{{ login_path }}">Sign in</a>
+            <a href="{{ register_path }}">Create account</a>
+        {% endif %}
+    </nav>
+{% endmacro %}
+
+{% macro text_input(name, type, label, value, autocomplete) %}
+    <div class="field">
+        <label for="{{ name }}">{{ label }}</label>
+        <input
+            id="{{ name }}"
+            name="{{ name }}"
+            type="{{ type }}"
+            value="{{ value }}"
+            autocomplete="{{ autocomplete }}"
+            required
+        >
+    </div>
+{% endmacro %}
