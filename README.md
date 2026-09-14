@@ -40,7 +40,7 @@ Security uses a `SecurityUser` adapter so the domain `User` stays free of Symfon
 
 Admins manage questionnaires at `/admin`: ordered steps, questions (types, validation, visibility), choice options, and PDF mappings. Forms go through application use cases; clients receive 403.
 
-Clients start and resume questionnaires at `/client`. Each step is its own route, saved with POST/redirect/GET. Hidden questions are ignored server-side. Clients can go back to earlier steps but cannot skip ahead of `current_step`. Review is shown before submit; finalize only marks the submission finalized (PDF generation comes later).
+Clients start and resume questionnaires at `/client`. Each step is its own route, saved with POST/redirect/GET. Hidden questions are ignored server-side, including extra POST fields, and answers are dropped when a condition hides them. Clients can go back to earlier steps but cannot skip ahead of `current_step`. Review is shown before submit; finalize only marks the submission finalized (PDF generation comes later).
 
 ## Domain model
 
