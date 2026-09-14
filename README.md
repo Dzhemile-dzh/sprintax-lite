@@ -207,7 +207,7 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on push to `main` and on pull r
 
 ## PDF generation
 
-Overlay goes through `PdfGeneratorInterface`. `GenerateSubmissionPdf` resolves `resources/pdf/{strtolower(questionnaire name)}.pdf` (for the demo questionnaire, `resources/pdf/1040-nr.pdf`), maps **visible** answers and computed fields through admin `QuestionMapping` coordinates (mm), and `FpdiPdfGenerator` stamps those values. The generator has no hardcoded field positions. File checks and directory creation go through `FileStorageInterface`. The worker writes the file under `var/pdf/` and stores `{id}.pdf` on the submission.
+Overlay goes through `PdfGeneratorInterface`. `GenerateSubmissionPdf` resolves `resources/pdf/{formType}.pdf` from the questionnaire's `FormType` (locked after a client starts; for Form 1040-NR, `resources/pdf/1040-nr.pdf`). It maps **visible** answers and computed fields through admin `QuestionMapping` coordinates (mm), and `FpdiPdfGenerator` stamps those values. The generator has no hardcoded field positions. File checks and directory creation go through `FileStorageInterface`. The worker writes the file under `var/pdf/` and stores `{id}.pdf` on the submission. The display name can be renamed without changing the template.
 
 The official IRS form is **not** in this repository (`resources/pdf/` is empty aside from `.gitkeep`). Download a blank Form 1040-NR and save it as `resources/pdf/1040-nr.pdf` before generating a real overlay. Tests use their own dummy PDFs.
 
@@ -229,7 +229,7 @@ Rules live on the question (`equals` / `not_equals`). `QuestionVisibilityEvaluat
 
 ## Calculation architecture
 
-`CalculateSubmission` picks a `CalculatorInterface` by questionnaire name. `Form1040NrCalculator` is a simplified 10% tax stand-in (`taxable_income = max(0, wages − treaty)`, `tax_owed = 10%`). Output keys (`taxable_income`, `tax_owed`, …) are for PDF mappings, not IRS rate tables.
+`CalculateSubmission` picks a `CalculatorInterface` by the questionnaire's `FormType` (selected when the questionnaire is created, independent of the display name). `Form1040NrCalculator` is a simplified 10% tax stand-in (`taxable_income = max(0, wages − treaty)`, `tax_owed = 10%`). Output keys (`taxable_income`, `tax_owed`, …) are for PDF mappings, not IRS rate tables. Form type cannot change after a client has started the questionnaire.
 
 ## Known limitations
 
