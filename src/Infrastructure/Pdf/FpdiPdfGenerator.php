@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Pdf;
 
+use App\Domain\Filesystem\Contract\FileStorageInterface;
 use App\Domain\Pdf\Contract\PdfGeneratorInterface;
 use App\Domain\Pdf\DTO\PdfFieldPlacement;
 use App\Domain\Pdf\DTO\PdfGenerationRequest;
@@ -21,17 +22,22 @@ final class FpdiPdfGenerator implements PdfGeneratorInterface
     private const DEFAULT_FONT_SIZE = 10;
 
     public function __construct(
+        private readonly FileStorageInterface $fileStorage,
         private readonly bool $compressStreams = true,
     ) {
     }
 
     public function generate(PdfGenerationRequest $request): void
     {
-        if (!is_file($request->sourcePdfPath) || !is_readable($request->sourcePdfPath)) {
+        if (!$this->fileStorage->isReadable($request->sourcePdfPath)) {
             throw PdfGenerationFailed::sourceUnreadable($request->sourcePdfPath);
         }
 
-        $this->ensureOutputDirectory($request->outputPath);
+        try {
+            $this->fileStorage->ensureDirectory(dirname($request->outputPath));
+        } catch (Throwable $exception) {
+            throw PdfGenerationFailed::writeFailed($request->outputPath, $exception);
+        }
 
         try {
             $pdf = new Fpdi('P', 'mm');
@@ -104,21 +110,5 @@ final class FpdiPdfGenerator implements PdfGeneratorInterface
         }
 
         return $encoded;
-    }
-
-    private function ensureOutputDirectory(string $outputPath): void
-    {
-        $directory = dirname($outputPath);
-
-        if (is_dir($directory)) {
-            return;
-        }
-
-        if (!mkdir($directory, 0775, true) && !is_dir($directory)) {
-            throw PdfGenerationFailed::writeFailed(
-                $outputPath,
-                new RuntimeException(sprintf('Cannot create directory "%s".', $directory)),
-            );
-        }
     }
 }

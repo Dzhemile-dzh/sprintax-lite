@@ -40,6 +40,9 @@ services:
             $templatesDirectory: '%app.pdf.templates_dir%'
             $outputDirectory: '%app.pdf.output_dir%'
 
+    App\Domain\Filesystem\Contract\FileStorageInterface:
+        alias: App\Infrastructure\Filesystem\LocalFileStorage
+
     App\Domain\Pdf\Contract\PdfGeneratorInterface:
         alias: App\Infrastructure\Pdf\FpdiPdfGenerator
 

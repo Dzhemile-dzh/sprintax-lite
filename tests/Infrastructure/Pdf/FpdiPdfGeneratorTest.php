@@ -7,6 +7,7 @@ namespace App\Tests\Infrastructure\Pdf;
 use App\Domain\Pdf\DTO\PdfFieldPlacement;
 use App\Domain\Pdf\DTO\PdfGenerationRequest;
 use App\Domain\Pdf\Exception\PdfGenerationFailed;
+use App\Infrastructure\Filesystem\LocalFileStorage;
 use App\Infrastructure\Pdf\FpdiPdfGenerator;
 use FPDF;
 use PHPUnit\Framework\TestCase;
@@ -19,7 +20,7 @@ final class FpdiPdfGeneratorTest extends TestCase
         $source = $this->blankPdf(2);
         $output = $this->tempFile('out');
 
-        $generator = new FpdiPdfGenerator(compressStreams: false);
+        $generator = new FpdiPdfGenerator(new LocalFileStorage(), compressStreams: false);
         $generator->generate(new PdfGenerationRequest($source, $output, [
             [
                 'placement' => new PdfFieldPlacement(1, 20.5, 40.25, 11),
@@ -45,7 +46,7 @@ final class FpdiPdfGeneratorTest extends TestCase
 
     public function testItFailsWhenTheSourcePdfCannotBeRead(): void
     {
-        $generator = new FpdiPdfGenerator();
+        $generator = new FpdiPdfGenerator(new LocalFileStorage());
 
         $this->expectException(PdfGenerationFailed::class);
         $generator->generate(new PdfGenerationRequest(
@@ -58,7 +59,7 @@ final class FpdiPdfGeneratorTest extends TestCase
     public function testItFailsWhenAFieldPageIsOutsideTheTemplate(): void
     {
         $source = $this->blankPdf(1);
-        $generator = new FpdiPdfGenerator();
+        $generator = new FpdiPdfGenerator(new LocalFileStorage());
 
         $this->expectException(PdfGenerationFailed::class);
         $generator->generate(new PdfGenerationRequest($source, $this->tempFile('out'), [
@@ -67,6 +68,19 @@ final class FpdiPdfGeneratorTest extends TestCase
                 'value' => 'too far',
             ],
         ]));
+    }
+
+    public function testItCreatesTheOutputDirectory(): void
+    {
+        $source = $this->blankPdf(1);
+        $output = sys_get_temp_dir()
+            .DIRECTORY_SEPARATOR.'sprintax-fpdi-nested-'.uniqid('', true)
+            .DIRECTORY_SEPARATOR.'out.pdf';
+
+        $generator = new FpdiPdfGenerator(new LocalFileStorage(), compressStreams: false);
+        $generator->generate(new PdfGenerationRequest($source, $output, []));
+
+        self::assertFileExists($output);
     }
 
     private function blankPdf(int $pages): string

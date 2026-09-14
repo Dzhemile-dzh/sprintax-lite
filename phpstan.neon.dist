@@ -5,6 +5,7 @@ parameters:
         - tests
     scanFiles:
         - migrations/Version20260914092233.php
+        - migrations/Version20260914154900.php
     tmpDir: var/phpstan
     treatPhpDocTypesAsCertain: false
     symfony:

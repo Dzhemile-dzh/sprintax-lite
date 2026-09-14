@@ -50,6 +50,9 @@ final class QuestionnaireSubmission
     #[ORM\Column(name: 'finalized_at', type: 'datetime_immutable', nullable: true)]
     private ?DateTimeImmutable $finalizedAt;
 
+    #[ORM\Column(name: 'pdf_path', type: 'string', length: 512, nullable: true)]
+    private ?string $pdfPath = null;
+
     /**
      * @var Collection<int, Answer>
      */
@@ -65,6 +68,7 @@ final class QuestionnaireSubmission
         DateTimeImmutable $createdAt,
         DateTimeImmutable $updatedAt,
         ?DateTimeImmutable $finalizedAt,
+        ?string $pdfPath = null,
     ) {
         $this->id = $id;
         $this->questionnaire = $questionnaire;
@@ -74,6 +78,7 @@ final class QuestionnaireSubmission
         $this->createdAt = $createdAt;
         $this->updatedAt = $updatedAt;
         $this->finalizedAt = $finalizedAt;
+        $this->pdfPath = $pdfPath;
         $this->answers = new ArrayCollection();
     }
 
@@ -144,6 +149,11 @@ final class QuestionnaireSubmission
     public function finalizedAt(): ?DateTimeImmutable
     {
         return $this->finalizedAt;
+    }
+
+    public function pdfPath(): ?string
+    {
+        return $this->pdfPath;
     }
 
     /**
@@ -239,13 +249,14 @@ final class QuestionnaireSubmission
         $this->updatedAt = $finalizedAt;
     }
 
-    public function markPdfReady(DateTimeImmutable $readyAt): void
+    public function markPdfReady(DateTimeImmutable $readyAt, string $pdfPath): void
     {
-        if ($this->status !== SubmissionStatus::Finalized) {
+        if ($this->status !== SubmissionStatus::Finalized && $this->status !== SubmissionStatus::PdfReady) {
             throw InvalidSubmission::cannotMarkPdfReady($this->status);
         }
 
         $this->status = SubmissionStatus::PdfReady;
+        $this->pdfPath = $pdfPath;
         $this->updatedAt = $readyAt;
     }
 }

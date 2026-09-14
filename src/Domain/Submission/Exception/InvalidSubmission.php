@@ -29,6 +29,11 @@ final class InvalidSubmission extends RuntimeException
         return new self(sprintf('A PDF cannot be marked ready from status "%s".', $status->value));
     }
 
+    public static function cannotGeneratePdf(SubmissionStatus $status): self
+    {
+        return new self(sprintf('A PDF cannot be generated from status "%s".', $status->value));
+    }
+
     public static function unknownStep(string $stepId): self
     {
         return new self(sprintf('Step "%s" is not part of this submission questionnaire.', $stepId));

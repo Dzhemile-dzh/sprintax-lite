@@ -88,6 +88,49 @@ final class QuestionnaireSubmissionTest extends TestCase
         $submission->finalize(new DateTimeImmutable('2026-01-01T11:01:00+00:00'));
     }
 
+    public function testMarkPdfReadyRequiresFinalizedAndStoresThePath(): void
+    {
+        $submission = QuestionnaireSubmission::start(
+            'sub-1',
+            $this->questionnaire(),
+            $this->client(),
+            new DateTimeImmutable('2026-01-01T10:00:00+00:00'),
+        );
+
+        $this->expectException(InvalidSubmission::class);
+        $submission->markPdfReady(
+            new DateTimeImmutable('2026-01-01T11:00:00+00:00'),
+            '/tmp/sub-1.pdf',
+        );
+    }
+
+    public function testMarkPdfReadyStoresThePathAndAllowsRegeneration(): void
+    {
+        $submission = QuestionnaireSubmission::start(
+            'sub-1',
+            $this->questionnaire(),
+            $this->client(),
+            new DateTimeImmutable('2026-01-01T10:00:00+00:00'),
+        );
+
+        $submission->finalize(new DateTimeImmutable('2026-01-01T11:00:00+00:00'));
+        $submission->markPdfReady(
+            new DateTimeImmutable('2026-01-01T11:05:00+00:00'),
+            '/tmp/sub-1.pdf',
+        );
+
+        self::assertSame(SubmissionStatus::PdfReady, $submission->status());
+        self::assertSame('/tmp/sub-1.pdf', $submission->pdfPath());
+
+        $submission->markPdfReady(
+            new DateTimeImmutable('2026-01-01T11:10:00+00:00'),
+            '/tmp/sub-1-again.pdf',
+        );
+
+        self::assertSame(SubmissionStatus::PdfReady, $submission->status());
+        self::assertSame('/tmp/sub-1-again.pdf', $submission->pdfPath());
+    }
+
     public function testCannotStartWhenQuestionnaireHasNoSteps(): void
     {
         $this->expectException(InvalidSubmission::class);
