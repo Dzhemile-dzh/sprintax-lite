@@ -14,10 +14,13 @@ services:
       - .:/var/www/html
       - vendor_data:/var/www/html/vendor
       - sqlite_data:/var/www/html/var/data
-    command:
-      - bash
-      - -lc
-      - composer install --prefer-dist --no-interaction && mkdir -p var/cache var/log var/data var/pdf && chmod -R a+rwX var/pdf && { test -f .env || cp .env.example .env; } && chown -R www-data:www-data var/data && apache2-foreground
+    command: ["docker-entrypoint-app"]
+    healthcheck:
+      test: ["CMD-SHELL", "php -r 'exit(@fsockopen(\"127.0.0.1\",80)?0:1);'"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 300s
 
   worker:
     build: .
@@ -25,11 +28,9 @@ services:
     volumes: *app-volumes
     depends_on:
       - app
+    init: true
     restart: unless-stopped
-    command:
-      - bash
-      - -lc
-      - until [ -f vendor/autoload.php ]; do sleep 2; done && until [ -w var/data ]; do sleep 2; done && mkdir -p var/pdf && runuser -u www-data -- php bin/console messenger:consume async --time-limit=3600 -vv
+    command: ["docker-entrypoint-worker"]
 
 volumes:
   vendor_data:

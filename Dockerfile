@@ -17,6 +17,9 @@ RUN apt-get update \
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 COPY docker/apache/000-default.conf /etc/apache2/sites-available/000-default.conf
+COPY docker/entrypoint-app.sh /usr/local/bin/docker-entrypoint-app
+COPY docker/entrypoint-worker.sh /usr/local/bin/docker-entrypoint-worker
+RUN chmod +x /usr/local/bin/docker-entrypoint-app /usr/local/bin/docker-entrypoint-worker
 
 WORKDIR /var/www/html
 
