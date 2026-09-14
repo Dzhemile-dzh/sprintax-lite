@@ -60,14 +60,22 @@ final class SaveStep
             $answersByKey,
         );
         $now = new DateTimeImmutable();
+        $waitForNewlyVisible = false;
 
         foreach ($visible as $question) {
+            if (!array_key_exists($question->key(), $submitted) && !$question->visibility()->isAlwaysVisible()) {
+                $waitForNewlyVisible = true;
+                continue;
+            }
+
             $value = $this->toAnswerValue($question, $submitted[$question->key()] ?? null);
             $this->validator->validate($question, $value);
             $submission->recordAnswer($question, $value, $now);
         }
 
-        if (!$advance) {
+        $this->discardHiddenAnswers($submission, $now);
+
+        if ($waitForNewlyVisible || !$advance) {
             $this->submissions->save($submission);
 
             return $stepId;
@@ -125,5 +133,19 @@ final class SaveStep
         }
 
         return AnswerValue::text('');
+    }
+
+    private function discardHiddenAnswers(QuestionnaireSubmission $submission, DateTimeImmutable $discardedAt): void
+    {
+        $answersByKey = $submission->answersByQuestionKey();
+        $visibleIds = [];
+
+        foreach ($submission->questionnaire()->allQuestions() as $question) {
+            if ($this->visibility->isVisible($question, $submission->questionnaire(), $answersByKey)) {
+                $visibleIds[] = $question->id();
+            }
+        }
+
+        $submission->discardAnswersNotIn($visibleIds, $discardedAt);
     }
 }
