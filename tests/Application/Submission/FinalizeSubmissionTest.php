@@ -8,6 +8,7 @@ use App\Application\Pdf\PdfGenerationScheduler;
 use App\Application\Submission\Finalize\FinalizeSubmission;
 use App\Domain\Questionnaire\Entity\Questionnaire;
 use App\Domain\Questionnaire\QuestionVisibilityEvaluator;
+use App\Domain\Questionnaire\ValueObject\FormType;
 use App\Domain\Questionnaire\ValueObject\QuestionType;
 use App\Domain\Questionnaire\ValueObject\QuestionValidation;
 use App\Domain\Questionnaire\ValueObject\VisibilityCondition;
@@ -128,7 +129,7 @@ final class FinalizeSubmissionTest extends TestCase
 
     private function submission(): QuestionnaireSubmission
     {
-        $questionnaire = Questionnaire::create('q-1', '1040-NR');
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
         $questionnaire->addStep('step-1', 'Personal');
         $questionnaire->addQuestion(
             'step-1',
@@ -236,6 +237,17 @@ final class FinalizeInMemorySubmissionRepository implements SubmissionRepository
         }
 
         return $matches;
+    }
+
+    public function existsForQuestionnaire(string $questionnaireId): bool
+    {
+        foreach ($this->submissions as $submission) {
+            if ($submission->questionnaire()->id() === $questionnaireId) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function save(QuestionnaireSubmission $submission): void

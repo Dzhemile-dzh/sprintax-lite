@@ -7,6 +7,7 @@ namespace App\Tests\Presentation\Pdf;
 use App\Application\User\PasswordHasherInterface;
 use App\Domain\Questionnaire\Entity\Questionnaire;
 use App\Domain\Questionnaire\Repository\QuestionnaireRepositoryInterface;
+use App\Domain\Questionnaire\ValueObject\FormType;
 use App\Domain\Questionnaire\ValueObject\QuestionType;
 use App\Domain\Submission\Entity\QuestionnaireSubmission;
 use App\Domain\Submission\Repository\SubmissionRepositoryInterface;
@@ -182,7 +183,7 @@ final class PdfDownloadTest extends WebDatabaseTestCase
 
     private function persistSubmission(string $id, User $user): QuestionnaireSubmission
     {
-        $questionnaire = Questionnaire::create('q-'.$id, '1040-NR');
+        $questionnaire = Questionnaire::create('q-'.$id, '1040-NR', FormType::Form1040Nr);
         $questionnaire->addStep('step-'.$id, 'Personal');
         $questionnaire->addQuestion('step-'.$id, 'q-name-'.$id, 'first_name', 'First name', QuestionType::ShortText);
 

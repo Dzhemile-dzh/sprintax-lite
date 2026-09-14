@@ -9,6 +9,7 @@ use App\Domain\Questionnaire\Entity\QuestionOption;
 use App\Domain\Questionnaire\Entity\Questionnaire;
 use App\Domain\Questionnaire\Exception\QuestionnaireNotFound;
 use App\Domain\Questionnaire\Repository\QuestionnaireRepositoryInterface;
+use App\Domain\Questionnaire\ValueObject\FormType;
 use App\Domain\Questionnaire\ValueObject\PdfCoordinates;
 use App\Domain\Questionnaire\ValueObject\QuestionType;
 use App\Domain\Questionnaire\ValueObject\QuestionValidation;
@@ -28,7 +29,7 @@ final class DoctrineQuestionnaireRepositoryTest extends DatabaseTestCase
 {
     public function testItPersistsAndReloadsAQuestionnaireAggregate(): void
     {
-        $questionnaire = Questionnaire::create('q-1', '1040-NR', 'Demo');
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr, 'Demo');
         $questionnaire->addStep('step-1', 'Personal');
         $questionnaire->addQuestion('step-1', 'question-1', 'married', 'Married?', QuestionType::YesNo);
         $spouseName = $questionnaire->addQuestion(
@@ -65,6 +66,7 @@ final class DoctrineQuestionnaireRepositoryTest extends DatabaseTestCase
         $reloaded = $questionnaires->get('q-1');
 
         self::assertSame('1040-NR', $reloaded->name());
+        self::assertSame(FormType::Form1040Nr, $reloaded->formType());
         self::assertCount(1, $reloaded->steps());
         self::assertSame('spouse_name', $spouseName->key());
 
@@ -83,7 +85,7 @@ final class DoctrineQuestionnaireRepositoryTest extends DatabaseTestCase
 
     public function testItPersistsASubmissionWithAnswers(): void
     {
-        $questionnaire = Questionnaire::create('q-1', '1040-NR');
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
         $questionnaire->addStep('step-1', 'Personal');
         $married = $questionnaire->addQuestion('step-1', 'question-1', 'married', 'Married?', QuestionType::YesNo);
 
@@ -121,7 +123,7 @@ final class DoctrineQuestionnaireRepositoryTest extends DatabaseTestCase
 
     public function testItReplacesAnExistingAnswerOnReload(): void
     {
-        $questionnaire = Questionnaire::create('q-1', '1040-NR');
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
         $questionnaire->addStep('step-1', 'Personal');
         $married = $questionnaire->addQuestion('step-1', 'question-1', 'married', 'Married?', QuestionType::YesNo);
         $user = User::registerClient('user-1', new Email('client@example.test'), 'hashed-password');

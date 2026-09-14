@@ -17,5 +17,7 @@ interface SubmissionRepositoryInterface
      */
     public function findForUser(string $userId): array;
 
+    public function existsForQuestionnaire(string $questionnaireId): bool;
+
     public function save(QuestionnaireSubmission $submission): void;
 }

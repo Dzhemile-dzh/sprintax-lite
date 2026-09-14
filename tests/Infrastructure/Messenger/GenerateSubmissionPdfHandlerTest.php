@@ -11,6 +11,7 @@ use App\Domain\Pdf\Exception\PdfGenerationFailed;
 use App\Domain\Questionnaire\Entity\QuestionMapping;
 use App\Domain\Questionnaire\Entity\Questionnaire;
 use App\Domain\Questionnaire\QuestionVisibilityEvaluator;
+use App\Domain\Questionnaire\ValueObject\FormType;
 use App\Domain\Questionnaire\ValueObject\PdfCoordinates;
 use App\Domain\Questionnaire\ValueObject\QuestionType;
 use App\Domain\Submission\Entity\QuestionnaireSubmission;
@@ -130,7 +131,7 @@ final class GenerateSubmissionPdfHandlerTest extends TestCase
 
     private function submission(): QuestionnaireSubmission
     {
-        $questionnaire = Questionnaire::create('q-1', '1040-NR');
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
         $questionnaire->addStep('step-1', 'Personal');
         $firstName = $questionnaire->addQuestion(
             'step-1',

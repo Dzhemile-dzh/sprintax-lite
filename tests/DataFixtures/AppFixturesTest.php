@@ -7,6 +7,7 @@ namespace App\Tests\DataFixtures;
 use App\DataFixtures\AppFixtures;
 use App\Domain\Questionnaire\Entity\QuestionMapping;
 use App\Domain\Questionnaire\Repository\QuestionnaireRepositoryInterface;
+use App\Domain\Questionnaire\ValueObject\FormType;
 use App\Domain\Questionnaire\ValueObject\QuestionType;
 use App\Domain\Questionnaire\ValueObject\VisibilityOperator;
 use App\Domain\User\Repository\UserRepositoryInterface;
@@ -40,6 +41,7 @@ final class AppFixturesTest extends WebDatabaseTestCase
 
         $questionnaire = $all[0];
         self::assertSame('1040-NR', $questionnaire->name());
+        self::assertSame(FormType::Form1040Nr, $questionnaire->formType());
         self::assertCount(2, $questionnaire->steps());
         $wages = $questionnaire->findQuestionByKey('income_wages');
         self::assertNotNull($wages);

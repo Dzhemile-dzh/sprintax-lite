@@ -6,6 +6,7 @@ namespace App\Application\Questionnaire\Create;
 
 use App\Domain\Questionnaire\Entity\Questionnaire;
 use App\Domain\Questionnaire\Repository\QuestionnaireRepositoryInterface;
+use App\Domain\Questionnaire\ValueObject\FormType;
 
 final class CreateQuestionnaire
 {
@@ -14,11 +15,12 @@ final class CreateQuestionnaire
     ) {
     }
 
-    public function execute(string $name, ?string $description): Questionnaire
+    public function execute(string $name, FormType $formType, ?string $description): Questionnaire
     {
         $questionnaire = Questionnaire::create(
             bin2hex(random_bytes(16)),
             $name,
+            $formType,
             $description,
         );
         $this->questionnaires->save($questionnaire);

@@ -7,6 +7,7 @@ namespace App\Tests\Domain\Submission;
 use App\Domain\Questionnaire\Entity\Question;
 use App\Domain\Questionnaire\Entity\QuestionOption;
 use App\Domain\Questionnaire\Entity\Questionnaire;
+use App\Domain\Questionnaire\ValueObject\FormType;
 use App\Domain\Questionnaire\ValueObject\QuestionType;
 use App\Domain\Questionnaire\ValueObject\QuestionValidation;
 use App\Domain\Submission\Exception\InvalidSubmission;
@@ -138,7 +139,7 @@ final class QuestionAnswerValidatorTest extends TestCase
         QuestionType $type,
         ?QuestionValidation $validation = null,
     ): Question {
-        $questionnaire = Questionnaire::create('q-1', '1040-NR');
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
         $questionnaire->addStep('step-1', 'Personal');
 
         return $questionnaire->addQuestion('step-1', 'id-'.$key, $key, ucfirst($key), $type, null, $validation);

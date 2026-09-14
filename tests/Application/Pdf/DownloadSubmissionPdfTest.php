@@ -6,6 +6,7 @@ namespace App\Tests\Application\Pdf;
 
 use App\Application\Pdf\DownloadSubmissionPdf;
 use App\Domain\Questionnaire\Entity\Questionnaire;
+use App\Domain\Questionnaire\ValueObject\FormType;
 use App\Domain\Questionnaire\ValueObject\QuestionType;
 use App\Domain\Submission\Entity\QuestionnaireSubmission;
 use App\Domain\Submission\Exception\InvalidSubmission;
@@ -88,7 +89,7 @@ final class DownloadSubmissionPdfTest extends TestCase
 
     private function submission(): QuestionnaireSubmission
     {
-        $questionnaire = Questionnaire::create('q-1', '1040-NR');
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
         $questionnaire->addStep('step-1', 'Personal');
         $questionnaire->addQuestion('step-1', 'q-name', 'first_name', 'First name', QuestionType::ShortText);
 

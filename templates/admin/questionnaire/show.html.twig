@@ -5,6 +5,7 @@
 
 {% block body %}
     <h1>{{ questionnaire.name }}</h1>
+    <p>Form type: {{ questionnaire.formType.label }} ({{ questionnaire.formType.value }})</p>
     {% if questionnaire.description %}
         <p>{{ questionnaire.description }}</p>
     {% endif %}

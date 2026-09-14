@@ -12,6 +12,8 @@ use App\Domain\Questionnaire\Entity\Questionnaire;
 use App\Domain\Questionnaire\Exception\InvalidQuestionnaire;
 use App\Domain\Questionnaire\Exception\QuestionnaireNotFound;
 use App\Domain\Questionnaire\Repository\QuestionnaireRepositoryInterface;
+use App\Domain\Questionnaire\ValueObject\FormType;
+use App\Domain\Submission\Repository\SubmissionRepositoryInterface;
 use App\Presentation\Admin\Form\QuestionnaireFormType;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\FormError;
@@ -30,6 +32,7 @@ final class QuestionnaireController extends AbstractController
         private readonly UpdateQuestionnaire $updateQuestionnaire,
         private readonly PreviewQuestionnaire $previewQuestionnaire,
         private readonly QuestionnaireRepositoryInterface $questionnaires,
+        private readonly SubmissionRepositoryInterface $submissions,
     ) {
     }
 
@@ -49,11 +52,12 @@ final class QuestionnaireController extends AbstractController
 
         if ($form->isSubmitted() && $form->isValid()) {
             $name = $form->get('name')->getData();
+            $formType = $form->get('formType')->getData();
             $description = $form->get('description')->getData();
 
-            if (is_string($name) && ($description === null || is_string($description))) {
+            if (is_string($name) && $formType instanceof FormType && ($description === null || is_string($description))) {
                 try {
-                    $questionnaire = $this->createQuestionnaire->execute($name, $description);
+                    $questionnaire = $this->createQuestionnaire->execute($name, $formType, $description);
 
                     return $this->redirectToRoute('admin_questionnaire_show', ['id' => $questionnaire->id()]);
                 } catch (InvalidQuestionnaire $exception) {
@@ -82,17 +86,21 @@ final class QuestionnaireController extends AbstractController
         $questionnaire = $this->questionnaire($id);
         $form = $this->createForm(QuestionnaireFormType::class, [
             'name' => $questionnaire->name(),
+            'formType' => $questionnaire->formType(),
             'description' => $questionnaire->description(),
+        ], [
+            'form_type_locked' => $this->submissions->existsForQuestionnaire($id),
         ]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
             $name = $form->get('name')->getData();
+            $formType = $form->get('formType')->getData() ?? $questionnaire->formType();
             $description = $form->get('description')->getData();
 
-            if (is_string($name) && ($description === null || is_string($description))) {
+            if (is_string($name) && $formType instanceof FormType && ($description === null || is_string($description))) {
                 try {
-                    $this->updateQuestionnaire->execute($id, $name, $description);
+                    $this->updateQuestionnaire->execute($id, $name, $description, $formType);
 
                     return $this->redirectToRoute('admin_questionnaire_show', ['id' => $id]);
                 } catch (InvalidQuestionnaire $exception) {

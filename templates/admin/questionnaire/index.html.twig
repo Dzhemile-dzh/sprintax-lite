@@ -14,6 +14,7 @@
             {% for questionnaire in questionnaires %}
                 <li>
                     {{ ui.link(path('admin_questionnaire_show', {id: questionnaire.id}), questionnaire.name) }}
+                    ({{ questionnaire.formType.label }})
                 </li>
             {% endfor %}
         </ul>

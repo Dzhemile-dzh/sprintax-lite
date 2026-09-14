@@ -30,7 +30,7 @@ final class CalculateSubmission
             $answers[$answer->question()->key()] = $answer->value()->raw();
         }
 
-        $input = new CalculationInput($submission->questionnaire()->name(), $answers);
+        $input = new CalculationInput($submission->questionnaire()->formType(), $answers);
 
         foreach ($this->calculators as $calculator) {
             if ($calculator->supports($input->formType)) {

@@ -8,6 +8,7 @@ use App\Application\User\PasswordHasherInterface;
 use App\Domain\Questionnaire\Entity\QuestionOption;
 use App\Domain\Questionnaire\Entity\Questionnaire;
 use App\Domain\Questionnaire\Repository\QuestionnaireRepositoryInterface;
+use App\Domain\Questionnaire\ValueObject\FormType;
 use App\Domain\Questionnaire\ValueObject\QuestionType;
 use App\Domain\Questionnaire\ValueObject\QuestionValidation;
 use App\Domain\Questionnaire\ValueObject\VisibilityCondition;
@@ -209,7 +210,7 @@ final class WizardTest extends WebDatabaseTestCase
 
     private function persistWizardQuestionnaire(): Questionnaire
     {
-        $questionnaire = Questionnaire::create('q-1', '1040-NR');
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
         $questionnaire->addStep('step-1', 'Personal');
         $questionnaire->addStep('step-2', 'Income');
         $questionnaire->addQuestion(

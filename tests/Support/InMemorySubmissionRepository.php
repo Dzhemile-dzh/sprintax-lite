@@ -68,4 +68,15 @@ final class InMemorySubmissionRepository implements SubmissionRepositoryInterfac
 
         return $matches;
     }
+
+    public function existsForQuestionnaire(string $questionnaireId): bool
+    {
+        foreach ($this->items as $submission) {
+            if ($submission->questionnaire()->id() === $questionnaireId) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

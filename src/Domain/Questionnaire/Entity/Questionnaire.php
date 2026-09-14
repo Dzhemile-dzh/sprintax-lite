@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Questionnaire\Entity;
 
 use App\Domain\Questionnaire\Exception\InvalidQuestionnaire;
+use App\Domain\Questionnaire\ValueObject\FormType;
 use App\Domain\Questionnaire\ValueObject\QuestionType;
 use App\Domain\Questionnaire\ValueObject\QuestionValidation;
 use App\Domain\Questionnaire\ValueObject\VisibilityRule;
@@ -22,6 +23,9 @@ final class Questionnaire
 
     #[ORM\Column(length: 255)]
     private string $name;
+
+    #[ORM\Column(name: 'form_type', enumType: FormType::class, length: 32)]
+    private FormType $formType;
 
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $description;
@@ -42,6 +46,7 @@ final class Questionnaire
     private function __construct(
         string $id,
         string $name,
+        FormType $formType,
         ?string $description,
     ) {
         if (trim($id) === '') {
@@ -58,14 +63,19 @@ final class Questionnaire
 
         $this->id = $id;
         $this->name = $name;
+        $this->formType = $formType;
         $this->description = $description;
         $this->steps = new ArrayCollection();
         $this->mappings = new ArrayCollection();
     }
 
-    public static function create(string $id, string $name, ?string $description = null): self
-    {
-        return new self($id, $name, $description);
+    public static function create(
+        string $id,
+        string $name,
+        FormType $formType,
+        ?string $description = null,
+    ): self {
+        return new self($id, $name, $formType, $description);
     }
 
     public function id(): string
@@ -76,6 +86,11 @@ final class Questionnaire
     public function name(): string
     {
         return $this->name;
+    }
+
+    public function formType(): FormType
+    {
+        return $this->formType;
     }
 
     public function description(): ?string
@@ -90,6 +105,15 @@ final class Questionnaire
         }
 
         $this->name = $name;
+    }
+
+    public function changeFormType(FormType $formType, bool $hasSubmissions): void
+    {
+        if ($hasSubmissions && $formType !== $this->formType) {
+            throw InvalidQuestionnaire::formTypeLocked();
+        }
+
+        $this->formType = $formType;
     }
 
     public function changeDescription(?string $description): void

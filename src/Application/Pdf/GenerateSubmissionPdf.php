@@ -14,6 +14,7 @@ use App\Domain\Pdf\Exception\PdfGenerationFailed;
 use App\Domain\Questionnaire\Entity\QuestionMapping;
 use App\Domain\Questionnaire\Entity\Questionnaire;
 use App\Domain\Questionnaire\QuestionVisibilityEvaluator;
+use App\Domain\Questionnaire\ValueObject\FormType;
 use App\Domain\Submission\Entity\QuestionnaireSubmission;
 use App\Domain\Submission\Exception\InvalidSubmission;
 use App\Domain\Submission\Repository\SubmissionRepositoryInterface;
@@ -54,7 +55,7 @@ final class GenerateSubmissionPdf
         $calculation = $this->calculationIfNeeded($submission, $questionnaire);
 
         $this->pdfGenerator->generate(new PdfGenerationRequest(
-            $this->templatePath($questionnaire->name()),
+            $this->templatePath($questionnaire->formType()),
             $outputPath,
             $this->overlayFields($submission, $questionnaire, $answersByKey, $calculation),
         ));
@@ -221,12 +222,12 @@ final class GenerateSubmissionPdf
         return $answersByKey;
     }
 
-    private function templatePath(string $formType): string
+    private function templatePath(FormType $formType): string
     {
-        $path = $this->templatesDirectory.DIRECTORY_SEPARATOR.strtolower($formType).'.pdf';
+        $path = $this->templatesDirectory.DIRECTORY_SEPARATOR.$formType->value.'.pdf';
 
         if (!$this->fileStorage->exists($path)) {
-            throw PdfGenerationFailed::templateMissing($formType, $path);
+            throw PdfGenerationFailed::templateMissing($formType->value, $path);
         }
 
         return $path;

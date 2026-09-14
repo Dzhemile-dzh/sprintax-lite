@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Domain\Submission;
 
 use App\Domain\Questionnaire\Entity\Questionnaire;
+use App\Domain\Questionnaire\ValueObject\FormType;
 use App\Domain\Questionnaire\ValueObject\QuestionType;
 use App\Domain\Submission\Entity\QuestionnaireSubmission;
 use App\Domain\Submission\Exception\InvalidSubmission;
@@ -137,7 +138,7 @@ final class QuestionnaireSubmissionTest extends TestCase
 
         QuestionnaireSubmission::start(
             'sub-1',
-            Questionnaire::create('q-1', 'Empty'),
+            Questionnaire::create('q-1', 'Empty', FormType::Form1040Nr),
             $this->client(),
             new DateTimeImmutable('2026-01-01T10:00:00+00:00'),
         );
@@ -145,7 +146,7 @@ final class QuestionnaireSubmissionTest extends TestCase
 
     private function questionnaire(): Questionnaire
     {
-        $questionnaire = Questionnaire::create('q-1', '1040-NR');
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
         $questionnaire->addStep('step-1', 'Personal');
         $questionnaire->addQuestion('step-1', 'q-1', 'married', 'Married?', QuestionType::YesNo);
 

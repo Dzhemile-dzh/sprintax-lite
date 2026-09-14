@@ -88,6 +88,19 @@ final class DoctrineSubmissionRepository implements SubmissionRepositoryInterfac
         return $submissions;
     }
 
+    public function existsForQuestionnaire(string $questionnaireId): bool
+    {
+        $count = $this->entityManager->createQueryBuilder()
+            ->select('COUNT(submission.id)')
+            ->from(QuestionnaireSubmission::class, 'submission')
+            ->where('IDENTITY(submission.questionnaire) = :questionnaireId')
+            ->setParameter('questionnaireId', $questionnaireId)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return (int) $count > 0;
+    }
+
     public function save(QuestionnaireSubmission $submission): void
     {
         $this->entityManager->persist($submission);

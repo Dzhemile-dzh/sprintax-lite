@@ -6,10 +6,11 @@ namespace App\Domain\Calculation\Contract;
 
 use App\Domain\Calculation\DTO\CalculationInput;
 use App\Domain\Calculation\DTO\CalculationResult;
+use App\Domain\Questionnaire\ValueObject\FormType;
 
 interface CalculatorInterface
 {
-    public function supports(string $formType): bool;
+    public function supports(FormType $formType): bool;
 
     public function calculate(CalculationInput $input): CalculationResult;
 }

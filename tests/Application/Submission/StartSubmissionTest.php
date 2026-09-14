@@ -8,6 +8,7 @@ use App\Application\Submission\Start\StartSubmission;
 use App\Domain\Questionnaire\Entity\Questionnaire;
 use App\Domain\Questionnaire\Exception\QuestionnaireNotFound;
 use App\Domain\Questionnaire\Repository\QuestionnaireRepositoryInterface;
+use App\Domain\Questionnaire\ValueObject\FormType;
 use App\Domain\User\Entity\User;
 use App\Domain\User\Exception\UserNotFound;
 use App\Domain\User\Repository\UserRepositoryInterface;
@@ -20,7 +21,7 @@ final class StartSubmissionTest extends TestCase
     public function testASecondStartResumesTheExistingSubmission(): void
     {
         $user = User::registerClient('user-1', new Email('client@example.test'), 'hashed-password');
-        $questionnaire = Questionnaire::create('q-1', '1040-NR');
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
         $questionnaire->addStep('step-1', 'Personal');
         $submissions = new InMemorySubmissionRepository();
         $useCase = new StartSubmission(

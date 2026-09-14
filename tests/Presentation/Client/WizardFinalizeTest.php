@@ -10,6 +10,7 @@ use App\Application\Submission\Start\StartSubmission;
 use App\Application\User\PasswordHasherInterface;
 use App\Domain\Questionnaire\Entity\Questionnaire;
 use App\Domain\Questionnaire\Repository\QuestionnaireRepositoryInterface;
+use App\Domain\Questionnaire\ValueObject\FormType;
 use App\Domain\Questionnaire\ValueObject\QuestionType;
 use App\Domain\Questionnaire\ValueObject\QuestionValidation;
 use App\Domain\Submission\Repository\SubmissionRepositoryInterface;
@@ -91,7 +92,7 @@ final class WizardFinalizeTest extends WebDatabaseTestCase
 
     private function persistQuestionnaire(): Questionnaire
     {
-        $questionnaire = Questionnaire::create('q-finalize', '1040-NR');
+        $questionnaire = Questionnaire::create('q-finalize', '1040-NR', FormType::Form1040Nr);
         $questionnaire->addStep('step-1', 'Personal');
         $questionnaire->addQuestion(
             'step-1',

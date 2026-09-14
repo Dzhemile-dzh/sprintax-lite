@@ -14,6 +14,7 @@ use App\Domain\Pdf\Exception\PdfGenerationFailed;
 use App\Domain\Questionnaire\Entity\QuestionMapping;
 use App\Domain\Questionnaire\Entity\Questionnaire;
 use App\Domain\Questionnaire\QuestionVisibilityEvaluator;
+use App\Domain\Questionnaire\ValueObject\FormType;
 use App\Domain\Questionnaire\ValueObject\PdfCoordinates;
 use App\Domain\Questionnaire\ValueObject\QuestionType;
 use App\Domain\Questionnaire\ValueObject\VisibilityCondition;
@@ -102,7 +103,7 @@ final class GenerateSubmissionPdfTest extends TestCase
 
     public function testItDoesNotCalculateWhenThereAreNoComputedMappings(): void
     {
-        $questionnaire = Questionnaire::create('q-1', '1040-NR');
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
         $questionnaire->addStep('step-1', 'Personal');
         $firstName = $questionnaire->addQuestion(
             'step-1',
@@ -133,7 +134,7 @@ final class GenerateSubmissionPdfTest extends TestCase
         $calculator = new class implements CalculatorInterface {
             public bool $called = false;
 
-            public function supports(string $formType): bool
+            public function supports(FormType $formType): bool
             {
                 $this->called = true;
 
@@ -251,6 +252,27 @@ final class GenerateSubmissionPdfTest extends TestCase
         self::assertSame(2, $this->submissions->saveCount);
     }
 
+    public function testItResolvesTheTemplateFromFormTypeAfterARename(): void
+    {
+        $submission = $this->finalized($this->submission());
+        $submission->questionnaire()->rename('1040-NR Demo');
+        $recorder = new RecordingPdfGenerator();
+        $templates = $this->templatesDirectoryWith('1040-nr.pdf');
+        $useCase = $this->useCase(
+            $submission,
+            $recorder,
+            $templates,
+            sys_get_temp_dir().DIRECTORY_SEPARATOR.'sprintax-pdf-out-'.uniqid('', true),
+        );
+
+        $useCase->execute('sub-1');
+
+        self::assertNotNull($recorder->last);
+        self::assertSame($templates.DIRECTORY_SEPARATOR.'1040-nr.pdf', $recorder->last->sourcePdfPath);
+        self::assertSame('1040-NR Demo', $submission->questionnaire()->name());
+        self::assertSame(FormType::Form1040Nr, $submission->questionnaire()->formType());
+    }
+
     public function testItDoesNotMarkPdfReadyWhenGenerationFails(): void
     {
         $submission = $this->finalized($this->submission());
@@ -321,7 +343,7 @@ final class GenerateSubmissionPdfTest extends TestCase
 
     private function submission(): QuestionnaireSubmission
     {
-        $questionnaire = Questionnaire::create('q-1', '1040-NR');
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
         $questionnaire->addStep('step-1', 'Personal');
         $firstName = $questionnaire->addQuestion(
             'step-1',

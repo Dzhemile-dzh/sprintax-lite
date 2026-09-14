@@ -13,6 +13,11 @@ final class InvalidQuestionnaire extends RuntimeException
         return new self(sprintf('Questionnaire %s cannot be blank.', $field));
     }
 
+    public static function formTypeLocked(): self
+    {
+        return new self('Form type cannot be changed after a client has started this questionnaire.');
+    }
+
     public static function duplicateQuestionKey(string $key): self
     {
         return new self(sprintf('Question key "%s" is already used in this questionnaire.', $key));

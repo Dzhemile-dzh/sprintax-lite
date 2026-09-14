@@ -5,25 +5,25 @@ declare(strict_types=1);
 namespace App\Tests\Infrastructure\Calculation;
 
 use App\Domain\Calculation\DTO\CalculationInput;
+use App\Domain\Questionnaire\ValueObject\FormType;
 use App\Infrastructure\Calculation\Form1040NrCalculator;
 use PHPUnit\Framework\TestCase;
 
 final class Form1040NrCalculatorTest extends TestCase
 {
-    public function testItSupportsThe1040NrFormTypeRegardlessOfCase(): void
+    public function testItSupportsOnlyThe1040NrFormType(): void
     {
         $calculator = new Form1040NrCalculator();
 
-        self::assertTrue($calculator->supports('1040-NR'));
-        self::assertTrue($calculator->supports('1040-nr'));
-        self::assertFalse($calculator->supports('1040'));
+        self::assertTrue($calculator->supports(FormType::Form1040Nr));
+        self::assertFalse($calculator->supports(FormType::FormW8Ben));
     }
 
     public function testItComputesTaxableIncomeTaxOwedAndBalanceFromAnswers(): void
     {
         $calculator = new Form1040NrCalculator();
 
-        $result = $calculator->calculate(new CalculationInput('1040-NR', [
+        $result = $calculator->calculate(new CalculationInput(FormType::Form1040Nr, [
             'income_wages' => '50000',
             'treaty_exempt_amount' => '10000',
             'tax_withheld' => '3000',
@@ -42,7 +42,7 @@ final class Form1040NrCalculatorTest extends TestCase
     {
         $calculator = new Form1040NrCalculator();
 
-        $result = $calculator->calculate(new CalculationInput('1040-NR', [
+        $result = $calculator->calculate(new CalculationInput(FormType::Form1040Nr, [
             'income_wages' => 20000,
             'tax_withheld' => 2500,
         ]));
@@ -57,7 +57,7 @@ final class Form1040NrCalculatorTest extends TestCase
     {
         $calculator = new Form1040NrCalculator();
 
-        $result = $calculator->calculate(new CalculationInput('1040-NR', [
+        $result = $calculator->calculate(new CalculationInput(FormType::Form1040Nr, [
             'income_wages' => '1000',
             'treaty_exempt_amount' => '5000',
         ]));

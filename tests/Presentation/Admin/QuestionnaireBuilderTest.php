@@ -6,13 +6,17 @@ namespace App\Tests\Presentation\Admin;
 
 use App\Application\User\PasswordHasherInterface;
 use App\Domain\Questionnaire\Repository\QuestionnaireRepositoryInterface;
+use App\Domain\Questionnaire\ValueObject\FormType;
 use App\Domain\Questionnaire\ValueObject\MappingSourceType;
 use App\Domain\Questionnaire\ValueObject\QuestionType;
+use App\Domain\Submission\Entity\QuestionnaireSubmission;
+use App\Domain\Submission\Repository\SubmissionRepositoryInterface;
 use App\Domain\User\Entity\User;
 use App\Domain\User\Repository\UserRepositoryInterface;
 use App\Domain\User\ValueObject\Email;
 use App\Infrastructure\Security\SecurityUser;
 use App\Tests\Support\WebDatabaseTestCase;
+use DateTimeImmutable;
 use Symfony\Component\HttpFoundation\Response;
 
 final class QuestionnaireBuilderTest extends WebDatabaseTestCase
@@ -43,8 +47,11 @@ final class QuestionnaireBuilderTest extends WebDatabaseTestCase
         self::assertSelectorTextContains('h1', 'Questionnaires');
 
         $crawler = $this->client->click($crawler->selectLink('New questionnaire')->link());
+        self::assertSelectorExists('#questionnaire_formType option[value="1040-nr"]');
+        self::assertSelectorNotExists('#questionnaire_formType option[value="w-8ben"]');
         $form = $crawler->selectButton('Save')->form([
             'questionnaire[name]' => '1040-NR',
+            'questionnaire[formType]' => FormType::Form1040Nr->value,
             'questionnaire[description]' => 'Demo form',
         ]);
         $this->client->submit($form);
@@ -52,6 +59,7 @@ final class QuestionnaireBuilderTest extends WebDatabaseTestCase
 
         $crawler = $this->client->followRedirect();
         self::assertSelectorTextContains('h1', '1040-NR');
+        self::assertSelectorTextContains('body', 'Form type: Form 1040-NR (1040-nr)');
         self::assertSelectorTextContains('body', 'Demo form');
 
         $crawler = $this->client->click($crawler->selectLink('Add step')->link());
@@ -115,6 +123,7 @@ final class QuestionnaireBuilderTest extends WebDatabaseTestCase
 
         $stored = $this->questionnaires()->all()[0] ?? null;
         self::assertNotNull($stored);
+        self::assertSame(FormType::Form1040Nr, $stored->formType());
         self::assertCount(1, $stored->steps());
         self::assertCount(2, $stored->allQuestions());
         self::assertCount(1, $stored->findQuestionByKey('income_types')?->options() ?? []);
@@ -128,6 +137,7 @@ final class QuestionnaireBuilderTest extends WebDatabaseTestCase
         $crawler = $this->client->request('GET', '/admin/questionnaires/new');
         $this->client->submit($crawler->selectButton('Save')->form([
             'questionnaire[name]' => '1040-NR',
+            'questionnaire[formType]' => FormType::Form1040Nr->value,
             'questionnaire[description]' => 'Original',
         ]));
         $crawler = $this->client->followRedirect();
@@ -144,7 +154,52 @@ final class QuestionnaireBuilderTest extends WebDatabaseTestCase
         $stored = $this->questionnaires()->all()[0] ?? null;
         self::assertNotNull($stored);
         self::assertSame('1040-NR Demo', $stored->name());
+        self::assertSame(FormType::Form1040Nr, $stored->formType());
         self::assertSame('Updated copy', $stored->description());
+    }
+
+    public function testAnAdminCannotChangeFormTypeAfterAClientStarts(): void
+    {
+        $this->loginAdmin();
+
+        $crawler = $this->client->request('GET', '/admin/questionnaires/new');
+        $this->client->submit($crawler->selectButton('Save')->form([
+            'questionnaire[name]' => '1040-NR',
+            'questionnaire[formType]' => FormType::Form1040Nr->value,
+        ]));
+        $this->client->followRedirect();
+
+        $stored = $this->questionnaires()->all()[0] ?? null;
+        self::assertNotNull($stored);
+        $stored->addStep('step-1', 'Personal');
+        $stored->addQuestion('step-1', 'q-name', 'first_name', 'First name', QuestionType::ShortText);
+        $this->questionnaires()->save($stored);
+
+        $clientUser = User::registerClient(
+            'u-client-start',
+            new Email('starter@example.test'),
+            $this->hash('password1'),
+        );
+        $this->users()->save($clientUser);
+        $this->submissions()->save(QuestionnaireSubmission::start(
+            'sub-lock',
+            $stored,
+            $clientUser,
+            new DateTimeImmutable('2026-01-01T10:00:00+00:00'),
+        ));
+
+        $crawler = $this->client->request('GET', '/admin/questionnaires/'.$stored->id().'/edit');
+        self::assertSelectorExists('#questionnaire_formType[disabled]');
+        self::assertSelectorTextContains('body', 'Form type cannot change after a client has started this questionnaire.');
+
+        $this->client->submit($crawler->selectButton('Save')->form([
+            'questionnaire[name]' => '1040-NR Demo',
+        ]));
+        $this->client->followRedirect();
+
+        $reloaded = $this->questionnaires()->get($stored->id());
+        self::assertSame('1040-NR Demo', $reloaded->name());
+        self::assertSame(FormType::Form1040Nr, $reloaded->formType());
     }
 
     private function loginAdmin(): void
@@ -172,6 +227,14 @@ final class QuestionnaireBuilderTest extends WebDatabaseTestCase
         self::assertInstanceOf(QuestionnaireRepositoryInterface::class, $questionnaires);
 
         return $questionnaires;
+    }
+
+    private function submissions(): SubmissionRepositoryInterface
+    {
+        $submissions = static::getContainer()->get(SubmissionRepositoryInterface::class);
+        self::assertInstanceOf(SubmissionRepositoryInterface::class, $submissions);
+
+        return $submissions;
     }
 
     private function hash(string $plainPassword): string

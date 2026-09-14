@@ -7,6 +7,7 @@ namespace App\Infrastructure\Calculation;
 use App\Domain\Calculation\Contract\CalculatorInterface;
 use App\Domain\Calculation\DTO\CalculationInput;
 use App\Domain\Calculation\DTO\CalculationResult;
+use App\Domain\Questionnaire\ValueObject\FormType;
 
 /**
  * Simplified 1040-NR stand-in: 10% of taxable income after a treaty exemption.
@@ -14,8 +15,6 @@ use App\Domain\Calculation\DTO\CalculationResult;
  */
 final class Form1040NrCalculator implements CalculatorInterface
 {
-    public const FORM_TYPE = '1040-nr';
-
     public const FIELD_TOTAL_INCOME = 'total_income';
     public const FIELD_TREATY_EXEMPTION = 'treaty_exemption';
     public const FIELD_TAXABLE_INCOME = 'taxable_income';
@@ -26,9 +25,9 @@ final class Form1040NrCalculator implements CalculatorInterface
 
     private const RATE = 0.10;
 
-    public function supports(string $formType): bool
+    public function supports(FormType $formType): bool
     {
-        return strtolower($formType) === self::FORM_TYPE;
+        return $formType === FormType::Form1040Nr;
     }
 
     public function calculate(CalculationInput $input): CalculationResult

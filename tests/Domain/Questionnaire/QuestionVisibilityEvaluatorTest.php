@@ -7,6 +7,7 @@ namespace App\Tests\Domain\Questionnaire;
 use App\Domain\Questionnaire\Entity\QuestionOption;
 use App\Domain\Questionnaire\Entity\Questionnaire;
 use App\Domain\Questionnaire\QuestionVisibilityEvaluator;
+use App\Domain\Questionnaire\ValueObject\FormType;
 use App\Domain\Questionnaire\ValueObject\QuestionType;
 use App\Domain\Questionnaire\ValueObject\VisibilityCondition;
 use App\Domain\Questionnaire\ValueObject\VisibilityOperator;
@@ -46,7 +47,7 @@ final class QuestionVisibilityEvaluatorTest extends TestCase
 
     public function testNotEqualsRequiresAnAnswerThatDiffers(): void
     {
-        $questionnaire = Questionnaire::create('q-1', '1040-NR');
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
         $questionnaire->addStep('step-1', 'Personal');
         $questionnaire->addQuestion('step-1', 'q-married', 'married', 'Married?', QuestionType::YesNo);
         $singleNote = $questionnaire->addQuestion(
@@ -73,7 +74,7 @@ final class QuestionVisibilityEvaluatorTest extends TestCase
 
     public function testMultiChoiceEqualsMatchesWhenTheExpectedValueIsSelected(): void
     {
-        $questionnaire = Questionnaire::create('q-1', '1040-NR');
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
         $questionnaire->addStep('step-1', 'Income');
         $incomeTypes = $questionnaire->addQuestion(
             'step-1',
@@ -107,7 +108,7 @@ final class QuestionVisibilityEvaluatorTest extends TestCase
 
     public function testMultiChoiceNotEqualsMeansTheValueIsNotSelected(): void
     {
-        $questionnaire = Questionnaire::create('q-1', '1040-NR');
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
         $questionnaire->addStep('step-1', 'Income');
         $incomeTypes = $questionnaire->addQuestion(
             'step-1',
@@ -144,7 +145,7 @@ final class QuestionVisibilityEvaluatorTest extends TestCase
 
     public function testAllConditionsMustHold(): void
     {
-        $questionnaire = Questionnaire::create('q-1', '1040-NR');
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
         $questionnaire->addStep('step-1', 'Personal');
         $questionnaire->addQuestion('step-1', 'q-married', 'married', 'Married?', QuestionType::YesNo);
         $questionnaire->addQuestion('step-1', 'q-us', 'spouse_in_us', 'Spouse in the US?', QuestionType::YesNo);
@@ -174,7 +175,7 @@ final class QuestionVisibilityEvaluatorTest extends TestCase
 
     public function testADependentStaysHiddenWhenItsControllerIsHidden(): void
     {
-        $questionnaire = Questionnaire::create('q-1', '1040-NR');
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
         $questionnaire->addStep('step-1', 'Personal');
         $questionnaire->addQuestion('step-1', 'q-married', 'married', 'Married?', QuestionType::YesNo);
         $questionnaire->addQuestion(
@@ -229,7 +230,7 @@ final class QuestionVisibilityEvaluatorTest extends TestCase
 
     public function testAMissingControllerQuestionHidesTheDependent(): void
     {
-        $questionnaire = Questionnaire::create('q-1', '1040-NR');
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
         $questionnaire->addStep('step-1', 'Personal');
         $orphan = $questionnaire->addQuestion(
             'step-1',
@@ -251,7 +252,7 @@ final class QuestionVisibilityEvaluatorTest extends TestCase
 
     public function testBlankTextIsTreatedAsUnanswered(): void
     {
-        $questionnaire = Questionnaire::create('q-1', '1040-NR');
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
         $questionnaire->addStep('step-1', 'Personal');
         $questionnaire->addQuestion('step-1', 'q-married', 'married', 'Married?', QuestionType::YesNo);
         $singleNote = $questionnaire->addQuestion(
@@ -277,7 +278,7 @@ final class QuestionVisibilityEvaluatorTest extends TestCase
 
     public function testCyclicRulesHideBothQuestions(): void
     {
-        $questionnaire = Questionnaire::create('q-1', '1040-NR');
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
         $questionnaire->addStep('step-1', 'Personal');
         $first = $questionnaire->addQuestion(
             'step-1',
@@ -312,7 +313,7 @@ final class QuestionVisibilityEvaluatorTest extends TestCase
 
     public function testADependentOnALaterStepUsesTheEarlierAnswer(): void
     {
-        $questionnaire = Questionnaire::create('q-1', '1040-NR');
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
         $questionnaire->addStep('step-1', 'Personal');
         $questionnaire->addStep('step-2', 'Spouse');
         $questionnaire->addQuestion('step-1', 'q-married', 'married', 'Married?', QuestionType::YesNo);
@@ -340,7 +341,7 @@ final class QuestionVisibilityEvaluatorTest extends TestCase
 
     private function personalQuestionnaire(): Questionnaire
     {
-        $questionnaire = Questionnaire::create('q-1', '1040-NR');
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
         $questionnaire->addStep('step-1', 'Personal');
         $questionnaire->addQuestion('step-1', 'q-married', 'married', 'Married?', QuestionType::YesNo);
         $questionnaire->addQuestion(

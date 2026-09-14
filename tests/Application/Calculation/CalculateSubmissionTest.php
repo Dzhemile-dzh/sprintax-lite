@@ -10,6 +10,7 @@ use App\Domain\Calculation\DTO\CalculationInput;
 use App\Domain\Calculation\DTO\CalculationResult;
 use App\Domain\Calculation\Exception\UnsupportedFormType;
 use App\Domain\Questionnaire\Entity\Questionnaire;
+use App\Domain\Questionnaire\ValueObject\FormType;
 use App\Domain\Questionnaire\ValueObject\QuestionType;
 use App\Domain\Submission\Entity\QuestionnaireSubmission;
 use App\Domain\Submission\Exception\SubmissionNotFound;
@@ -25,11 +26,11 @@ final class CalculateSubmissionTest extends TestCase
 {
     public function testItSelectsTheCalculatorThatSupportsTheQuestionnaireForm(): void
     {
-        $submission = $this->submissionWithWages('1040-NR', '50000');
+        $submission = $this->submissionWithWages(FormType::Form1040Nr, '50000');
         $useCase = new CalculateSubmission(
             new InMemorySubmissionRepository(['sub-1' => $submission]),
             [
-                new MatchingCalculator('W-2', ['ignored' => 1]),
+                new MatchingCalculator(FormType::FormW8Ben, ['ignored' => 1]),
                 new Form1040NrCalculator(),
             ],
         );
@@ -42,7 +43,7 @@ final class CalculateSubmissionTest extends TestCase
 
     public function testItFailsWhenNoCalculatorSupportsTheForm(): void
     {
-        $submission = $this->submissionWithWages('W-8BEN', '1000');
+        $submission = $this->submissionWithWages(FormType::FormW8Ben, '1000');
         $useCase = new CalculateSubmission(
             new InMemorySubmissionRepository(['sub-1' => $submission]),
             [new Form1040NrCalculator()],
@@ -52,9 +53,23 @@ final class CalculateSubmissionTest extends TestCase
         $useCase->execute('sub-1');
     }
 
-    private function submissionWithWages(string $formName, string $wages): QuestionnaireSubmission
+    public function testItStillCalculatesAfterTheQuestionnaireIsRenamed(): void
     {
-        $questionnaire = Questionnaire::create('q-1', $formName);
+        $submission = $this->submissionWithWages(FormType::Form1040Nr, '50000');
+        $submission->questionnaire()->rename('1040-NR Demo');
+        $useCase = new CalculateSubmission(
+            new InMemorySubmissionRepository(['sub-1' => $submission]),
+            [new Form1040NrCalculator()],
+        );
+
+        $result = $useCase->execute('sub-1');
+
+        self::assertSame(5000.0, $result->value(Form1040NrCalculator::FIELD_TAX_OWED));
+    }
+
+    private function submissionWithWages(FormType $formType, string $wages): QuestionnaireSubmission
+    {
+        $questionnaire = Questionnaire::create('q-1', 'Demo form', $formType);
         $questionnaire->addStep('step-1', 'Income');
         $wagesQuestion = $questionnaire->addQuestion(
             'step-1',
@@ -106,6 +121,17 @@ final class InMemorySubmissionRepository implements SubmissionRepositoryInterfac
         $this->submissions[$submission->id()] = $submission;
     }
 
+    public function existsForQuestionnaire(string $questionnaireId): bool
+    {
+        foreach ($this->submissions as $submission) {
+            if ($submission->questionnaire()->id() === $questionnaireId) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function findByUserAndQuestionnaire(string $userId, string $questionnaireId): ?QuestionnaireSubmission
     {
         foreach ($this->submissions as $submission) {
@@ -140,12 +166,12 @@ final class MatchingCalculator implements CalculatorInterface
      * @param array<string, int|float|string> $values
      */
     public function __construct(
-        private readonly string $formType,
+        private readonly FormType $formType,
         private readonly array $values,
     ) {
     }
 
-    public function supports(string $formType): bool
+    public function supports(FormType $formType): bool
     {
         return $formType === $this->formType;
     }

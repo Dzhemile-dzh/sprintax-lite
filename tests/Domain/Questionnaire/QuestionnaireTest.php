@@ -8,6 +8,7 @@ use App\Domain\Questionnaire\Entity\QuestionMapping;
 use App\Domain\Questionnaire\Entity\QuestionOption;
 use App\Domain\Questionnaire\Entity\Questionnaire;
 use App\Domain\Questionnaire\Exception\InvalidQuestionnaire;
+use App\Domain\Questionnaire\ValueObject\FormType;
 use App\Domain\Questionnaire\ValueObject\PdfCoordinates;
 use App\Domain\Questionnaire\ValueObject\QuestionType;
 use App\Domain\Questionnaire\ValueObject\VisibilityCondition;
@@ -33,7 +34,7 @@ final class QuestionnaireTest extends TestCase
 
     public function testDuplicateQuestionKeysAreRejected(): void
     {
-        $questionnaire = Questionnaire::create('q-1', '1040-NR');
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
         $questionnaire->addStep('step-1', 'Personal');
         $questionnaire->addQuestion('step-1', 'question-1', 'married', 'Are you married?', QuestionType::YesNo);
 
@@ -43,7 +44,7 @@ final class QuestionnaireTest extends TestCase
 
     public function testChoiceQuestionsAcceptOptionsAndTextQuestionsDoNot(): void
     {
-        $questionnaire = Questionnaire::create('q-1', '1040-NR');
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
         $questionnaire->addStep('step-1', 'Personal');
         $status = $questionnaire->addQuestion(
             'step-1',
@@ -71,7 +72,7 @@ final class QuestionnaireTest extends TestCase
 
     public function testMappingMustReferenceAQuestionInTheQuestionnaire(): void
     {
-        $questionnaire = Questionnaire::create('q-1', '1040-NR');
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
         $questionnaire->addStep('step-1', 'Personal');
         $questionnaire->addQuestion('step-1', 'question-1', 'married', 'Married?', QuestionType::YesNo);
 
@@ -98,7 +99,7 @@ final class QuestionnaireTest extends TestCase
 
     public function testDuplicateMappingSourcesAreRejected(): void
     {
-        $questionnaire = Questionnaire::create('q-1', '1040-NR');
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
         $questionnaire->addStep('step-1', 'Personal');
         $questionnaire->addQuestion('step-1', 'question-1', 'married', 'Married?', QuestionType::YesNo);
         $questionnaire->addMapping(QuestionMapping::forQuestion(
@@ -117,7 +118,7 @@ final class QuestionnaireTest extends TestCase
 
     public function testVisibilityRuleCanDependOnAnotherQuestion(): void
     {
-        $questionnaire = Questionnaire::create('q-1', '1040-NR');
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
         $questionnaire->addStep('step-1', 'Personal');
         $questionnaire->addQuestion('step-1', 'question-1', 'married', 'Married?', QuestionType::YesNo);
         $spouseName = $questionnaire->addQuestion(
@@ -145,9 +146,49 @@ final class QuestionnaireTest extends TestCase
         self::assertSame('personal', $questionnaire->previousStepBefore('income')?->id());
     }
 
+    public function testRenameKeepsTheFormType(): void
+    {
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
+        $questionnaire->rename('1040-NR Demo');
+
+        self::assertSame('1040-NR Demo', $questionnaire->name());
+        self::assertSame(FormType::Form1040Nr, $questionnaire->formType());
+    }
+
+    public function testOnlyImplementedFormTypesAreExposedToAdmins(): void
+    {
+        self::assertTrue(FormType::Form1040Nr->isImplemented());
+        self::assertFalse(FormType::FormW8Ben->isImplemented());
+    }
+
+    public function testFormTypeCanBeChangedBeforeLocking(): void
+    {
+        $questionnaire = Questionnaire::create('q-1', 'W-8BEN draft', FormType::Form1040Nr);
+        $questionnaire->changeFormType(FormType::FormW8Ben, false);
+
+        self::assertSame(FormType::FormW8Ben, $questionnaire->formType());
+        self::assertSame('W-8BEN draft', $questionnaire->name());
+    }
+
+    public function testFormTypeCannotChangeWhenTheQuestionnaireHasSubmissions(): void
+    {
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
+
+        $this->expectException(InvalidQuestionnaire::class);
+        $questionnaire->changeFormType(FormType::FormW8Ben, true);
+    }
+
+    public function testTheSameFormTypeIsAllowedWhenTheQuestionnaireHasSubmissions(): void
+    {
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
+        $questionnaire->changeFormType(FormType::Form1040Nr, true);
+
+        self::assertSame(FormType::Form1040Nr, $questionnaire->formType());
+    }
+
     private function questionnaireWithPersonalAndIncomeSteps(): Questionnaire
     {
-        $questionnaire = Questionnaire::create('q-1', '1040-NR', 'Demo');
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr, 'Demo');
         $questionnaire->addStep('personal', 'Personal');
         $questionnaire->addStep('income', 'Income');
         $questionnaire->addQuestion('personal', 'q-married', 'married', 'Married?', QuestionType::YesNo);

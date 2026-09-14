@@ -9,6 +9,7 @@ use App\Domain\Questionnaire\Entity\Question;
 use App\Domain\Questionnaire\Entity\QuestionMapping;
 use App\Domain\Questionnaire\Entity\Questionnaire;
 use App\Domain\Questionnaire\Entity\QuestionOption;
+use App\Domain\Questionnaire\ValueObject\FormType;
 use App\Domain\Questionnaire\ValueObject\PdfCoordinates;
 use App\Domain\Questionnaire\ValueObject\QuestionType;
 use App\Domain\Questionnaire\ValueObject\QuestionValidation;
@@ -54,6 +55,7 @@ final class AppFixtures extends Fixture
         $questionnaire = Questionnaire::create(
             $this->id(),
             '1040-NR',
+            FormType::Form1040Nr,
             'Demo Form 1040-NR with conditional spouse questions and computed tax fields.',
         );
 

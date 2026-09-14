@@ -7,6 +7,7 @@ namespace App\Tests\Presentation\Client;
 use App\Application\User\PasswordHasherInterface;
 use App\Domain\Questionnaire\Entity\Questionnaire;
 use App\Domain\Questionnaire\Repository\QuestionnaireRepositoryInterface;
+use App\Domain\Questionnaire\ValueObject\FormType;
 use App\Domain\Questionnaire\ValueObject\QuestionType;
 use App\Domain\Questionnaire\ValueObject\QuestionValidation;
 use App\Domain\Questionnaire\ValueObject\VisibilityCondition;
@@ -97,7 +98,7 @@ final class WizardVisibilityTest extends WebDatabaseTestCase
 
     private function persistConditionalQuestionnaire(): Questionnaire
     {
-        $questionnaire = Questionnaire::create('q-vis', 'Visibility');
+        $questionnaire = Questionnaire::create('q-vis', 'Visibility', FormType::Form1040Nr);
         $questionnaire->addStep('step-1', 'Personal');
         $questionnaire->addQuestion(
             'step-1',
