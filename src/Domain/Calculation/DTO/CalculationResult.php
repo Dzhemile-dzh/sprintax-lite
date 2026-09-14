@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Calculation\DTO;
 
+use InvalidArgumentException;
+
 final readonly class CalculationResult
 {
     /**
@@ -12,5 +14,14 @@ final readonly class CalculationResult
     public function __construct(
         public array $values,
     ) {
+    }
+
+    public function value(string $field): int|float|string
+    {
+        if (!array_key_exists($field, $this->values)) {
+            throw new InvalidArgumentException(sprintf('Calculated field "%s" is not present.', $field));
+        }
+
+        return $this->values[$field];
     }
 }

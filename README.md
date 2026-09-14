@@ -2,7 +2,7 @@
 
 Symfony questionnaire engine and IRS Form 1040-NR PDF generator (take-home assignment).
 
-Domain model, Doctrine persistence, and server-side visibility evaluation are in place. The client wizard, admin builder, calculation, PDF overlay, and security land in later commits.
+Domain model, Doctrine persistence, server-side visibility, and a pluggable calculation engine are in place. The client wizard, admin builder, PDF overlay, and security land in later commits.
 
 ## Architecture
 
@@ -32,7 +32,7 @@ Meaningful boundaries:
 
 There are no generic managers, base CRUD services, or abstract domain service classes. Business rules must not live in controllers or Twig.
 
-Placeholder infrastructure adapters exist for calculation and PDF. Doctrine persists domain aggregates through repository implementations under `Infrastructure/Persistence/Doctrine`. Mapping uses ORM attributes on entities; value objects are converted with custom DBAL types. Domain code still must not use EntityManager, QueryBuilder, or Symfony.
+Placeholder PDF adapter remains. Calculation is pluggable: `CalculateSubmission` picks a `CalculatorInterface` by questionnaire name. `Form1040NrCalculator` is a simplified 10% tax stand-in whose output keys (`taxable_income`, `tax_owed`, …) are meant for PDF mappings, not IRS tables.
 
 ## Domain model
 
