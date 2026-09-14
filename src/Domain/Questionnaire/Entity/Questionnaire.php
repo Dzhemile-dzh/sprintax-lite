@@ -239,16 +239,10 @@ final class Questionnaire
 
     public function hasStep(string $stepId): bool
     {
-        foreach ($this->steps as $step) {
-            if ($step->id() === $stepId) {
-                return true;
-            }
-        }
-
-        return false;
+        return $this->findStep($stepId) !== null;
     }
 
-    private function step(string $stepId): QuestionnaireStep
+    public function findStep(string $stepId): ?QuestionnaireStep
     {
         foreach ($this->steps as $step) {
             if ($step->id() === $stepId) {
@@ -256,6 +250,17 @@ final class Questionnaire
             }
         }
 
-        throw InvalidQuestionnaire::stepNotFound($stepId);
+        return null;
+    }
+
+    private function step(string $stepId): QuestionnaireStep
+    {
+        $step = $this->findStep($stepId);
+
+        if ($step === null) {
+            throw InvalidQuestionnaire::stepNotFound($stepId);
+        }
+
+        return $step;
     }
 }

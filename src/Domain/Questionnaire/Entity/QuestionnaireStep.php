@@ -85,6 +85,15 @@ final class QuestionnaireStep
         return $this->position;
     }
 
+    public function rename(string $title): void
+    {
+        if (trim($title) === '') {
+            throw InvalidQuestionnaire::blank('step title');
+        }
+
+        $this->title = $title;
+    }
+
     /**
      * @return list<Question>
      */

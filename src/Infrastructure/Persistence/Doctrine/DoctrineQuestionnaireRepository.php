@@ -40,6 +40,22 @@ final class DoctrineQuestionnaireRepository implements QuestionnaireRepositoryIn
         return $questionnaire;
     }
 
+    /**
+     * @return list<Questionnaire>
+     */
+    public function all(): array
+    {
+        /** @var list<Questionnaire> $questionnaires */
+        $questionnaires = $this->entityManager->createQueryBuilder()
+            ->select('questionnaire')
+            ->from(Questionnaire::class, 'questionnaire')
+            ->orderBy('questionnaire.name', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        return $questionnaires;
+    }
+
     public function save(Questionnaire $questionnaire): void
     {
         $this->entityManager->persist($questionnaire);

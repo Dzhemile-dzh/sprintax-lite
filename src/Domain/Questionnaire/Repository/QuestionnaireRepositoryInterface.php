@@ -8,6 +8,11 @@ use App\Domain\Questionnaire\Entity\Questionnaire;
 
 interface QuestionnaireRepositoryInterface
 {
+    /**
+     * @return list<Questionnaire>
+     */
+    public function all(): array;
+
     public function get(string $id): Questionnaire;
 
     public function save(Questionnaire $questionnaire): void;
