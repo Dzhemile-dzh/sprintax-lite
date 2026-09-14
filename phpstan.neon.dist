@@ -3,6 +3,8 @@ parameters:
     paths:
         - src
         - tests
+    scanFiles:
+        - migrations/Version20260914092233.php
     tmpDir: var/phpstan
     treatPhpDocTypesAsCertain: false
     symfony:
