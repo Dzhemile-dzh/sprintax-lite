@@ -97,22 +97,37 @@ Conditional visibility lives on the question (`equals` / `not_equals`). `Questio
 docker compose up --build
 ```
 
-The app listens on [http://localhost:8080](http://localhost:8080). Compose also starts a `worker` service that waits until `var/data` is writable, then consumes async PDF jobs as `www-data`.
+That starts Apache and the Messenger worker. The app is at [http://localhost:8080](http://localhost:8080). On first boot the app container runs migrations and loads demo fixtures. SQLite is stored in the `sqlite_data` volume (not the bind-mounted working tree). Linux `vendor/` packages live in a separate volume so Windows and container PHP builds do not mix.
 
-After the containers are up, apply the schema and demo data (as `www-data` so Apache can write the SQLite file):
+Console commands that write to SQLite or `var/cache` should run as `www-data`:
 
 ```bash
 docker compose exec --user www-data app php bin/console doctrine:migrations:migrate --no-interaction
 docker compose exec --user www-data app php bin/console doctrine:fixtures:load --no-interaction
 ```
 
-If login fails with a readonly-database error, the data volume was created as root. Fix it with:
+`doctrine:fixtures:load` purges existing data. If demo logins fail after a partial first boot, run that fixtures command or reset volumes with `docker compose down -v`.
+
+```bash
+docker compose exec app composer test
+docker compose exec --user www-data app php bin/console cache:warmup
+docker compose exec --user www-data app composer phpstan
+docker compose logs -f worker
+```
+
+The worker service already consumes `async`. If that service is not running:
+
+```bash
+docker compose run --rm --user www-data worker php bin/console messenger:consume async
+```
+
+If login fails with a readonly-database error, the data volume was created as root:
 
 ```bash
 docker compose exec app chown -R www-data:www-data /var/www/html/var/data
 ```
 
-SQLite data is stored in a Docker volume. Linux vendor packages are isolated from the host `vendor/` directory so Windows and container PHP builds do not mix.
+Reset SQLite (and vendor) volumes with `docker compose down -v`.
 
 ## Local PHP
 
@@ -177,7 +192,7 @@ After a client finalizes a submission, consume the async transport so the PDF is
 php bin/console messenger:consume async
 ```
 
-Docker Compose runs that command in the `worker` service. Jobs retry up to three times, then move to the `failed` transport (`doctrine://default?queue_name=failed`). Generated files are written to `var/pdf/{submissionId}.pdf`. Download is `GET /submissions/{id}/pdf`.
+Docker Compose runs that command in the `worker` service (`docker compose logs -f worker`). Jobs retry up to three times, then move to the `failed` transport (`doctrine://default?queue_name=failed`). Generated files are written to `var/pdf/{submissionId}.pdf`. Download is `GET /submissions/{id}/pdf`.
 
 ## Continuous integration
 
