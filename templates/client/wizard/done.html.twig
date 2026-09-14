@@ -1,0 +1,11 @@
+{% extends 'base.html.twig' %}
+{% import 'macros/ui.html.twig' as ui %}
+
+{% block title %}Submitted{% endblock %}
+
+{% block body %}
+    <h1>Submitted</h1>
+    <p>{{ questionnaire.name }} has been submitted.</p>
+    <p>{{ ui.link(path('client_wizard_review', {id: submission.id}), 'View answers') }}</p>
+    <p>{{ ui.link(path('client_home'), 'Back to client area') }}</p>
+{% endblock %}

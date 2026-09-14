@@ -1,0 +1,23 @@
+{% extends 'base.html.twig' %}
+{% import 'macros/ui.html.twig' as ui %}
+
+{% block title %}{{ step.title }}{% endblock %}
+
+{% block body %}
+    <h1>{{ questionnaire.name }}</h1>
+    <h2>{{ step.position }}. {{ step.title }}</h2>
+
+    {{ form_start(form) }}
+        {{ form_errors(form) }}
+        {% for field in form %}
+            {% if not field.rendered %}
+                {{ ui.field(field) }}
+            {% endif %}
+        {% endfor %}
+        {{ ui.submit('Continue') }}
+    {{ form_end(form) }}
+
+    {% if previousStepId %}
+        <p>{{ ui.link(path('client_wizard_step', {id: submission.id, stepId: previousStepId}), 'Back') }}</p>
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends 'base.html.twig' %}
+{% import 'macros/ui.html.twig' as ui %}
+
+{% block title %}Review {{ questionnaire.name }}{% endblock %}
+
+{% block body %}
+    <h1>Review</h1>
+    <p>{{ questionnaire.name }}</p>
+
+    {% for stepView in steps %}
+        <section>
+            <h2>{{ stepView.step.position }}. {{ stepView.step.title }}</h2>
+            {% if canFinalize %}
+                <p>{{ ui.link(path('client_wizard_step', {id: submission.id, stepId: stepView.step.id}), 'Edit this step') }}</p>
+            {% endif %}
+            <dl>
+                {% for item in stepView.questions %}
+                    <dt>{{ item.question.label }}</dt>
+                    <dd>{{ ui.answer(item.answer) }}</dd>
+                {% endfor %}
+            </dl>
+        </section>
+    {% endfor %}
+
+    {% if canFinalize %}
+        <form method="post" action="{{ path('client_wizard_finalize', {id: submission.id}) }}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token('finalize-' ~ submission.id) }}">
+            {{ ui.submit('Submit') }}
+        </form>
+    {% else %}
+        <p>{{ ui.link(path('client_wizard_done', {id: submission.id}), 'View confirmation') }}</p>
+    {% endif %}
+{% endblock %}

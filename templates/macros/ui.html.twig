@@ -1,9 +1,26 @@
 {% macro field(form_field) %}
     <div class="field">
         {{ form_label(form_field) }}
+        {{ form_help(form_field) }}
         {{ form_widget(form_field) }}
         {{ form_errors(form_field) }}
     </div>
+{% endmacro %}
+
+{% macro answer(value) %}
+    {% if value is null %}
+        Not answered
+    {% elseif value.raw() is iterable %}
+        {% if value.raw()|length == 0 %}
+            None selected
+        {% else %}
+            {{ value.raw()|join(', ') }}
+        {% endif %}
+    {% elseif not value.isProvided() %}
+        Not answered
+    {% else %}
+        {{ value.raw() }}
+    {% endif %}
 {% endmacro %}
 
 {% macro submit(label) %}
