@@ -13,6 +13,7 @@ doctrine:
                 dir: '%kernel.project_dir%/src/Entity'
                 prefix: 'App\Entity'
                 alias: App
+            # Domain entity mapping is added when Doctrine persistence is implemented.
 
 when@test:
     doctrine:

@@ -4,6 +4,36 @@ Symfony questionnaire engine and IRS Form 1040-NR PDF generator (take-home assig
 
 This is the project foundation only. Domain features are added in later commits.
 
+## Architecture
+
+The app uses a pragmatic Clean Architecture / hexagonal layout. HTTP never talks to Doctrine or PDF libraries directly.
+
+```
+Controller (Presentation)
+    ↓
+Application use case
+    ↓
+Domain
+    ↑
+Infrastructure implementations
+```
+
+| Layer | Namespace | Responsibility |
+| --- | --- | --- |
+| Domain | `App\Domain` | Entities, value objects, repository interfaces, calculation/PDF contracts. No Symfony, Doctrine, HTTP, Forms, or Twig. |
+| Application | `App\Application` | Use cases that orchestrate starting a submission, saving a step, calculating, generating a PDF. |
+| Infrastructure | `App\Infrastructure` | Doctrine repositories, FPDI PDF adapter, 1040-NR calculator. |
+| Presentation | `App\Presentation` | Thin controllers, forms, and other HTTP concerns for admin, client, and security. |
+
+Meaningful boundaries:
+
+- `CalculatorInterface` / `PdfGeneratorInterface`
+- `QuestionnaireRepositoryInterface` / `SubmissionRepositoryInterface`
+
+There are no generic managers, base CRUD services, or abstract domain service classes. Business rules must not live in controllers or Twig.
+
+Placeholder classes exist so the namespaces and dependency direction are in place. Behavior is added in later phases.
+
 ## Stack
 
 - PHP 8.4+
