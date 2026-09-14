@@ -42,4 +42,26 @@ final readonly class AnswerValue
     {
         return $this->value;
     }
+
+    /**
+     * A missing map entry is unanswered. Blank text is also unanswered.
+     * An empty choice list is an explicit "none selected" answer.
+     */
+    public function isProvided(): bool
+    {
+        if (is_array($this->value)) {
+            return true;
+        }
+
+        return trim($this->value) !== '';
+    }
+
+    public function includes(string $expected): bool
+    {
+        if (is_array($this->value)) {
+            return in_array($expected, $this->value, true);
+        }
+
+        return $this->value === $expected;
+    }
 }

@@ -2,7 +2,7 @@
 
 Symfony questionnaire engine and IRS Form 1040-NR PDF generator (take-home assignment).
 
-This is the project foundation only. Domain features are added in later commits.
+Domain model, Doctrine persistence, and server-side visibility evaluation are in place. The client wizard, admin builder, calculation, PDF overlay, and security land in later commits.
 
 ## Architecture
 
@@ -59,7 +59,12 @@ User
 - Status only moves `in_progress` → `finalized` → `pdf_ready`.
 - Clients are registered through `User::registerClient()`; admins are provisioned through `User::provisionAdmin()`.
 
-Conditional visibility configuration lives on the question (`equals` / `not_equals`). Evaluation is a later domain service.
+Conditional visibility lives on the question (`equals` / `not_equals`). `QuestionVisibilityEvaluator` applies those rules server-side against answers keyed by question key:
+
+- Every condition on a question must hold (AND).
+- Missing or blank text answers hide both `equals` and `not_equals` dependents.
+- An empty multi-choice list is “none selected”; `equals` / `not_equals` mean contains / does not contain.
+- A hidden or missing controller hides its dependents. Cyclic rules hide both sides.
 
 ## Stack
 
