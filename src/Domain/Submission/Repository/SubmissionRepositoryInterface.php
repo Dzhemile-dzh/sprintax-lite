@@ -10,5 +10,12 @@ interface SubmissionRepositoryInterface
 {
     public function get(string $id): QuestionnaireSubmission;
 
+    public function findByUserAndQuestionnaire(string $userId, string $questionnaireId): ?QuestionnaireSubmission;
+
+    /**
+     * @return list<QuestionnaireSubmission>
+     */
+    public function findForUser(string $userId): array;
+
     public function save(QuestionnaireSubmission $submission): void;
 }

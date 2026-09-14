@@ -105,6 +105,33 @@ final class InMemorySubmissionRepository implements SubmissionRepositoryInterfac
     {
         $this->submissions[$submission->id()] = $submission;
     }
+
+    public function findByUserAndQuestionnaire(string $userId, string $questionnaireId): ?QuestionnaireSubmission
+    {
+        foreach ($this->submissions as $submission) {
+            if ($submission->user()->id() === $userId && $submission->questionnaire()->id() === $questionnaireId) {
+                return $submission;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return list<QuestionnaireSubmission>
+     */
+    public function findForUser(string $userId): array
+    {
+        $matches = [];
+
+        foreach ($this->submissions as $submission) {
+            if ($submission->user()->id() === $userId) {
+                $matches[] = $submission;
+            }
+        }
+
+        return $matches;
+    }
 }
 
 final class MatchingCalculator implements CalculatorInterface

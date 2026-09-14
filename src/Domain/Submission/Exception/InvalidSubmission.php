@@ -38,4 +38,24 @@ final class InvalidSubmission extends RuntimeException
     {
         return new self('Answer values cannot be blank.');
     }
+
+    public static function cannotEdit(SubmissionStatus $status): self
+    {
+        return new self(sprintf('A submission cannot be edited from status "%s".', $status->value));
+    }
+
+    public static function requiredAnswer(string $questionKey): self
+    {
+        return new self(sprintf('Question "%s" is required.', $questionKey));
+    }
+
+    public static function invalidAnswer(string $questionKey, string $reason): self
+    {
+        return new self(sprintf('Question "%s" is invalid: %s.', $questionKey, $reason));
+    }
+
+    public static function incomplete(): self
+    {
+        return new self('The submission cannot be finalized until all required applicable questions are answered.');
+    }
 }

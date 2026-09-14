@@ -242,6 +242,32 @@ final class Questionnaire
         return $this->findStep($stepId) !== null;
     }
 
+    public function nextStepAfter(string $stepId): ?QuestionnaireStep
+    {
+        $steps = $this->steps();
+
+        foreach ($steps as $index => $step) {
+            if ($step->id() === $stepId) {
+                return $steps[$index + 1] ?? null;
+            }
+        }
+
+        throw InvalidQuestionnaire::stepNotFound($stepId);
+    }
+
+    public function previousStepBefore(string $stepId): ?QuestionnaireStep
+    {
+        $steps = $this->steps();
+
+        foreach ($steps as $index => $step) {
+            if ($step->id() === $stepId) {
+                return $index > 0 ? $steps[$index - 1] : null;
+            }
+        }
+
+        throw InvalidQuestionnaire::stepNotFound($stepId);
+    }
+
     public function findStep(string $stepId): ?QuestionnaireStep
     {
         foreach ($this->steps as $step) {

@@ -135,6 +135,16 @@ final class QuestionnaireTest extends TestCase
         self::assertSame('married', $spouseName->visibility()->conditions[0]->questionKey);
     }
 
+    public function testNextAndPreviousStepsFollowPosition(): void
+    {
+        $questionnaire = $this->questionnaireWithPersonalAndIncomeSteps();
+
+        self::assertSame('income', $questionnaire->nextStepAfter('personal')?->id());
+        self::assertNull($questionnaire->nextStepAfter('income'));
+        self::assertNull($questionnaire->previousStepBefore('personal'));
+        self::assertSame('personal', $questionnaire->previousStepBefore('income')?->id());
+    }
+
     private function questionnaireWithPersonalAndIncomeSteps(): Questionnaire
     {
         $questionnaire = Questionnaire::create('q-1', '1040-NR', 'Demo');

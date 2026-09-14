@@ -20,13 +20,26 @@ final class DoctrineSubmissionRepository implements SubmissionRepositoryInterfac
     {
         /** @var list<QuestionnaireSubmission> $submissions */
         $submissions = $this->entityManager->createQueryBuilder()
-            ->select('submission', 'answer', 'question', 'questionnaire', 'owner', 'currentStep')
+            ->select(
+                'submission',
+                'answer',
+                'answeredQuestion',
+                'questionnaire',
+                'owner',
+                'currentStep',
+                'step',
+                'question',
+                'questionOption',
+            )
             ->from(QuestionnaireSubmission::class, 'submission')
             ->leftJoin('submission.answers', 'answer')
-            ->leftJoin('answer.question', 'question')
+            ->leftJoin('answer.question', 'answeredQuestion')
             ->leftJoin('submission.questionnaire', 'questionnaire')
             ->leftJoin('submission.user', 'owner')
             ->leftJoin('submission.currentStep', 'currentStep')
+            ->leftJoin('questionnaire.steps', 'step')
+            ->leftJoin('step.questions', 'question')
+            ->leftJoin('question.options', 'questionOption')
             ->where('submission.id = :id')
             ->setParameter('id', $id)
             ->getQuery()
@@ -39,6 +52,40 @@ final class DoctrineSubmissionRepository implements SubmissionRepositoryInterfac
         }
 
         return $submission;
+    }
+
+    public function findByUserAndQuestionnaire(string $userId, string $questionnaireId): ?QuestionnaireSubmission
+    {
+        $submission = $this->entityManager->createQueryBuilder()
+            ->select('submission')
+            ->from(QuestionnaireSubmission::class, 'submission')
+            ->where('IDENTITY(submission.user) = :userId')
+            ->andWhere('IDENTITY(submission.questionnaire) = :questionnaireId')
+            ->setParameter('userId', $userId)
+            ->setParameter('questionnaireId', $questionnaireId)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        return $submission instanceof QuestionnaireSubmission ? $submission : null;
+    }
+
+    /**
+     * @return list<QuestionnaireSubmission>
+     */
+    public function findForUser(string $userId): array
+    {
+        /** @var list<QuestionnaireSubmission> $submissions */
+        $submissions = $this->entityManager->createQueryBuilder()
+            ->select('submission', 'questionnaire', 'currentStep')
+            ->from(QuestionnaireSubmission::class, 'submission')
+            ->join('submission.questionnaire', 'questionnaire')
+            ->join('submission.currentStep', 'currentStep')
+            ->where('IDENTITY(submission.user) = :userId')
+            ->setParameter('userId', $userId)
+            ->getQuery()
+            ->getResult();
+
+        return $submissions;
     }
 
     public function save(QuestionnaireSubmission $submission): void

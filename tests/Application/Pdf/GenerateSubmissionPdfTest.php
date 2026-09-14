@@ -216,6 +216,33 @@ final class GenerateSubmissionPdfTest extends TestCase
             {
                 $this->items[$submission->id()] = $submission;
             }
+
+            public function findByUserAndQuestionnaire(string $userId, string $questionnaireId): ?QuestionnaireSubmission
+            {
+                foreach ($this->items as $submission) {
+                    if ($submission->user()->id() === $userId && $submission->questionnaire()->id() === $questionnaireId) {
+                        return $submission;
+                    }
+                }
+
+                return null;
+            }
+
+            /**
+             * @return list<QuestionnaireSubmission>
+             */
+            public function findForUser(string $userId): array
+            {
+                $matches = [];
+
+                foreach ($this->items as $submission) {
+                    if ($submission->user()->id() === $userId) {
+                        $matches[] = $submission;
+                    }
+                }
+
+                return $matches;
+            }
         };
     }
 

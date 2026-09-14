@@ -121,6 +121,11 @@ final class QuestionnaireSubmission
         return $this->status;
     }
 
+    public function currentStep(): QuestionnaireStep
+    {
+        return $this->currentStep;
+    }
+
     public function currentStepId(): string
     {
         return $this->currentStep->id();
@@ -150,6 +155,20 @@ final class QuestionnaireSubmission
         $answers = $this->answers->toArray();
 
         return $answers;
+    }
+
+    /**
+     * @return array<string, AnswerValue>
+     */
+    public function answersByQuestionKey(): array
+    {
+        $answersByKey = [];
+
+        foreach ($this->answers() as $answer) {
+            $answersByKey[$answer->question()->key()] = $answer->value();
+        }
+
+        return $answersByKey;
     }
 
     public function answerFor(string $questionId): ?Answer
