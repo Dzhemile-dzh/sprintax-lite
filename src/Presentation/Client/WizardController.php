@@ -4,18 +4,17 @@ declare(strict_types=1);
 
 namespace App\Presentation\Client;
 
-use App\Application\Questionnaire\List\ListQuestionnaires;
+use App\Application\Submission\ClientHome\ListClientHome;
 use App\Application\Submission\Finalize\FinalizeSubmission;
+use App\Application\Submission\Get\GetSubmission;
+use App\Application\Submission\GetWizardStep\GetWizardStep;
 use App\Application\Submission\Review\ReviewSubmission;
 use App\Application\Submission\SaveStep\SaveStep;
 use App\Application\Submission\Start\StartSubmission;
 use App\Domain\Questionnaire\Exception\QuestionnaireNotFound;
-use App\Domain\Questionnaire\QuestionVisibilityEvaluator;
 use App\Domain\Submission\Entity\QuestionnaireSubmission;
 use App\Domain\Submission\Exception\InvalidSubmission;
 use App\Domain\Submission\Exception\SubmissionNotFound;
-use App\Domain\Submission\Repository\SubmissionRepositoryInterface;
-use App\Domain\Submission\SubmissionCompleteness;
 use App\Domain\Submission\ValueObject\SubmissionStatus;
 use App\Infrastructure\Security\SecurityUser;
 use App\Infrastructure\Security\SubmissionVoter;
@@ -32,29 +31,24 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class WizardController extends AbstractController
 {
     public function __construct(
-        private readonly ListQuestionnaires $listQuestionnaires,
+        private readonly ListClientHome $listClientHome,
         private readonly StartSubmission $startSubmission,
+        private readonly GetWizardStep $getWizardStep,
         private readonly SaveStep $saveStep,
         private readonly ReviewSubmission $reviewSubmission,
         private readonly FinalizeSubmission $finalizeSubmission,
-        private readonly SubmissionRepositoryInterface $submissions,
-        private readonly QuestionVisibilityEvaluator $visibility,
-        private readonly SubmissionCompleteness $completeness,
+        private readonly GetSubmission $getSubmission,
     ) {
     }
 
     #[Route('', name: 'client_home', methods: ['GET'])]
     public function home(): Response
     {
-        $submissionsByQuestionnaire = [];
-
-        foreach ($this->submissions->findForUser($this->securityUser()->id()) as $submission) {
-            $submissionsByQuestionnaire[$submission->questionnaire()->id()] = $submission;
-        }
+        $home = $this->listClientHome->execute($this->securityUser()->id());
 
         return $this->render('client/home.html.twig', [
-            'questionnaires' => $this->listQuestionnaires->execute(),
-            'submissions' => $submissionsByQuestionnaire,
+            'questionnaires' => $home->questionnaires,
+            'submissions' => $home->submissionsByQuestionnaireId,
         ]);
     }
 
@@ -83,13 +77,24 @@ final class WizardController extends AbstractController
     #[Route('/submissions/{id}/steps/{stepId}', name: 'client_wizard_step', methods: ['GET', 'POST'])]
     public function step(Request $request, string $id, string $stepId): Response
     {
-        $submission = $this->submission($id);
+        try {
+            $view = $this->getWizardStep->execute($id, $stepId);
+        } catch (SubmissionNotFound) {
+            throw $this->createNotFoundException();
+        } catch (InvalidSubmission $exception) {
+            if ($exception->deniesAccess()) {
+                throw $this->createAccessDeniedException();
+            }
+
+            throw $this->createNotFoundException();
+        }
+
         $this->denyAccessUnlessGranted(
             $request->isMethod('POST') ? SubmissionVoter::EDIT : SubmissionVoter::VIEW,
-            $submission,
+            $view->submission,
         );
 
-        if ($submission->status() !== SubmissionStatus::InProgress) {
+        if (!$view->openForEditing) {
             if ($request->isMethod('POST')) {
                 throw $this->createAccessDeniedException();
             }
@@ -97,26 +102,12 @@ final class WizardController extends AbstractController
             return $this->redirectToRoute('client_wizard_review', ['id' => $id]);
         }
 
-        $step = $submission->questionnaire()->findStep($stepId);
+        $step = $view->editableStep();
 
-        if ($step === null) {
-            throw $this->createNotFoundException();
-        }
-
-        if ($step->position() > $submission->currentStep()->position()) {
-            throw $this->createAccessDeniedException();
-        }
-
-        $answersByKey = $submission->answersByQuestionKey();
-        $visible = $this->visibility->visibleQuestionsOnStep(
-            $step,
-            $submission->questionnaire(),
-            $answersByKey,
-        );
         $form = $this->createForm(
             WizardStepFormType::class,
-            WizardStepFormType::dataFromAnswers($visible, $answersByKey),
-            ['questions' => $visible],
+            WizardStepFormType::dataFromAnswers($view->visibleQuestions, $view->submission->answersByQuestionKey()),
+            ['questions' => $view->visibleQuestions],
         );
         $form->handleRequest($request);
 
@@ -131,14 +122,18 @@ final class WizardController extends AbstractController
                     true,
                 );
             } catch (InvalidSubmission $exception) {
+                if ($exception->deniesAccess()) {
+                    throw $this->createAccessDeniedException();
+                }
+
                 $form->addError(new FormError($exception->getMessage()));
 
                 return $this->render('client/wizard/step.html.twig', [
                     'form' => $form,
-                    'submission' => $submission,
-                    'questionnaire' => $submission->questionnaire(),
+                    'submission' => $view->submission,
+                    'questionnaire' => $view->submission->questionnaire(),
                     'step' => $step,
-                    'previousStepId' => $submission->questionnaire()->previousStepBefore($stepId)?->id(),
+                    'previousStepId' => $view->previousStepId,
                 ]);
             }
 
@@ -154,10 +149,10 @@ final class WizardController extends AbstractController
 
         return $this->render('client/wizard/step.html.twig', [
             'form' => $form,
-            'submission' => $submission,
-            'questionnaire' => $submission->questionnaire(),
+            'submission' => $view->submission,
+            'questionnaire' => $view->submission->questionnaire(),
             'step' => $step,
-            'previousStepId' => $submission->questionnaire()->previousStepBefore($stepId)?->id(),
+            'previousStepId' => $view->previousStepId,
         ]);
     }
 
@@ -165,28 +160,25 @@ final class WizardController extends AbstractController
     public function review(string $id): Response
     {
         try {
-            $submission = $this->reviewSubmission->execute($id);
+            $review = $this->reviewSubmission->execute($id);
         } catch (SubmissionNotFound) {
             throw $this->createNotFoundException();
         }
 
-        $this->denyAccessUnlessGranted(SubmissionVoter::VIEW, $submission);
+        $this->denyAccessUnlessGranted(SubmissionVoter::VIEW, $review->submission);
 
-        if (
-            $submission->status() === SubmissionStatus::InProgress
-            && !$this->completeness->isComplete($submission)
-        ) {
+        if ($review->resumeStepId !== null) {
             return $this->redirectToRoute('client_wizard_step', [
                 'id' => $id,
-                'stepId' => $submission->currentStep()->id(),
+                'stepId' => $review->resumeStepId,
             ]);
         }
 
         return $this->render('client/wizard/review.html.twig', [
-            'submission' => $submission,
-            'questionnaire' => $submission->questionnaire(),
-            'steps' => $this->reviewSubmission->visibleAnswersByStep($submission),
-            'canFinalize' => $submission->status() === SubmissionStatus::InProgress,
+            'submission' => $review->submission,
+            'questionnaire' => $review->submission->questionnaire(),
+            'steps' => $review->steps,
+            'canFinalize' => $review->canFinalize,
         ]);
     }
 
@@ -242,7 +234,7 @@ final class WizardController extends AbstractController
     private function submission(string $id): QuestionnaireSubmission
     {
         try {
-            return $this->submissions->get($id);
+            return $this->getSubmission->execute($id);
         } catch (SubmissionNotFound) {
             throw $this->createNotFoundException();
         }

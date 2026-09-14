@@ -9,25 +9,37 @@ use App\Domain\Questionnaire\Entity\QuestionnaireStep;
 use App\Domain\Questionnaire\QuestionVisibilityEvaluator;
 use App\Domain\Submission\Entity\QuestionnaireSubmission;
 use App\Domain\Submission\Repository\SubmissionRepositoryInterface;
+use App\Domain\Submission\SubmissionCompleteness;
 use App\Domain\Submission\ValueObject\AnswerValue;
+use App\Domain\Submission\ValueObject\SubmissionStatus;
 
 final class ReviewSubmission
 {
     public function __construct(
         private readonly SubmissionRepositoryInterface $submissions,
         private readonly QuestionVisibilityEvaluator $visibility,
+        private readonly SubmissionCompleteness $completeness,
     ) {
     }
 
-    public function execute(string $submissionId): QuestionnaireSubmission
+    public function execute(string $submissionId): ReviewView
     {
-        return $this->submissions->get($submissionId);
+        $submission = $this->submissions->get($submissionId);
+        $inProgress = $submission->status() === SubmissionStatus::InProgress;
+        $complete = $inProgress && $this->completeness->isComplete($submission);
+
+        return new ReviewView(
+            $submission,
+            $this->visibleAnswersByStep($submission),
+            $inProgress && $complete,
+            $inProgress && !$complete ? $submission->currentStep()->id() : null,
+        );
     }
 
     /**
      * @return list<array{step: QuestionnaireStep, questions: list<array{question: Question, answer: ?AnswerValue}>}>
      */
-    public function visibleAnswersByStep(QuestionnaireSubmission $submission): array
+    private function visibleAnswersByStep(QuestionnaireSubmission $submission): array
     {
         $answersByKey = $submission->answersByQuestionKey();
         $steps = [];

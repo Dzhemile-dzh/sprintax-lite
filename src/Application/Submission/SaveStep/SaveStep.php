@@ -46,6 +46,10 @@ final class SaveStep
             throw InvalidSubmission::unknownStep($stepId);
         }
 
+        if ($step->position() > $submission->currentStep()->position()) {
+            throw InvalidSubmission::cannotSkipAhead();
+        }
+
         $answersByKey = $submission->answersByQuestionKey();
 
         foreach ($step->questions() as $question) {

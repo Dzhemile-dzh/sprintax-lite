@@ -9,6 +9,8 @@ use RuntimeException;
 
 final class InvalidSubmission extends RuntimeException
 {
+    private bool $deniesAccess = false;
+
     public static function questionnaireHasNoSteps(): self
     {
         return new self('A submission cannot start because the questionnaire has no steps.');
@@ -37,6 +39,19 @@ final class InvalidSubmission extends RuntimeException
     public static function unknownStep(string $stepId): self
     {
         return new self(sprintf('Step "%s" is not part of this submission questionnaire.', $stepId));
+    }
+
+    public static function cannotSkipAhead(): self
+    {
+        $exception = new self('Cannot skip ahead to a later wizard step.');
+        $exception->deniesAccess = true;
+
+        return $exception;
+    }
+
+    public function deniesAccess(): bool
+    {
+        return $this->deniesAccess;
     }
 
     public static function blankAnswerValue(): self

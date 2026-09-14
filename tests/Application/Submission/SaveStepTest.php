@@ -80,6 +80,49 @@ final class SaveStepTest extends TestCase
         ], true);
     }
 
+    public function testItRejectsSkippingAheadToALaterStep(): void
+    {
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
+        $questionnaire->addStep('step-1', 'Personal');
+        $questionnaire->addStep('step-2', 'Income');
+        $questionnaire->addQuestion(
+            'step-1',
+            'q-name',
+            'first_name',
+            'First name',
+            QuestionType::ShortText,
+            null,
+            QuestionValidation::required(),
+        );
+        $questionnaire->addQuestion(
+            'step-2',
+            'q-wages',
+            'wages',
+            'Wages',
+            QuestionType::Number,
+            null,
+            QuestionValidation::required(),
+        );
+        $submission = QuestionnaireSubmission::start(
+            'sub-1',
+            $questionnaire,
+            User::registerClient('user-1', new Email('client@example.test'), 'hashed-password'),
+            new DateTimeImmutable('2026-01-01T10:00:00+00:00'),
+        );
+
+        try {
+            $this->saveStep($submission)->execute('sub-1', 'step-2', [
+                'wages' => '50000',
+            ], true);
+            self::fail('Expected skipping ahead to be rejected.');
+        } catch (InvalidSubmission $exception) {
+            self::assertTrue($exception->deniesAccess());
+            self::assertSame('Cannot skip ahead to a later wizard step.', $exception->getMessage());
+            self::assertSame('step-1', $submission->currentStepId());
+            self::assertArrayNotHasKey('wages', $submission->answersByQuestionKey());
+        }
+    }
+
     public function testItRejectsAnInvalidDate(): void
     {
         $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
