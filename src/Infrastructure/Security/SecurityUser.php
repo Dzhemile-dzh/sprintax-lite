@@ -12,6 +12,7 @@ use Symfony\Component\Security\Core\User\UserInterface;
 final class SecurityUser implements UserInterface, PasswordAuthenticatedUserInterface
 {
     /**
+     * @param non-empty-string $email
      * @param list<string> $roles
      */
     private function __construct(

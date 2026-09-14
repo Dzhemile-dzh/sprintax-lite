@@ -37,6 +37,8 @@ final class WizardVisibilityTest extends WebDatabaseTestCase
             'wizard_step[married]' => 'no',
         ]);
         $values = $form->getPhpValues();
+        self::assertArrayHasKey('wizard_step', $values);
+        self::assertIsArray($values['wizard_step']);
         $values['wizard_step']['spouse_name'] = 'Hacker';
         $this->client->request($form->getMethod(), $form->getUri(), $values);
         self::assertResponseRedirects();

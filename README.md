@@ -151,7 +151,7 @@ php bin/console debug:container --env=dev >/dev/null
 
 PHPUnit suites follow the assignment layers: **unit** (visibility, calculation, domain rules, PDF orchestration, voters), **functional** (kernel/HTTP smoke, persistence, register, login, admin builder, wizard, resume, conditionals, review, finalize, authorization, PDF download), and **messenger** (handler behavior and idempotency). `composer test` runs all three.
 
-Warm the Symfony cache before PHPStan so the compiled container XML exists:
+PHPStan runs at level 8 against `src/` and `tests/` (PHP 8.4). There is no baseline: type issues are fixed in code. Warm the Symfony cache before PHPStan so the compiled container XML exists:
 
 ```bash
 php bin/console cache:warmup

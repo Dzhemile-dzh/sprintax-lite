@@ -1,12 +1,16 @@
 parameters:
-    level: 6
+    level: 8
+    phpVersion: 80400
     paths:
         - src
         - tests
-    scanFiles:
-        - migrations/Version20260914092233.php
-        - migrations/Version20260914154900.php
+    scanDirectories:
+        - migrations
+    excludePaths:
+        - tests/object-manager.php
     tmpDir: var/phpstan
     treatPhpDocTypesAsCertain: false
     symfony:
         containerXmlPath: var/cache/dev/App_KernelDevDebugContainer.xml
+    doctrine:
+        objectManagerLoader: tests/object-manager.php

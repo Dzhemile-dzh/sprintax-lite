@@ -34,6 +34,10 @@ final class EmailType extends StringType
             return null;
         }
 
-        return new Email((string) $converted);
+        if (!is_string($converted)) {
+            throw new InvalidArgumentException('Expected string when converting Email.');
+        }
+
+        return new Email($converted);
     }
 }

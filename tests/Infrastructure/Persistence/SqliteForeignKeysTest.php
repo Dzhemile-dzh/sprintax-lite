@@ -20,10 +20,8 @@ final class SqliteForeignKeysTest extends KernelTestCase
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
-        self::assertSame(
-            1,
-            (int) $entityManager->getConnection()->fetchOne('PRAGMA foreign_keys'),
-        );
+        $foreignKeys = $entityManager->getConnection()->fetchOne('PRAGMA foreign_keys');
+        self::assertContains($foreignKeys, [1, '1'], 'SQLite foreign_keys should be enabled.');
     }
 
     public function testInitialMigrationAppliesWithForeignKeysEnabled(): void
@@ -44,8 +42,9 @@ final class SqliteForeignKeysTest extends KernelTestCase
         }
 
         $schemaManager = $connection->createSchemaManager();
+        $foreignKeys = $connection->fetchOne('PRAGMA foreign_keys');
 
-        self::assertSame(1, (int) $connection->fetchOne('PRAGMA foreign_keys'));
+        self::assertContains($foreignKeys, [1, '1'], 'SQLite foreign_keys should be enabled.');
         self::assertTrue($schemaManager->tablesExist([
             'app_user',
             'questionnaire',

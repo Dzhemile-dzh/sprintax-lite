@@ -29,4 +29,10 @@ final class UserTest extends TestCase
         $this->expectException(InvalidEmail::class);
         new Email('not-an-email');
     }
+
+    public function testBlankEmailIsRejected(): void
+    {
+        $this->expectException(InvalidEmail::class);
+        new Email('   ');
+    }
 }
