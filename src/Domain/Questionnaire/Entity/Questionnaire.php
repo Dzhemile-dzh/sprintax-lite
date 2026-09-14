@@ -8,31 +8,59 @@ use App\Domain\Questionnaire\Exception\InvalidQuestionnaire;
 use App\Domain\Questionnaire\ValueObject\QuestionType;
 use App\Domain\Questionnaire\ValueObject\QuestionValidation;
 use App\Domain\Questionnaire\ValueObject\VisibilityRule;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
+use Doctrine\ORM\Mapping as ORM;
 
+#[ORM\Entity]
+#[ORM\Table(name: 'questionnaire')]
 final class Questionnaire
 {
-    /** @var list<QuestionnaireStep> */
-    private array $steps = [];
+    #[ORM\Id]
+    #[ORM\Column(length: 64)]
+    private string $id;
 
-    /** @var list<QuestionMapping> */
-    private array $mappings = [];
+    #[ORM\Column(length: 255)]
+    private string $name;
+
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $description;
+
+    /**
+     * @var Collection<int, QuestionnaireStep>
+     */
+    #[ORM\OneToMany(targetEntity: QuestionnaireStep::class, mappedBy: 'questionnaire', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[ORM\OrderBy(['position' => 'ASC'])]
+    private Collection $steps;
+
+    /**
+     * @var Collection<int, QuestionMapping>
+     */
+    #[ORM\OneToMany(targetEntity: QuestionMapping::class, mappedBy: 'questionnaire', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $mappings;
 
     private function __construct(
-        private string $id,
-        private string $name,
-        private ?string $description,
+        string $id,
+        string $name,
+        ?string $description,
     ) {
-        if (trim($this->id) === '') {
+        if (trim($id) === '') {
             throw InvalidQuestionnaire::blank('id');
         }
 
-        if (trim($this->name) === '') {
+        if (trim($name) === '') {
             throw InvalidQuestionnaire::blank('name');
         }
 
-        if ($this->description !== null && trim($this->description) === '') {
-            $this->description = null;
+        if ($description !== null && trim($description) === '') {
+            $description = null;
         }
+
+        $this->id = $id;
+        $this->name = $name;
+        $this->description = $description;
+        $this->steps = new ArrayCollection();
+        $this->mappings = new ArrayCollection();
     }
 
     public static function create(string $id, string $name, ?string $description = null): self
@@ -74,7 +102,8 @@ final class Questionnaire
      */
     public function steps(): array
     {
-        $steps = $this->steps;
+        /** @var list<QuestionnaireStep> $steps */
+        $steps = $this->steps->toArray();
         usort(
             $steps,
             static fn (QuestionnaireStep $left, QuestionnaireStep $right): int => $left->position() <=> $right->position(),
@@ -85,8 +114,8 @@ final class Questionnaire
 
     public function addStep(string $id, string $title): QuestionnaireStep
     {
-        $step = QuestionnaireStep::create($id, $title, count($this->steps) + 1);
-        $this->steps[] = $step;
+        $step = QuestionnaireStep::create($id, $title, $this->steps->count() + 1, $this);
+        $this->steps->add($step);
 
         return $step;
     }
@@ -112,6 +141,7 @@ final class Questionnaire
             $label,
             $type,
             $step->nextQuestionPosition(),
+            $step,
             $helpText,
             $validation,
             $visibility,
@@ -127,7 +157,17 @@ final class Questionnaire
             throw InvalidQuestionnaire::questionNotFound($mapping->source()->reference);
         }
 
-        $this->mappings[] = $mapping;
+        foreach ($this->mappings as $existing) {
+            if (
+                $existing->source()->type === $mapping->source()->type
+                && $existing->source()->reference === $mapping->source()->reference
+            ) {
+                throw InvalidQuestionnaire::duplicateMappingSource($mapping->source()->reference);
+            }
+        }
+
+        $mapping->belongTo($this);
+        $this->mappings->add($mapping);
     }
 
     /**
@@ -135,7 +175,10 @@ final class Questionnaire
      */
     public function mappings(): array
     {
-        return $this->mappings;
+        /** @var list<QuestionMapping> $mappings */
+        $mappings = $this->mappings->toArray();
+
+        return $mappings;
     }
 
     public function firstStep(): ?QuestionnaireStep

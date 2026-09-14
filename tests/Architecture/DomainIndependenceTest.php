@@ -11,7 +11,7 @@ use SplFileInfo;
 
 final class DomainIndependenceTest extends TestCase
 {
-    public function testDomainSourceDoesNotDependOnSymfonyOrDoctrine(): void
+    public function testDomainSourceDoesNotDependOnSymfonyOrDoctrineRuntime(): void
     {
         $domainDirectory = dirname(__DIR__, 2).'/src/Domain';
         $violations = [];
@@ -29,15 +29,26 @@ final class DomainIndependenceTest extends TestCase
             $contents = file_get_contents($file->getPathname());
             self::assertNotFalse($contents);
 
-            if (preg_match('/^use (Symfony|Doctrine)\\\\/m', $contents) === 1) {
-                $violations[] = $file->getPathname();
+            preg_match_all('/\bDoctrine\\\\[A-Za-z0-9_\\\\]+/', $contents, $matches);
+
+            foreach ($matches[0] as $reference) {
+                $allowed = str_starts_with($reference, 'Doctrine\\ORM\\Mapping')
+                    || str_starts_with($reference, 'Doctrine\\Common\\Collections');
+
+                if (!$allowed) {
+                    $violations[] = $file->getPathname().' references '.$reference;
+                }
+            }
+
+            if (str_contains($contents, 'Symfony\\')) {
+                $violations[] = $file->getPathname().' references Symfony';
             }
         }
 
         self::assertSame(
             [],
             $violations,
-            'Domain must not import Symfony or Doctrine classes.',
+            'Domain may use Doctrine mapping/collections only; no Symfony or Doctrine runtime APIs.',
         );
     }
 }

@@ -20,7 +20,7 @@ Infrastructure implementations
 
 | Layer | Namespace | Responsibility |
 | --- | --- | --- |
-| Domain | `App\Domain` | Entities, value objects, repository interfaces, calculation/PDF contracts. No Symfony, Doctrine, HTTP, Forms, or Twig. |
+| Domain | `App\Domain` | Entities, value objects, repository interfaces, calculation/PDF contracts. No Symfony, HTTP, Forms, or Twig. Doctrine mapping attributes and collections only. |
 | Application | `App\Application` | Use cases that orchestrate starting a submission, saving a step, calculating, generating a PDF. |
 | Infrastructure | `App\Infrastructure` | Doctrine repositories, FPDI PDF adapter, 1040-NR calculator. |
 | Presentation | `App\Presentation` | Thin controllers, forms, and other HTTP concerns for admin, client, and security. |
@@ -28,11 +28,11 @@ Infrastructure implementations
 Meaningful boundaries:
 
 - `CalculatorInterface` / `PdfGeneratorInterface`
-- `QuestionnaireRepositoryInterface` / `SubmissionRepositoryInterface`
+- `QuestionnaireRepositoryInterface` / `SubmissionRepositoryInterface` / `UserRepositoryInterface`
 
 There are no generic managers, base CRUD services, or abstract domain service classes. Business rules must not live in controllers or Twig.
 
-Placeholder infrastructure adapters exist for Doctrine, calculation, and PDF. Domain entities now model the questionnaire aggregate; persistence mapping comes later.
+Placeholder infrastructure adapters exist for calculation and PDF. Doctrine persists domain aggregates through repository implementations under `Infrastructure/Persistence/Doctrine`. Mapping uses ORM attributes on entities; value objects are converted with custom DBAL types. Domain code still must not use EntityManager, QueryBuilder, or Symfony.
 
 ## Domain model
 

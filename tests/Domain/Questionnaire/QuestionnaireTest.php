@@ -96,6 +96,25 @@ final class QuestionnaireTest extends TestCase
         ));
     }
 
+    public function testDuplicateMappingSourcesAreRejected(): void
+    {
+        $questionnaire = Questionnaire::create('q-1', '1040-NR');
+        $questionnaire->addStep('step-1', 'Personal');
+        $questionnaire->addQuestion('step-1', 'question-1', 'married', 'Married?', QuestionType::YesNo);
+        $questionnaire->addMapping(QuestionMapping::forQuestion(
+            'map-1',
+            'question-1',
+            new PdfCoordinates(1, 20.0, 40.0, 10),
+        ));
+
+        $this->expectException(InvalidQuestionnaire::class);
+        $questionnaire->addMapping(QuestionMapping::forQuestion(
+            'map-2',
+            'question-1',
+            new PdfCoordinates(1, 10.0, 10.0),
+        ));
+    }
+
     public function testVisibilityRuleCanDependOnAnotherQuestion(): void
     {
         $questionnaire = Questionnaire::create('q-1', '1040-NR');

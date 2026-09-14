@@ -8,41 +8,98 @@ use App\Domain\Questionnaire\Exception\InvalidQuestionnaire;
 use App\Domain\Questionnaire\ValueObject\QuestionType;
 use App\Domain\Questionnaire\ValueObject\QuestionValidation;
 use App\Domain\Questionnaire\ValueObject\VisibilityRule;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
+use Doctrine\ORM\Mapping as ORM;
 
+#[ORM\Entity]
+#[ORM\Table(name: 'question')]
+#[ORM\UniqueConstraint(name: 'uniq_question_step_position', columns: ['step_id', 'position'])]
+#[ORM\UniqueConstraint(name: 'uniq_question_questionnaire_key', columns: ['questionnaire_id', 'key'])]
 final class Question
 {
-    /** @var list<QuestionOption> */
-    private array $options = [];
+    #[ORM\Id]
+    #[ORM\Column(length: 64)]
+    private string $id;
+
+    #[ORM\ManyToOne(targetEntity: QuestionnaireStep::class, inversedBy: 'questions')]
+    #[ORM\JoinColumn(name: 'step_id', nullable: false, onDelete: 'CASCADE')]
+    private QuestionnaireStep $step;
+
+    #[ORM\ManyToOne(targetEntity: Questionnaire::class)]
+    #[ORM\JoinColumn(name: 'questionnaire_id', nullable: false, onDelete: 'CASCADE')]
+    private Questionnaire $questionnaire;
+
+    #[ORM\Column(length: 100)]
+    private string $key;
+
+    #[ORM\Column(length: 255)]
+    private string $label;
+
+    #[ORM\Column(enumType: QuestionType::class, length: 32)]
+    private QuestionType $type;
+
+    #[ORM\Column]
+    private int $position;
+
+    #[ORM\Column(name: 'help_text', type: 'text', nullable: true)]
+    private ?string $helpText;
+
+    #[ORM\Column(type: 'question_validation')]
+    private QuestionValidation $validation;
+
+    #[ORM\Column(type: 'visibility_rule')]
+    private VisibilityRule $visibility;
+
+    /**
+     * @var Collection<int, QuestionOption>
+     */
+    #[ORM\OneToMany(targetEntity: QuestionOption::class, mappedBy: 'question', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[ORM\OrderBy(['position' => 'ASC'])]
+    private Collection $options;
 
     private function __construct(
-        private string $id,
-        private string $key,
-        private string $label,
-        private QuestionType $type,
-        private int $position,
-        private ?string $helpText,
-        private QuestionValidation $validation,
-        private VisibilityRule $visibility,
+        string $id,
+        string $key,
+        string $label,
+        QuestionType $type,
+        int $position,
+        ?string $helpText,
+        QuestionValidation $validation,
+        VisibilityRule $visibility,
+        QuestionnaireStep $step,
     ) {
-        if (trim($this->id) === '') {
+        if (trim($id) === '') {
             throw InvalidQuestionnaire::blank('question id');
         }
 
-        if (trim($this->key) === '') {
+        if (trim($key) === '') {
             throw InvalidQuestionnaire::blank('question key');
         }
 
-        if (trim($this->label) === '') {
+        if (trim($label) === '') {
             throw InvalidQuestionnaire::blank('question label');
         }
 
-        if ($this->position < 1) {
+        if ($position < 1) {
             throw InvalidQuestionnaire::blank('question position');
         }
 
-        if ($this->helpText !== null && trim($this->helpText) === '') {
-            $this->helpText = null;
+        if ($helpText !== null && trim($helpText) === '') {
+            $helpText = null;
         }
+
+        $this->id = $id;
+        $this->key = $key;
+        $this->label = $label;
+        $this->type = $type;
+        $this->position = $position;
+        $this->helpText = $helpText;
+        $this->validation = $validation;
+        $this->visibility = $visibility;
+        $this->step = $step;
+        $this->questionnaire = $step->questionnaire();
+        $this->options = new ArrayCollection();
     }
 
     public static function create(
@@ -51,6 +108,7 @@ final class Question
         string $label,
         QuestionType $type,
         int $position,
+        QuestionnaireStep $step,
         ?string $helpText = null,
         ?QuestionValidation $validation = null,
         ?VisibilityRule $visibility = null,
@@ -64,6 +122,7 @@ final class Question
             $helpText,
             $validation ?? QuestionValidation::none(),
             $visibility ?? VisibilityRule::alwaysVisible(),
+            $step,
         );
     }
 
@@ -112,7 +171,8 @@ final class Question
      */
     public function options(): array
     {
-        $options = $this->options;
+        /** @var list<QuestionOption> $options */
+        $options = $this->options->toArray();
         usort(
             $options,
             static fn (QuestionOption $left, QuestionOption $right): int => $left->position() <=> $right->position(),
@@ -133,7 +193,8 @@ final class Question
             }
         }
 
-        $this->options[] = $option;
+        $option->belongTo($this);
+        $this->options->add($option);
     }
 
     public function configureValidation(QuestionValidation $validation): void

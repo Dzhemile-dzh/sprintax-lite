@@ -38,6 +38,11 @@ final class InvalidQuestionnaire extends RuntimeException
         return new self(sprintf('Option value "%s" is already used on this question.', $value));
     }
 
+    public static function duplicateMappingSource(string $reference): self
+    {
+        return new self(sprintf('A PDF mapping for "%s" already exists on this questionnaire.', $reference));
+    }
+
     public static function invalidPdfCoordinates(string $reason): self
     {
         return new self(sprintf('Invalid PDF mapping coordinates: %s.', $reason));
