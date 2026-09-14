@@ -21,8 +21,23 @@
     </php>
 
     <testsuites>
-        <testsuite name="Project Test Suite">
-            <directory>tests</directory>
+        <testsuite name="unit">
+            <directory>tests/Domain</directory>
+            <directory>tests/Application</directory>
+            <directory>tests/Architecture</directory>
+            <directory>tests/Infrastructure/Calculation</directory>
+            <directory>tests/Infrastructure/Pdf</directory>
+            <directory>tests/Infrastructure/Security</directory>
+            <exclude>tests/Application/KernelBootTest.php</exclude>
+        </testsuite>
+        <testsuite name="functional">
+            <directory>tests/Presentation</directory>
+            <directory>tests/DataFixtures</directory>
+            <directory>tests/Infrastructure/Persistence</directory>
+            <file>tests/Application/KernelBootTest.php</file>
+        </testsuite>
+        <testsuite name="messenger">
+            <directory>tests/Infrastructure/Messenger</directory>
         </testsuite>
     </testsuites>
 

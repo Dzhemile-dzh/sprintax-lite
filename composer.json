@@ -70,6 +70,9 @@
             "@auto-scripts"
         ],
         "test": "phpunit",
+        "test:unit": "phpunit --testsuite unit",
+        "test:functional": "phpunit --testsuite functional",
+        "test:messenger": "phpunit --testsuite messenger",
         "phpstan": "phpstan analyse --memory-limit=512M",
         "lint": [
             "php bin/console lint:container",
