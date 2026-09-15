@@ -5,30 +5,40 @@
 
 {% block body %}
     <h1>Review</h1>
-    <p>{{ questionnaire.name }}</p>
+    <p class="page-lead">{{ questionnaire.name }}</p>
 
     {% for stepView in steps %}
-        <section>
-            <h2>{{ stepView.step.position }}. {{ stepView.step.title }}</h2>
-            {% if canFinalize %}
-                <p>{{ ui.link(path('client_wizard_step', {id: submission.id, stepId: stepView.step.id}), 'Edit this step') }}</p>
-            {% endif %}
-            <dl>
+        <section class="review-section">
+            <div class="review-section__header">
+                <h2>{{ stepView.step.position }}. {{ stepView.step.title }}</h2>
+                {% if canFinalize %}
+                    {{ ui.link(
+                        path('client_wizard_step', {id: submission.id, stepId: stepView.step.id}),
+                        'Edit this step',
+                        'btn btn-secondary btn-sm'
+                    ) }}
+                {% endif %}
+            </div>
+            <dl class="answer-list">
                 {% for item in stepView.questions %}
-                    <dt>{{ item.question.label }}</dt>
-                    <dd>{{ ui.answer(item.answer) }}</dd>
+                    <div class="answer-row">
+                        <dt>{{ item.question.label }}</dt>
+                        <dd>{{ ui.answer(item.answer) }}</dd>
+                    </div>
                 {% endfor %}
             </dl>
         </section>
     {% endfor %}
 
-    {% if canFinalize %}
-        <form method="post" action="{{ path('client_wizard_finalize', {id: submission.id}) }}">
-            <input type="hidden" name="_csrf_token" value="{{ csrf_token('finalize-' ~ submission.id) }}">
-            {{ ui.submit('Submit') }}
-        </form>
-    {% else %}
-        <p>{{ ui.link(path('client_wizard_done', {id: submission.id}), 'View confirmation') }}</p>
-        <p>{{ ui.pdf_download(submission) }}</p>
-    {% endif %}
+    <div class="page-toolbar">
+        {% if canFinalize %}
+            <form method="post" action="{{ path('client_wizard_finalize', {id: submission.id}) }}" class="inline">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token('finalize-' ~ submission.id) }}">
+                {{ ui.submit('Submit') }}
+            </form>
+        {% else %}
+            {{ ui.link(path('client_wizard_done', {id: submission.id}), 'View confirmation', 'btn btn-secondary') }}
+            {{ ui.pdf_download(submission) }}
+        {% endif %}
+    </div>
 {% endblock %}

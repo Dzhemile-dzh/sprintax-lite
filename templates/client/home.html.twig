@@ -4,29 +4,39 @@
 {% block title %}Client{% endblock %}
 
 {% block body %}
-    <h1>Client</h1>
+    <h1>Client area</h1>
+    <p class="page-lead">Start or continue your tax questionnaires. Submitted PDFs appear here when ready.</p>
 
     {% if questionnaires is empty %}
-        <p>No questionnaires are available yet.</p>
+        <p class="empty-state">No questionnaires are available yet.</p>
     {% else %}
-        <ul>
+        <ul class="entity-list">
             {% for questionnaire in questionnaires %}
                 {% set submission = submissions[questionnaire.id] ?? null %}
-                <li>
-                    <strong>{{ questionnaire.name }}</strong>
-                    {% if submission %}
-                        {% if submission.status.value == 'in_progress' %}
-                            {{ ui.link(path('client_wizard_step', {id: submission.id, stepId: submission.currentStep.id}), 'Continue') }}
+                <li class="entity-list__item">
+                    <div class="entity-list__main">
+                        <strong class="entity-list__title">{{ questionnaire.name }}</strong>
+                        <span class="badge badge--soft">{{ questionnaire.formType.label }}</span>
+                    </div>
+                    <div class="entity-list__actions">
+                        {% if submission %}
+                            {% if submission.status.value == 'in_progress' %}
+                                {{ ui.link(
+                                    path('client_wizard_step', {id: submission.id, stepId: submission.currentStep.id}),
+                                    'Continue',
+                                    'btn btn-primary'
+                                ) }}
+                            {% else %}
+                                {{ ui.link(path('client_wizard_review', {id: submission.id}), 'View answers', 'btn btn-secondary') }}
+                                {{ ui.pdf_download(submission) }}
+                            {% endif %}
                         {% else %}
-                            {{ ui.link(path('client_wizard_review', {id: submission.id}), 'View answers') }}
-                            {{ ui.pdf_download(submission) }}
+                            <form method="post" action="{{ path('client_wizard_start', {questionnaireId: questionnaire.id}) }}" class="inline">
+                                <input type="hidden" name="_csrf_token" value="{{ csrf_token('start-questionnaire') }}">
+                                {{ ui.submit('Start') }}
+                            </form>
                         {% endif %}
-                    {% else %}
-                        <form method="post" action="{{ path('client_wizard_start', {questionnaireId: questionnaire.id}) }}" class="inline">
-                            <input type="hidden" name="_csrf_token" value="{{ csrf_token('start-questionnaire') }}">
-                            {{ ui.submit('Start') }}
-                        </form>
-                    {% endif %}
+                    </div>
                 </li>
             {% endfor %}
         </ul>

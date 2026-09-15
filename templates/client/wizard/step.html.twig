@@ -4,20 +4,28 @@
 {% block title %}{{ step.title }}{% endblock %}
 
 {% block body %}
-    <h1>{{ questionnaire.name }}</h1>
-    <h2>{{ step.position }}. {{ step.title }}</h2>
+    <h1 class="wizard-title">{{ questionnaire.name }}</h1>
 
-    {{ form_start(form) }}
+    <div class="page-header">
+        <h2>{{ step.position }}. {{ step.title }}</h2>
+        {% if previousStepId %}
+            {{ ui.back_link(path('client_wizard_step', {id: submission.id, stepId: previousStepId}), 'Back') }}
+        {% endif %}
+    </div>
+
+    {{ form_start(form, {attr: {class: 'wizard-form'}}) }}
         {{ form_errors(form) }}
         {% for field in form %}
-            {% if not field.rendered %}
-                {{ ui.field(field) }}
+            {% if not field.rendered and field.vars.name != '_token' %}
+                {{ ui.wizard_field(field) }}
             {% endif %}
         {% endfor %}
-        {{ ui.submit('Continue') }}
+        <div class="form-actions form-actions--end">
+            {{ ui.submit('Continue') }}
+        </div>
     {{ form_end(form) }}
+{% endblock %}
 
-    {% if previousStepId %}
-        <p>{{ ui.link(path('client_wizard_step', {id: submission.id, stepId: previousStepId}), 'Back') }}</p>
-    {% endif %}
+{% block javascripts %}
+    <script src="{{ app.request.basePath }}/js/wizard-date.js" defer></script>
 {% endblock %}

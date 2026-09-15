@@ -4,13 +4,19 @@
 {% block title %}Submitted{% endblock %}
 
 {% block body %}
-    <h1>Submitted</h1>
+    {{ ui.page_header('Submitted', path('client_home'), 'Back to client area') }}
+
     {% if submission.status.value == 'pdf_ready' %}
-        <p role="status">{{ questionnaire.name }} is ready. {{ ui.pdf_download(submission) }}</p>
+        <p class="page-lead">{{ questionnaire.name }} is ready to download.</p>
+        <div class="page-toolbar">
+            {{ ui.pdf_download(submission) }}
+            {{ ui.link(path('client_wizard_review', {id: submission.id}), 'View answers', 'btn btn-secondary') }}
+        </div>
     {% else %}
-        <p>{{ questionnaire.name }} has been submitted.</p>
-        <p>{{ ui.pdf_download(submission) }}</p>
+        <p class="page-lead">{{ questionnaire.name }} has been submitted.</p>
+        {{ ui.pdf_download(submission) }}
+        <div class="page-toolbar">
+            {{ ui.link(path('client_wizard_review', {id: submission.id}), 'View answers', 'btn btn-secondary') }}
+        </div>
     {% endif %}
-    <p>{{ ui.link(path('client_wizard_review', {id: submission.id}), 'View answers') }}</p>
-    <p>{{ ui.link(path('client_home'), 'Back to client area') }}</p>
 {% endblock %}

@@ -122,6 +122,11 @@ final class WizardStepFormType extends AbstractType
                 ...$options,
                 'widget' => 'single_text',
                 'input' => 'datetime_immutable',
+                'html5' => true,
+                'attr' => [
+                    'class' => 'date-input',
+                    'autocomplete' => 'off',
+                ],
             ],
             QuestionType::YesNo => [
                 ...$options,
@@ -131,20 +136,23 @@ final class WizardStepFormType extends AbstractType
                 ],
                 'expanded' => true,
                 'multiple' => false,
-                'placeholder' => $required ? false : 'Choose',
+                'placeholder' => false,
+                'attr' => ['class' => 'choice-chips'],
             ],
             QuestionType::SingleChoice => [
                 ...$options,
                 'choices' => $this->choiceChoices($question),
-                'expanded' => false,
+                'expanded' => true,
                 'multiple' => false,
-                'placeholder' => $required ? false : 'Choose',
+                'placeholder' => false,
+                'attr' => ['class' => 'choice-chips'],
             ],
             QuestionType::MultiChoice => [
                 ...$options,
                 'choices' => $this->choiceChoices($question),
                 'expanded' => true,
                 'multiple' => true,
+                'attr' => ['class' => 'choice-chips'],
             ],
         };
     }
