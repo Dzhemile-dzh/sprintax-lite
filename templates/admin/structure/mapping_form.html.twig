@@ -4,25 +4,42 @@
 
 {% block title %}{{ title }}{% endblock %}
 
-{% block stylesheets %}
-    {{ mapping.picker_styles() }}
-{% endblock %}
-
 {% block body %}
     <h1>{{ title }}</h1>
+    <p class="page-lead">Map a questionnaire answer or computed value onto the PDF template.</p>
 
-    {{ form_start(form) }}
+    {{ form_start(form, {attr: {class: 'mapping-form'}}) }}
         {{ form_errors(form) }}
-        {% for field in form %}
-            {% if not field.rendered %}
-                {{ ui.field(field) }}
-            {% endif %}
-        {% endfor %}
+
+        <div class="form-section">
+            <h2 class="form-section__title">Source</h2>
+            <div class="form-grid form-grid--2">
+                {{ ui.field(form.sourceType) }}
+                {{ ui.field(form.page) }}
+            </div>
+            <div class="form-grid form-grid--2">
+                {{ ui.field(form.questionKey) }}
+                {{ ui.field(form.computedField) }}
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h2 class="form-section__title">Position</h2>
+            <div class="form-grid form-grid--3">
+                {{ ui.field(form.xMm) }}
+                {{ ui.field(form.yMm) }}
+                {{ ui.field(form.fontSize) }}
+            </div>
+        </div>
 
         {{ mapping.picker(pdf_template_url|default(null), form.page.vars.id, form.xMm.vars.id, form.yMm.vars.id) }}
 
-        {{ ui.submit('Save') }}
-    {{ form_end(form) }}
+        <div class="form-actions">
+            {{ ui.submit('Save') }}
+        </div>
+
+        {{ form_rest(form) }}
+    {{ form_end(form, {render_rest: false}) }}
 {% endblock %}
 
 {% block javascripts %}

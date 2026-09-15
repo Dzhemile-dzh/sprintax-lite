@@ -5,13 +5,9 @@
 {% block title %}{{ questionnaire.name }} v{{ revision.version }}{% endblock %}
 
 {% block body %}
-    <h1>Version {{ revision.version }}</h1>
+    {{ ui.page_header('Version ' ~ revision.version, path('admin_questionnaire_history', {id: questionnaire.id}), 'Back to history') }}
     <p>{{ audit.revision_line(revision, null) }}</p>
-    <p>
-        {{ ui.link(path('admin_questionnaire_history', {id: questionnaire.id}), 'Back to history') }}
-        ·
-        {{ ui.link(path('admin_questionnaire_show', {id: questionnaire.id}), 'Current structure') }}
-    </p>
+    <p>{{ ui.link(path('admin_questionnaire_show', {id: questionnaire.id}), 'Current structure') }}</p>
 
     <h2>Structure as of this version</h2>
     {{ audit.structure(revision.snapshot) }}

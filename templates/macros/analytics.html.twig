@@ -1,42 +1,62 @@
 {% macro summary(overview) %}
-    <ul>
-        <li>Total submissions: {{ overview.totalSubmissions }}</li>
-        <li>In progress: {{ overview.countForStatus('in_progress') }}</li>
-        <li>Finalized (awaiting PDF): {{ overview.countForStatus('finalized') }}</li>
-        <li>PDF ready: {{ overview.countForStatus('pdf_ready') }}</li>
-        <li>PDFs emailed: {{ overview.pdfEmailed }}</li>
-        <li>Stored answers: {{ overview.answeredQuestions }}</li>
+    <ul class="metric-grid">
+        <li class="metric-card">
+            <span class="metric-card__label">Total submissions</span>
+            <span class="metric-card__value">{{ overview.totalSubmissions }}</span>
+        </li>
+        <li class="metric-card">
+            <span class="metric-card__label">In progress</span>
+            <span class="metric-card__value">{{ overview.countForStatus('in_progress') }}</span>
+        </li>
+        <li class="metric-card">
+            <span class="metric-card__label">Awaiting PDF</span>
+            <span class="metric-card__value">{{ overview.countForStatus('finalized') }}</span>
+        </li>
+        <li class="metric-card">
+            <span class="metric-card__label">PDF ready</span>
+            <span class="metric-card__value">{{ overview.countForStatus('pdf_ready') }}</span>
+        </li>
+        <li class="metric-card">
+            <span class="metric-card__label">PDFs emailed</span>
+            <span class="metric-card__value">{{ overview.pdfEmailed }}</span>
+        </li>
+        <li class="metric-card">
+            <span class="metric-card__label">Stored answers</span>
+            <span class="metric-card__value">{{ overview.answeredQuestions }}</span>
+        </li>
     </ul>
 {% endmacro %}
 
 {% macro questionnaire_table(rows) %}
     {% if rows is empty %}
-        <p>No questionnaires yet.</p>
+        <p class="empty-state">No questionnaires yet.</p>
     {% else %}
-        <table>
-            <thead>
-                <tr>
-                    <th>Questionnaire</th>
-                    <th>Started</th>
-                    <th>In progress</th>
-                    <th>Finalized</th>
-                    <th>PDF ready</th>
-                    <th>Emailed</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for row in rows %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
                     <tr>
-                        <td>{{ _self.questionnaire_link(row) }}</td>
-                        <td>{{ row.started }}</td>
-                        <td>{{ row.inProgress }}</td>
-                        <td>{{ row.finalized }}</td>
-                        <td>{{ row.pdfReady }}</td>
-                        <td>{{ row.pdfEmailed }}</td>
+                        <th>Questionnaire</th>
+                        <th class="num">Started</th>
+                        <th class="num">In progress</th>
+                        <th class="num">Finalized</th>
+                        <th class="num">PDF ready</th>
+                        <th class="num">Emailed</th>
                     </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                        <tr>
+                            <td>{{ _self.questionnaire_link(row) }}</td>
+                            <td class="num">{{ row.started }}</td>
+                            <td class="num">{{ row.inProgress }}</td>
+                            <td class="num">{{ row.finalized }}</td>
+                            <td class="num">{{ row.pdfReady }}</td>
+                            <td class="num">{{ row.pdfEmailed }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     {% endif %}
 {% endmacro %}
 

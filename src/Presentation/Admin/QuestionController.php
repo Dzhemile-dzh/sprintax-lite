@@ -79,7 +79,7 @@ final class QuestionController extends AbstractController
             }
         }
 
-        return $this->render('admin/structure/form.html.twig', [
+        return $this->render('admin/structure/question_form.html.twig', [
             'form' => $form,
             'title' => 'Add question',
         ]);
@@ -128,7 +128,7 @@ final class QuestionController extends AbstractController
             }
         }
 
-        return $this->render('admin/structure/form.html.twig', [
+        return $this->render('admin/structure/question_form.html.twig', [
             'form' => $form,
             'title' => 'Edit question',
         ]);

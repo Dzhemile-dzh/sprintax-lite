@@ -4,8 +4,7 @@
 {% block title %}Preview {{ questionnaire.name }}{% endblock %}
 
 {% block body %}
-    <h1>Preview: {{ questionnaire.name }}</h1>
-    <p>{{ ui.link(path('admin_questionnaire_show', {id: questionnaire.id}), 'Back to builder') }}</p>
+    {{ ui.page_header('Preview: ' ~ questionnaire.name, path('admin_questionnaire_show', {id: questionnaire.id}), 'Back to builder') }}
 
     {% for step in questionnaire.steps %}
         <section>

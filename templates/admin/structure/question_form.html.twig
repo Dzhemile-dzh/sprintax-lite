@@ -1,0 +1,52 @@
+{% extends 'base.html.twig' %}
+{% import 'macros/ui.html.twig' as ui %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block body %}
+    <h1>{{ title }}</h1>
+    <p class="page-lead">Define the question identity, validation rules, and optional visibility conditions.</p>
+
+    {{ form_start(form, {attr: {class: 'question-form'}}) }}
+        {{ form_errors(form) }}
+
+        <div class="form-section">
+            <h2 class="form-section__title">Basics</h2>
+            <div class="form-grid form-grid--2">
+                {{ ui.field(form.key) }}
+                {{ ui.field(form.type) }}
+            </div>
+            {{ ui.field(form.label) }}
+            {{ ui.field(form.helpText) }}
+            <div class="field field--check">
+                {{ form_widget(form.required) }}
+                {{ form_label(form.required) }}
+                {{ form_errors(form.required) }}
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h2 class="form-section__title">Validation</h2>
+            <div class="form-grid form-grid--3">
+                {{ ui.field(form.min) }}
+                {{ ui.field(form.max) }}
+                {{ ui.field(form.regex) }}
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h2 class="form-section__title">Visibility</h2>
+            <div class="form-grid form-grid--3">
+                {{ ui.field(form.visibilityQuestionKey) }}
+                {{ ui.field(form.visibilityOperator) }}
+                {{ ui.field(form.visibilityExpectedValue) }}
+            </div>
+        </div>
+
+        <div class="form-actions">
+            {{ ui.submit('Save') }}
+        </div>
+
+        {{ form_rest(form) }}
+    {{ form_end(form, {render_rest: false}) }}
+{% endblock %}

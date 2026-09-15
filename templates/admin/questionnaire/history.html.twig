@@ -5,8 +5,7 @@
 {% block title %}History of {{ questionnaire.name }}{% endblock %}
 
 {% block body %}
-    <h1>Change history</h1>
-    <p>{{ ui.link(path('admin_questionnaire_show', {id: questionnaire.id}), 'Back to ' ~ questionnaire.name) }}</p>
+    {{ ui.page_header('Change history', path('admin_questionnaire_show', {id: questionnaire.id}), 'Back to ' ~ questionnaire.name) }}
 
     {% if revisions is empty %}
         <p>No structure changes recorded yet.</p>

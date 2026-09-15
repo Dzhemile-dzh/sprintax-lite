@@ -5,20 +5,30 @@
 
 {% block body %}
     <h1>Questionnaires</h1>
-    <p>
-        {{ ui.link(path('admin_questionnaire_new'), 'New questionnaire') }}
-        ·
-        {{ ui.link(path('admin_analytics'), 'Analytics') }}
-    </p>
+    <p class="page-lead">Build and manage tax questionnaire structure, mappings, and history.</p>
+
+    <div class="page-toolbar">
+        {{ ui.link(path('admin_questionnaire_new'), 'New questionnaire', 'btn btn-primary') }}
+        {{ ui.link(path('admin_analytics'), 'Analytics', 'btn btn-secondary') }}
+    </div>
 
     {% if questionnaires is empty %}
-        <p>No questionnaires yet.</p>
+        <p class="empty-state">No questionnaires yet.</p>
     {% else %}
-        <ul>
+        <ul class="entity-list">
             {% for questionnaire in questionnaires %}
-                <li>
-                    {{ ui.link(path('admin_questionnaire_show', {id: questionnaire.id}), questionnaire.name) }}
-                    ({{ questionnaire.formType.label }})
+                <li class="entity-list__item">
+                    <div class="entity-list__main">
+                        {{ ui.link(
+                            path('admin_questionnaire_show', {id: questionnaire.id}),
+                            questionnaire.name,
+                            'entity-list__title'
+                        ) }}
+                        <span class="badge badge--soft">{{ questionnaire.formType.label }}</span>
+                    </div>
+                    <div class="entity-list__actions">
+                        {{ ui.link(path('admin_questionnaire_show', {id: questionnaire.id}), 'Open', 'btn btn-secondary') }}
+                    </div>
                 </li>
             {% endfor %}
         </ul>

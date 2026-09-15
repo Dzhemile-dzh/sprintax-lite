@@ -5,79 +5,101 @@
 
 {% block body %}
     <h1>{{ questionnaire.name }}</h1>
-    <p>Form type: {{ questionnaire.formType.label }} ({{ questionnaire.formType.value }})</p>
+
+    <div class="builder-meta">
+        <span class="badge">{{ questionnaire.formType.label }}</span>
+        <span class="badge badge--soft">{{ questionnaire.formType.value }}</span>
+    </div>
+
     {% if questionnaire.description %}
-        <p>{{ questionnaire.description }}</p>
+        <p class="page-lead">{{ questionnaire.description }}</p>
     {% endif %}
 
-    <p>
-        {{ ui.link(path('admin_questionnaire_edit', {id: questionnaire.id}), 'Edit') }}
-        ·
-        {{ ui.link(path('admin_questionnaire_preview', {id: questionnaire.id}), 'Preview') }}
-        ·
-        {{ ui.link(path('admin_questionnaire_history', {id: questionnaire.id}), 'History') }}
-        ·
-        {{ ui.link(path('admin_step_new', {id: questionnaire.id}), 'Add step') }}
-        ·
-        {{ ui.link(path('admin_mapping_new', {id: questionnaire.id}), 'Add PDF mapping') }}
-    </p>
+    <div class="page-toolbar">
+        {{ ui.link(path('admin_questionnaire_edit', {id: questionnaire.id}), 'Edit details', 'btn btn-secondary') }}
+        {{ ui.link(path('admin_questionnaire_preview', {id: questionnaire.id}), 'Preview', 'btn btn-secondary') }}
+        {{ ui.link(path('admin_questionnaire_history', {id: questionnaire.id}), 'History', 'btn btn-secondary') }}
+        {{ ui.link(path('admin_step_new', {id: questionnaire.id}), 'Add step', 'btn btn-primary') }}
+        {{ ui.link(path('admin_mapping_new', {id: questionnaire.id}), 'Add PDF mapping', 'btn btn-primary') }}
+    </div>
 
     <h2>Steps</h2>
     {% if questionnaire.steps is empty %}
-        <p>No steps yet.</p>
+        <p class="empty-state">No steps yet. Add a step to start building the questionnaire.</p>
     {% else %}
         {% for step in questionnaire.steps %}
-            <section>
-                <h3>{{ step.position }}. {{ step.title }}</h3>
-                <p>
-                    {{ ui.link(path('admin_question_new', {id: questionnaire.id, stepId: step.id}), 'Add question') }}
-                    ·
-                    {{ ui.link(path('admin_step_edit', {id: questionnaire.id, stepId: step.id}), 'Edit step') }}
-                    ·
-                    {{ ui.delete(path('admin_step_delete', {id: questionnaire.id, stepId: step.id}), csrf_token('delete-step-' ~ step.id), 'Delete step') }}
-                </p>
-                {% if step.questions is empty %}
-                    <p>No questions on this step.</p>
-                {% else %}
-                    <ul>
-                        {% for question in step.questions %}
-                            <li>
-                                <strong>{{ question.label }}</strong>
-                                ({{ question.key }}, {{ question.type.value }})
-                                · {{ ui.link(path('admin_question_edit', {id: questionnaire.id, questionId: question.id}), 'Edit question') }}
-                                · {{ ui.delete(path('admin_question_delete', {id: questionnaire.id, questionId: question.id}), csrf_token('delete-question-' ~ question.id), 'Delete question') }}
-                                {% if question.type.allowsOptions %}
-                                    · {{ ui.link(path('admin_option_new', {id: questionnaire.id, questionId: question.id}), 'Add option') }}
-                                    {% if question.options is not empty %}
-                                        <ul>
+            <article class="builder-step">
+                <header class="builder-step__header">
+                    <h3>{{ step.position }}. {{ step.title }}</h3>
+                    <div class="actions">
+                        {{ ui.link(path('admin_question_new', {id: questionnaire.id, stepId: step.id}), 'Add question', 'btn btn-secondary btn-sm') }}
+                        {{ ui.link(path('admin_step_edit', {id: questionnaire.id, stepId: step.id}), 'Edit', 'btn btn-ghost btn-sm') }}
+                        {{ ui.delete(path('admin_step_delete', {id: questionnaire.id, stepId: step.id}), csrf_token('delete-step-' ~ step.id), 'Delete') }}
+                    </div>
+                </header>
+                <div class="builder-step__body">
+                    {% if step.questions is empty %}
+                        <p class="empty-state">No questions on this step.</p>
+                    {% else %}
+                        <ul class="builder-question">
+                            {% for question in step.questions %}
+                                <li class="builder-question__item">
+                                    <div class="builder-question__top">
+                                        <div>
+                                            <p class="builder-question__title">{{ question.label }}</p>
+                                            <p class="builder-question__keys">{{ question.key }} · {{ question.type.value }}</p>
+                                        </div>
+                                        <div class="actions">
+                                            {{ ui.link(path('admin_question_edit', {id: questionnaire.id, questionId: question.id}), 'Edit', 'btn btn-ghost btn-sm') }}
+                                            {{ ui.delete(path('admin_question_delete', {id: questionnaire.id, questionId: question.id}), csrf_token('delete-question-' ~ question.id), 'Delete') }}
+                                            {% if question.type.allowsOptions %}
+                                                {{ ui.link(path('admin_option_new', {id: questionnaire.id, questionId: question.id}), 'Add option', 'btn btn-secondary btn-sm') }}
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% if question.type.allowsOptions and question.options is not empty %}
+                                        <ul class="builder-options">
                                             {% for option in question.options %}
-                                                <li>
-                                                    {{ option.label }} = {{ option.value }}
-                                                    · {{ ui.link(path('admin_option_edit', {id: questionnaire.id, questionId: question.id, optionId: option.id}), 'Edit option') }}
-                                                    · {{ ui.delete(path('admin_option_delete', {id: questionnaire.id, questionId: question.id, optionId: option.id}), csrf_token('delete-option-' ~ option.id), 'Delete option') }}
+                                                <li class="builder-options__item">
+                                                    <span class="builder-options__label">
+                                                        {{ option.label }}
+                                                        <code>{{ option.value }}</code>
+                                                    </span>
+                                                    <div class="actions">
+                                                        {{ ui.link(path('admin_option_edit', {id: questionnaire.id, questionId: question.id, optionId: option.id}), 'Edit', 'btn btn-ghost btn-sm') }}
+                                                        {{ ui.delete(path('admin_option_delete', {id: questionnaire.id, questionId: question.id, optionId: option.id}), csrf_token('delete-option-' ~ option.id), 'Delete') }}
+                                                    </div>
                                                 </li>
                                             {% endfor %}
                                         </ul>
                                     {% endif %}
-                                {% endif %}
-                            </li>
-                        {% endfor %}
-                    </ul>
-                {% endif %}
-            </section>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+            </article>
         {% endfor %}
     {% endif %}
 
     <h2>PDF mappings</h2>
     {% if questionnaire.mappings is empty %}
-        <p>No mappings yet.</p>
+        <p class="empty-state">No mappings yet. Add coordinates so answers stamp onto the IRS form.</p>
     {% else %}
-        <ul>
+        <ul class="builder-mapping">
             {% for mapping in questionnaire.mappings %}
-                <li>
-                    {{ ui.mapping_summary(mapping) }}
-                    · {{ ui.link(path('admin_mapping_edit', {id: questionnaire.id, mappingId: mapping.id}), 'Edit mapping') }}
-                    · {{ ui.delete(path('admin_mapping_delete', {id: questionnaire.id, mappingId: mapping.id}), csrf_token('delete-mapping-' ~ mapping.id), 'Delete mapping') }}
+                <li class="builder-mapping__item">
+                    <div class="builder-mapping__summary">
+                        <strong>{{ mapping.source.type.value }}</strong>: {{ mapping.source.reference }}
+                        <span class="builder-question__keys">
+                            page {{ mapping.coordinates.page }}
+                            · {{ mapping.coordinates.xMm }}mm, {{ mapping.coordinates.yMm }}mm
+                        </span>
+                    </div>
+                    <div class="actions">
+                        {{ ui.link(path('admin_mapping_edit', {id: questionnaire.id, mappingId: mapping.id}), 'Edit', 'btn btn-ghost btn-sm') }}
+                        {{ ui.delete(path('admin_mapping_delete', {id: questionnaire.id, mappingId: mapping.id}), csrf_token('delete-mapping-' ~ mapping.id), 'Delete') }}
+                    </div>
                 </li>
             {% endfor %}
         </ul>

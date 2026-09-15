@@ -5,8 +5,8 @@
 {% block title %}Analytics{% endblock %}
 
 {% block body %}
-    <h1>Analytics</h1>
-    <p>{{ ui.link(path('admin_home'), 'Back to questionnaires') }}</p>
+    {{ ui.page_header('Analytics', path('admin_home'), 'Back to questionnaires') }}
+    <p class="page-lead">Submission activity across questionnaires.</p>
 
     {{ analytics.summary(overview) }}
 

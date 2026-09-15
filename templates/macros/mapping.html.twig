@@ -1,46 +1,17 @@
-{% macro picker_styles() %}
-    <style>
-        .pdf-picker { margin: 1.25rem 0; }
-        .pdf-picker-toolbar { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.5rem; }
-        .pdf-picker-stage {
-            position: relative;
-            display: inline-block;
-            max-width: 100%;
-            border: 1px solid #999;
-            background: #eee;
-            line-height: 0;
-            cursor: crosshair;
-        }
-        .pdf-picker-stage canvas { max-width: 100%; height: auto; display: block; }
-        .pdf-picker-mark {
-            position: absolute;
-            width: 12px;
-            height: 12px;
-            margin: -6px 0 0 -6px;
-            border: 2px solid #b00020;
-            border-radius: 50%;
-            background: rgba(176, 0, 32, 0.2);
-            pointer-events: none;
-        }
-        .pdf-picker-hint { color: #444; margin: 0.5rem 0 0; }
-        .pdf-picker-missing { color: #666; }
-    </style>
-{% endmacro %}
-
 {% macro picker(pdf_template_url, page_field_id, x_field_id, y_field_id) %}
     <section class="pdf-picker" aria-label="PDF coordinate picker">
         <h2>Coordinate picker</h2>
         {% if pdf_template_url %}
             <div class="pdf-picker-toolbar">
-                <button type="button" id="pdf-picker-prev">Previous page</button>
+                <button type="button" id="pdf-picker-prev" class="btn btn-secondary">Previous page</button>
                 <span id="pdf-picker-page-label" aria-live="polite">Page 1</span>
-                <button type="button" id="pdf-picker-next">Next page</button>
+                <button type="button" id="pdf-picker-next" class="btn btn-secondary">Next page</button>
             </div>
             <div class="pdf-picker-stage" id="pdf-picker-stage">
                 <canvas id="pdf-picker-canvas"></canvas>
                 <span class="pdf-picker-mark" id="pdf-picker-mark" hidden></span>
             </div>
-            <p class="pdf-picker-hint">Click the form to set X/Y in millimetres from the top-left corner. Page changes update the Page field.</p>
+            <p class="pdf-picker-hint">Click the form to set X/Y in millimetres from the top-left corner. For checkbox marks, click the center of the box. Page changes update the Page field.</p>
         {% else %}
             <p class="pdf-picker-missing">No blank PDF template is available for this form type. Enter coordinates manually, or place <code>resources/pdf/{formType}.pdf</code> and reload.</p>
         {% endif %}
