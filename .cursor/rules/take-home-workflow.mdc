@@ -1,13 +1,11 @@
 ---
-description: Stop after each take-home phase for review and commit as Dzhemile-dzh
-alwaysApply: true
+description: Stop after each phase for review
 ---
 
-# Take-home workflow
+# Workflow
 
 Implement one assignment phase at a time. After a phase, stop so the user can review.
 
-Do not commit unless the user asks. When committing, author and committer must be `Dzhemile-dzh <dzhemile_ahmet@abv.bg>`, never Cursor Agent.
 
 Run the `review` subagent (`.cursor/agents/review.md`) when the user asks for review.
 
