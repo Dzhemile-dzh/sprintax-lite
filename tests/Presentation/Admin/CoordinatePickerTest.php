@@ -38,7 +38,7 @@ final class CoordinatePickerTest extends WebDatabaseTestCase
         try {
             $crawler = $this->client->request('GET', '/admin/questionnaires/'.$questionnaire->id().'/mappings/new');
             self::assertResponseIsSuccessful();
-            self::assertSelectorTextContains('h2', 'Coordinate picker');
+            self::assertSelectorTextContains('.pdf-picker h2', 'Coordinate picker');
             self::assertSelectorExists('#pdf-picker-canvas');
             self::assertSelectorExists('body script[src*="pdf.js"]');
             $html = (string) $this->client->getResponse()->getContent();

@@ -92,7 +92,8 @@ final class QuestionnaireBuilderTest extends WebDatabaseTestCase
 
         $crawler = $this->client->followRedirect();
         self::assertSelectorTextContains('h1', '1040-NR');
-        self::assertSelectorTextContains('body', 'Form type: Form 1040-NR (1040-nr)');
+        self::assertSelectorTextContains('.builder-meta', 'Form 1040-NR');
+        self::assertSelectorTextContains('.builder-meta', '1040-nr');
         self::assertSelectorTextContains('body', 'Demo form');
 
         $crawler = $this->client->click($crawler->selectLink('Add step')->link());
@@ -131,7 +132,8 @@ final class QuestionnaireBuilderTest extends WebDatabaseTestCase
         ]);
         $this->client->submit($form);
         $crawler = $this->client->followRedirect();
-        self::assertSelectorTextContains('body', 'Wages = wages');
+        self::assertSelectorTextContains('.builder-options__label', 'Wages');
+        self::assertSelectorTextContains('.builder-options__label code', 'wages');
 
         $crawler = $this->client->click($crawler->selectLink('Add PDF mapping')->link());
         self::assertSelectorExists('#mapping_questionKey option[value="married"]');
@@ -149,14 +151,18 @@ final class QuestionnaireBuilderTest extends WebDatabaseTestCase
         self::assertSelectorTextContains('body', 'question: married');
         self::assertSelectorTextContains('body', '20.5mm, 40.25mm');
 
-        $crawler = $this->client->click($crawler->selectLink('Edit step')->link());
+        $editStep = $crawler->filter('a[href*="/steps/"][href$="/edit"]');
+        self::assertGreaterThan(0, $editStep->count());
+        $crawler = $this->client->click($editStep->link());
         $this->client->submit($crawler->selectButton('Save')->form([
             'step[title]' => 'About you',
         ]));
         $crawler = $this->client->followRedirect();
         self::assertSelectorTextContains('body', 'About you');
 
-        $crawler = $this->client->click($crawler->selectLink('Edit question')->eq(1)->link());
+        $editQuestion = $crawler->filter('a[href*="/questions/"][href$="/edit"]');
+        self::assertGreaterThan(1, $editQuestion->count());
+        $crawler = $this->client->click($editQuestion->eq(1)->link());
         self::assertSelectorExists('#question_visibilityQuestionKey option[value="married"]');
         $this->client->submit($crawler->selectButton('Save')->form([
             'question[label]' => 'Income sources',
