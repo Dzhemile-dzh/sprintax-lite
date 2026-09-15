@@ -73,9 +73,7 @@
         <ul>
             {% for mapping in questionnaire.mappings %}
                 <li>
-                    {{ mapping.source.type.value }}: {{ mapping.source.reference }}
-                    · page {{ mapping.coordinates.page }}
-                    · {{ mapping.coordinates.xMm }}mm, {{ mapping.coordinates.yMm }}mm
+                    {{ ui.mapping_summary(mapping) }}
                     · {{ ui.link(path('admin_mapping_edit', {id: questionnaire.id, mappingId: mapping.id}), 'Edit mapping') }}
                     · {{ ui.delete(path('admin_mapping_delete', {id: questionnaire.id, mappingId: mapping.id}), csrf_token('delete-mapping-' ~ mapping.id), 'Delete mapping') }}
                 </li>

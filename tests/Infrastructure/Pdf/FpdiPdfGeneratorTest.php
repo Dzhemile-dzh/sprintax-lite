@@ -56,18 +56,27 @@ final class FpdiPdfGeneratorTest extends TestCase
         ));
     }
 
-    public function testItFailsWhenAFieldPageIsOutsideTheTemplate(): void
+    public function testItSkipsFieldsWhosePageIsOutsideTheTemplate(): void
     {
         $source = $this->blankPdf(1);
-        $generator = new FpdiPdfGenerator(new LocalFileStorage());
+        $output = $this->tempFile('out');
+        $generator = new FpdiPdfGenerator(new LocalFileStorage(), compressStreams: false);
 
-        $this->expectException(PdfGenerationFailed::class);
-        $generator->generate(new PdfGenerationRequest($source, $this->tempFile('out'), [
+        $generator->generate(new PdfGenerationRequest($source, $output, [
+            [
+                'placement' => new PdfFieldPlacement(1, 20.0, 30.0, 11),
+                'value' => 'on page',
+            ],
             [
                 'placement' => new PdfFieldPlacement(3, 10.0, 10.0),
                 'value' => 'too far',
             ],
         ]));
+
+        $contents = file_get_contents($output);
+        self::assertNotFalse($contents);
+        self::assertStringContainsString('on page', $contents);
+        self::assertStringNotContainsString('too far', $contents);
     }
 
     public function testItCreatesTheOutputDirectory(): void

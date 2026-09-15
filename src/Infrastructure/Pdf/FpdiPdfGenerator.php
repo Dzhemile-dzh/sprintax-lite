@@ -111,8 +111,8 @@ final class FpdiPdfGenerator implements PdfGeneratorInterface
         foreach ($fields as $field) {
             $page = $field['placement']->page;
 
-            if ($page > $pageCount) {
-                throw PdfGenerationFailed::pageOutOfRange($page, $pageCount);
+            if ($page < 1 || $page > $pageCount) {
+                continue;
             }
 
             $fieldsByPage[$page][] = $field;

@@ -80,7 +80,26 @@ final class AppFixturesTest extends WebDatabaseTestCase
             $questionnaire->mappings(),
         );
         self::assertContains($firstName->key(), $mappingSources);
+        self::assertContains('last_name', $mappingSources);
+        self::assertContains('birth_date', $mappingSources);
+        self::assertContains('income_wages', $mappingSources);
+        self::assertContains('treaty_exempt_amount', $mappingSources);
+        self::assertContains(Form1040NrCalculator::FIELD_FILING_SINGLE, $mappingSources);
+        self::assertContains(Form1040NrCalculator::FIELD_FILING_MFS, $mappingSources);
+        self::assertContains(Form1040NrCalculator::FIELD_TOTAL_INCOME, $mappingSources);
+        self::assertContains(Form1040NrCalculator::FIELD_TOTAL_ECI, $mappingSources);
+        self::assertContains(Form1040NrCalculator::FIELD_ADJUSTED_GROSS_INCOME, $mappingSources);
+        self::assertContains(Form1040NrCalculator::FIELD_TAXABLE_INCOME, $mappingSources);
         self::assertContains(Form1040NrCalculator::FIELD_TAX_OWED, $mappingSources);
+        self::assertContains(Form1040NrCalculator::FIELD_TOTAL_TAX, $mappingSources);
+        self::assertContains(Form1040NrCalculator::FIELD_TAX_WITHHELD, $mappingSources);
+        self::assertContains(Form1040NrCalculator::FIELD_TOTAL_PAYMENTS, $mappingSources);
+        self::assertContains(Form1040NrCalculator::FIELD_AMOUNT_OVERPAID, $mappingSources);
+        self::assertContains(Form1040NrCalculator::FIELD_AMOUNT_OWED, $mappingSources);
+        self::assertNotContains('married', $mappingSources);
+        self::assertNotContains('residency', $mappingSources);
+        self::assertNotContains('income_types', $mappingSources);
+        self::assertCount(21, $questionnaire->mappings());
 
         $this->signIn(AppFixtures::ADMIN_EMAIL, AppFixtures::ADMIN_PASSWORD);
         $this->client->request('GET', '/admin');

@@ -30,12 +30,21 @@ final class Form1040NrCalculatorTest extends TestCase
         ]));
 
         self::assertSame(50000.0, $result->value(Form1040NrCalculator::FIELD_TOTAL_INCOME));
+        self::assertSame(50000.0, $result->value(Form1040NrCalculator::FIELD_TOTAL_ECI));
+        self::assertSame(50000.0, $result->value(Form1040NrCalculator::FIELD_ADJUSTED_GROSS_INCOME));
+        self::assertSame(50000.0, $result->value(Form1040NrCalculator::FIELD_ADJUSTED_GROSS_INCOME_B));
         self::assertSame(10000.0, $result->value(Form1040NrCalculator::FIELD_TREATY_EXEMPTION));
         self::assertSame(40000.0, $result->value(Form1040NrCalculator::FIELD_TAXABLE_INCOME));
         self::assertSame(4000.0, $result->value(Form1040NrCalculator::FIELD_TAX_OWED));
+        self::assertSame(4000.0, $result->value(Form1040NrCalculator::FIELD_TAX_SUBTOTAL));
+        self::assertSame(4000.0, $result->value(Form1040NrCalculator::FIELD_TAX_AFTER_CREDITS));
+        self::assertSame(4000.0, $result->value(Form1040NrCalculator::FIELD_TOTAL_TAX));
         self::assertSame(3000.0, $result->value(Form1040NrCalculator::FIELD_TAX_WITHHELD));
+        self::assertSame(3000.0, $result->value(Form1040NrCalculator::FIELD_TOTAL_PAYMENTS));
         self::assertSame(1000.0, $result->value(Form1040NrCalculator::FIELD_AMOUNT_OWED));
         self::assertSame(0.0, $result->value(Form1040NrCalculator::FIELD_AMOUNT_OVERPAID));
+        self::assertSame('X', $result->value(Form1040NrCalculator::FIELD_FILING_SINGLE));
+        self::assertSame('', $result->value(Form1040NrCalculator::FIELD_FILING_MFS));
     }
 
     public function testMissingAmountsAreTreatedAsZeroAndOverpaymentIsReported(): void
@@ -64,5 +73,18 @@ final class Form1040NrCalculatorTest extends TestCase
 
         self::assertSame(0.0, $result->value(Form1040NrCalculator::FIELD_TAXABLE_INCOME));
         self::assertSame(0.0, $result->value(Form1040NrCalculator::FIELD_TAX_OWED));
+    }
+
+    public function testMarriedAnswerMarksTheMfsCheckbox(): void
+    {
+        $calculator = new Form1040NrCalculator();
+
+        $result = $calculator->calculate(new CalculationInput(FormType::Form1040Nr, [
+            'married' => 'yes',
+            'income_wages' => '1000',
+        ]));
+
+        self::assertSame('', $result->value(Form1040NrCalculator::FIELD_FILING_SINGLE));
+        self::assertSame('X', $result->value(Form1040NrCalculator::FIELD_FILING_MFS));
     }
 }

@@ -90,6 +90,16 @@ final class AuthenticationAndAuthorizationTest extends WebDatabaseTestCase
         self::assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
     }
 
+    public function testTheLoginPageRendersASingleForm(): void
+    {
+        $crawler = $this->client->request('GET', '/login');
+
+        self::assertResponseIsSuccessful();
+        self::assertCount(1, $crawler->filter('form'));
+        self::assertCount(1, $crawler->filter('h1'));
+        self::assertSelectorTextSame('h1', 'Sign in');
+    }
+
     public function testLoginRejectsAnUnknownPassword(): void
     {
         $this->persistUser(User::registerClient(

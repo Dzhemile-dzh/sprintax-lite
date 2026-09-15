@@ -23,6 +23,7 @@
 
 .idea/
 /compose.override.yaml
+/resources/pdf/*.pdf
 /identifier.sqlite
 /AGENTS.md
 /INTERVIEW.md

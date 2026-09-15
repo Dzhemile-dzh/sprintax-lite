@@ -13,7 +13,7 @@ services:
       DATABASE_URL: sqlite:////var/www/html/var/data/app.db
       DEFAULT_URI: http://localhost:8080
       MESSENGER_TRANSPORT_DSN: doctrine://default?auto_setup=1
-      MAILER_DSN: ${MAILER_DSN:-null://null}
+      MAILER_DSN: smtp://mailer:1025
       MAILER_FROM: ${MAILER_FROM:-noreply@localhost}
     volumes: &app-volumes
       - .:/var/www/html
@@ -27,12 +27,22 @@ services:
       retries: 12
       start_period: 300s
 
+  mailer:
+    image: axllent/mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+
   worker:
     build: .
     environment: *app-environment
     volumes: *app-volumes
     depends_on:
       - app
+      - mailer
     init: true
     restart: unless-stopped
     command: ["docker-entrypoint-worker"]

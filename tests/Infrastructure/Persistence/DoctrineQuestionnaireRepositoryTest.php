@@ -121,6 +121,45 @@ final class DoctrineQuestionnaireRepositoryTest extends DatabaseTestCase
         self::assertSame('2026-01-01T10:05:00+00:00', $reloaded->updatedAt()->format(DATE_ATOM));
     }
 
+    public function testLoadedSubmissionCanReadPdfMappingsFromTheQuestionnaire(): void
+    {
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
+        $questionnaire->addStep('step-1', 'Personal');
+        $questionnaire->addQuestion('step-1', 'question-1', 'last_name', 'Last name', QuestionType::ShortText);
+        $questionnaire->addMapping(QuestionMapping::forQuestion(
+            'map-1',
+            'last_name',
+            new PdfCoordinates(1, 90.0, 40.3, 9),
+        ));
+
+        $user = User::registerClient('user-1', new Email('client@example.test'), 'hashed-password');
+        $questionnaires = self::getContainer()->get(QuestionnaireRepositoryInterface::class);
+        $users = self::getContainer()->get(UserRepositoryInterface::class);
+        $submissions = self::getContainer()->get(SubmissionRepositoryInterface::class);
+        self::assertInstanceOf(QuestionnaireRepositoryInterface::class, $questionnaires);
+        self::assertInstanceOf(UserRepositoryInterface::class, $users);
+        self::assertInstanceOf(SubmissionRepositoryInterface::class, $submissions);
+
+        $questionnaires->save($questionnaire);
+        $users->save($user);
+        $submissions->save(QuestionnaireSubmission::start(
+            'sub-1',
+            $questionnaire,
+            $user,
+            new DateTimeImmutable('2026-01-01T10:00:00+00:00'),
+        ));
+
+        $this->entityManager->clear();
+
+        $fromSubmission = $submissions->get('sub-1');
+        self::assertCount(1, $fromSubmission->questionnaire()->mappings());
+
+        $fromAdmin = $questionnaires->get('q-1');
+        self::assertCount(1, $fromAdmin->mappings());
+        self::assertSame('last_name', $fromAdmin->mappings()[0]->source()->reference);
+        self::assertSame(90.0, $fromAdmin->mappings()[0]->coordinates()->xMm);
+    }
+
     public function testItReplacesAnExistingAnswerOnReload(): void
     {
         $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);

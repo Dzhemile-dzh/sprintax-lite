@@ -167,6 +167,8 @@ final class QuestionnaireBuilderTest extends WebDatabaseTestCase
         $this->client->click($crawler->selectLink('Preview')->link());
         self::assertSelectorTextContains('h1', 'Preview: 1040-NR');
         self::assertSelectorTextContains('body', 'Married?');
+        self::assertSelectorTextContains('body', 'PDF mappings');
+        self::assertSelectorTextContains('body', 'question: married');
 
         $stored = $this->questionnaires()->all()[0] ?? null;
         self::assertNotNull($stored);

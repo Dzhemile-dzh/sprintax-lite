@@ -71,7 +71,7 @@ final class AppFixtures extends Fixture
             'As shown on your passport.',
             QuestionValidation::required(),
         );
-        $questionnaire->addQuestion(
+        $lastName = $questionnaire->addQuestion(
             $personal->id(),
             $this->id(),
             'last_name',
@@ -80,7 +80,7 @@ final class AppFixtures extends Fixture
             null,
             QuestionValidation::required(),
         );
-        $questionnaire->addQuestion(
+        $birthDate = $questionnaire->addQuestion(
             $personal->id(),
             $this->id(),
             'birth_date',
@@ -143,7 +143,7 @@ final class AppFixtures extends Fixture
                 new VisibilityCondition('income_types', VisibilityOperator::Equals, 'wages'),
             ]),
         );
-        $questionnaire->addQuestion(
+        $treatyExempt = $questionnaire->addQuestion(
             $income->id(),
             $this->id(),
             'treaty_exempt_amount',
@@ -163,28 +163,62 @@ final class AppFixtures extends Fixture
             QuestionType::Number,
         );
 
-        $questionnaire->addMapping(QuestionMapping::forQuestion(
-            $this->id(),
-            $firstName->key(),
-            new PdfCoordinates(1, 20.5, 40.25, 11),
-        ));
-        $questionnaire->addMapping(QuestionMapping::forQuestion(
-            $this->id(),
-            $spouseName->key(),
-            new PdfCoordinates(1, 20.5, 50.0, 11),
-        ));
-        $questionnaire->addMapping(QuestionMapping::forQuestion(
-            $this->id(),
-            $wages->key(),
-            new PdfCoordinates(1, 100.0, 120.0, 10),
-        ));
-        $questionnaire->addMapping(QuestionMapping::forComputedField(
-            $this->id(),
-            Form1040NrCalculator::FIELD_TAX_OWED,
-            new PdfCoordinates(1, 100.0, 180.5, 9),
-        ));
+        // Coordinates are millimetres from the top-left of 2025 Form 1040-NR (Letter).
+        // Amounts share the IRS amount-column x; y matches each line-number baseline.
+        $amountX = 188.0;
+        $this->mapQuestion($questionnaire, $firstName->key(), 1, 14.0, 43.0);
+        $this->mapQuestion($questionnaire, $lastName->key(), 1, 90.0, 43.0);
+        $this->mapQuestion($questionnaire, $birthDate->key(), 1, 168.0, 43.0, 8);
+        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_FILING_SINGLE, 1, 36.5, 74.2, 10);
+        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_FILING_MFS, 1, 55.5, 74.2, 10);
+        $this->mapQuestion($questionnaire, $spouseName->key(), 1, 38.0, 82.0, 8);
+        $this->mapQuestion($questionnaire, $wages->key(), 1, $amountX, 143.1);
+        $this->mapQuestion($questionnaire, $treatyExempt->key(), 1, $amountX, 189.7);
+        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_TOTAL_INCOME, 1, $amountX, 193.9);
+        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_TOTAL_ECI, 1, $amountX, 244.7);
+        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_ADJUSTED_GROSS_INCOME, 1, $amountX, 257.2);
+        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_ADJUSTED_GROSS_INCOME_B, 2, $amountX, 20.4);
+        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_TAXABLE_INCOME, 2, $amountX, 47.9);
+        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_TAX_OWED, 2, $amountX, 52.1);
+        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_TAX_SUBTOTAL, 2, $amountX, 60.6);
+        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_TAX_AFTER_CREDITS, 2, $amountX, 77.5);
+        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_TOTAL_TAX, 2, $amountX, 102.9);
+        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_TAX_WITHHELD, 2, $amountX, 124.1);
+        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_TOTAL_PAYMENTS, 2, $amountX, 172.8);
+        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_AMOUNT_OVERPAID, 2, $amountX, 177.0);
+        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_AMOUNT_OWED, 2, $amountX, 208.7);
 
         return $questionnaire;
+    }
+
+    private function mapQuestion(
+        Questionnaire $questionnaire,
+        string $key,
+        int $page,
+        float $xMm,
+        float $yMm,
+        int $fontSize = 9,
+    ): void {
+        $questionnaire->addMapping(QuestionMapping::forQuestion(
+            $this->id(),
+            $key,
+            new PdfCoordinates($page, $xMm, $yMm, $fontSize),
+        ));
+    }
+
+    private function mapComputed(
+        Questionnaire $questionnaire,
+        string $field,
+        int $page,
+        float $xMm,
+        float $yMm,
+        int $fontSize = 9,
+    ): void {
+        $questionnaire->addMapping(QuestionMapping::forComputedField(
+            $this->id(),
+            $field,
+            new PdfCoordinates($page, $xMm, $yMm, $fontSize),
+        ));
     }
 
     private function addOption(Question $question, string $label, string $value, int $position): void

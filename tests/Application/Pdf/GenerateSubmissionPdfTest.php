@@ -32,6 +32,7 @@ use App\Infrastructure\Calculation\Form1040NrCalculator;
 use App\Infrastructure\Filesystem\LocalFileStorage;
 use App\Tests\Support\FailingPdfGenerator;
 use App\Tests\Support\FailingSubmissionPdfMailer;
+use App\Tests\Support\InMemoryQuestionnaireRepository;
 use App\Tests\Support\InMemorySubmissionRepository;
 use App\Tests\Support\RecordingPdfGenerator;
 use App\Tests\Support\RecordingSubmissionPdfMailer;
@@ -59,7 +60,7 @@ final class GenerateSubmissionPdfTest extends TestCase
         self::assertNotNull($recorder->last);
         self::assertSame($templates.DIRECTORY_SEPARATOR.'1040-nr.pdf', $recorder->last->sourcePdfPath);
         self::assertSame($outputPath, $recorder->last->outputPath);
-        self::assertCount(3, $recorder->last->fields);
+        self::assertCount(4, $recorder->last->fields);
 
         $firstName = $recorder->last->fields[0];
         self::assertSame('Ada', $firstName['value']);
@@ -75,12 +76,85 @@ final class GenerateSubmissionPdfTest extends TestCase
         self::assertSame(60.0, $incomeTypes['placement']->yMm);
         self::assertNull($incomeTypes['placement']->fontSize);
 
-        $taxOwed = $recorder->last->fields[2];
+        $wages = $recorder->last->fields[2];
+        self::assertSame('50000.00', $wages['value']);
+
+        $taxOwed = $recorder->last->fields[3];
         self::assertSame('5000.00', $taxOwed['value']);
         self::assertSame(2, $taxOwed['placement']->page);
         self::assertSame(100.0, $taxOwed['placement']->xMm);
         self::assertSame(180.5, $taxOwed['placement']->yMm);
         self::assertSame(9, $taxOwed['placement']->fontSize);
+    }
+
+    public function testItOverlaysUsingMappingsFromTheQuestionnaireBuilder(): void
+    {
+        $onSubmission = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
+        $onSubmission->addStep('step-1', 'Personal');
+        $firstName = $onSubmission->addQuestion(
+            'step-1',
+            'q-name',
+            'first_name',
+            'First name',
+            QuestionType::ShortText,
+        );
+        $onSubmission->addMapping(QuestionMapping::forQuestion(
+            'map-stale',
+            $firstName->key(),
+            new PdfCoordinates(1, 1.0, 1.0, 8),
+        ));
+
+        $fromAdmin = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
+        $fromAdmin->addStep('step-1', 'Personal');
+        $fromAdmin->addQuestion(
+            'step-1',
+            'q-name',
+            'first_name',
+            'First name',
+            QuestionType::ShortText,
+        );
+        $fromAdmin->addMapping(QuestionMapping::forQuestion(
+            'map-admin',
+            'first_name',
+            new PdfCoordinates(1, 17.0, 40.3, 9),
+        ));
+
+        $submission = QuestionnaireSubmission::start(
+            'sub-1',
+            $onSubmission,
+            User::registerClient('user-1', new Email('client@example.test'), 'hashed-password'),
+            new DateTimeImmutable('2026-01-01T10:00:00+00:00'),
+        );
+        $submission->recordAnswer(
+            $firstName,
+            AnswerValue::text('Ada'),
+            new DateTimeImmutable('2026-01-01T10:05:00+00:00'),
+        );
+        $this->finalized($submission);
+
+        $recorder = new RecordingPdfGenerator();
+        $repository = InMemorySubmissionRepository::with($submission);
+        $outputDirectory = sys_get_temp_dir().DIRECTORY_SEPARATOR.'sprintax-pdf-out-'.uniqid('', true);
+        $useCase = new GenerateSubmissionPdf(
+            $repository,
+            InMemoryQuestionnaireRepository::with($fromAdmin),
+            new CalculateSubmission($repository, [new Form1040NrCalculator()]),
+            $recorder,
+            new QuestionVisibilityEvaluator(),
+            new LocalFileStorage(),
+            $this->emailer($repository, $outputDirectory, new RecordingSubmissionPdfMailer()),
+            $this->templatesDirectoryWith('1040-nr.pdf'),
+            $outputDirectory,
+        );
+
+        $useCase->execute('sub-1');
+
+        self::assertNotNull($recorder->last);
+        self::assertCount(1, $recorder->last->fields);
+        self::assertSame('Ada', $recorder->last->fields[0]['value']);
+        self::assertSame(17.0, $recorder->last->fields[0]['placement']->xMm);
+        self::assertSame(40.3, $recorder->last->fields[0]['placement']->yMm);
+        self::assertSame(9, $recorder->last->fields[0]['placement']->fontSize);
     }
 
     public function testItOmitsHiddenAndBlankAnswers(): void
@@ -163,6 +237,7 @@ final class GenerateSubmissionPdfTest extends TestCase
         $outputDirectory = sys_get_temp_dir().DIRECTORY_SEPARATOR.'sprintax-pdf-out-'.uniqid('', true);
         $useCase = new GenerateSubmissionPdf(
             $repository,
+            InMemoryQuestionnaireRepository::with($questionnaire),
             new CalculateSubmission($repository, [$calculator]),
             $recorder,
             new QuestionVisibilityEvaluator(),
@@ -391,6 +466,7 @@ final class GenerateSubmissionPdfTest extends TestCase
 
         return new GenerateSubmissionPdf(
             $this->submissions,
+            InMemoryQuestionnaireRepository::with($submission->questionnaire()),
             new CalculateSubmission($this->submissions, [new Form1040NrCalculator()]),
             $generator,
             new QuestionVisibilityEvaluator(),
@@ -494,6 +570,11 @@ final class GenerateSubmissionPdfTest extends TestCase
             'map-types',
             $incomeTypes->key(),
             new PdfCoordinates(1, 15.0, 60.0),
+        ));
+        $questionnaire->addMapping(QuestionMapping::forQuestion(
+            'map-wages',
+            $wages->key(),
+            new PdfCoordinates(1, 188.0, 143.1, 9),
         ));
         $questionnaire->addMapping(QuestionMapping::forQuestion(
             'map-notes',

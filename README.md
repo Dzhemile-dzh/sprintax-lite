@@ -244,7 +244,7 @@ Rules live on the question (`equals` / `not_equals`). `QuestionVisibilityEvaluat
 - The IRS 1040-NR blank is not shipped. Without `resources/pdf/1040-nr.pdf`, Messenger PDF jobs fail. Overlay is coordinate-based; there is no interactive form-field fill.
 - Messenger `messenger_messages` is created by Doctrine transport auto-setup in `dev`, not by migrations.
 - Demo passwords are fixtures for local/CI use, not a production identity store.
-- `MAILER_DSN=null://null` discards PDF emails until you configure SMTP.
+- `MAILER_DSN` defaults to Mailpit in Docker (`smtp://mailer:1025`, inbox at http://localhost:8025). Local PHP uses `smtp://127.0.0.1:1025`. Use `null://null` to discard mail.
 
 ## AI assistance
 

@@ -27,6 +27,7 @@ use App\Infrastructure\Messenger\GenerateSubmissionPdfHandler;
 use App\Infrastructure\Messenger\Message\GenerateSubmissionPdfMessage;
 use App\Tests\Support\FailingPdfGenerator;
 use App\Tests\Support\FailingSubmissionPdfMailer;
+use App\Tests\Support\InMemoryQuestionnaireRepository;
 use App\Tests\Support\InMemorySubmissionRepository;
 use App\Tests\Support\RecordingPdfGenerator;
 use App\Tests\Support\RecordingSubmissionPdfMailer;
@@ -140,6 +141,7 @@ final class GenerateSubmissionPdfHandlerTest extends TestCase
 
         return new GenerateSubmissionPdfHandler(new GenerateSubmissionPdf(
             $this->submissions,
+            InMemoryQuestionnaireRepository::with($submission->questionnaire()),
             new CalculateSubmission($this->submissions, [new Form1040NrCalculator()]),
             $generator,
             new QuestionVisibilityEvaluator(),

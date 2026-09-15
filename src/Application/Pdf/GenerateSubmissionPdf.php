@@ -14,7 +14,9 @@ use App\Domain\Pdf\Exception\PdfGenerationFailed;
 use App\Domain\Questionnaire\Entity\QuestionMapping;
 use App\Domain\Questionnaire\Entity\Questionnaire;
 use App\Domain\Questionnaire\QuestionVisibilityEvaluator;
+use App\Domain\Questionnaire\Repository\QuestionnaireRepositoryInterface;
 use App\Domain\Questionnaire\ValueObject\FormType;
+use App\Domain\Questionnaire\ValueObject\QuestionType;
 use App\Domain\Submission\Entity\QuestionnaireSubmission;
 use App\Domain\Submission\Exception\InvalidSubmission;
 use App\Domain\Submission\Repository\SubmissionRepositoryInterface;
@@ -26,6 +28,7 @@ final class GenerateSubmissionPdf
 {
     public function __construct(
         private readonly SubmissionRepositoryInterface $submissions,
+        private readonly QuestionnaireRepositoryInterface $questionnaires,
         private readonly CalculateSubmission $calculateSubmission,
         private readonly PdfGeneratorInterface $pdfGenerator,
         private readonly QuestionVisibilityEvaluator $visibility,
@@ -53,7 +56,7 @@ final class GenerateSubmissionPdf
             return $existingPath;
         }
 
-        $questionnaire = $submission->questionnaire();
+        $questionnaire = $this->questionnaires->get($submission->questionnaire()->id());
         $answersByKey = $this->answersByQuestionKey($submission);
         $calculation = $this->calculationIfNeeded($submission, $questionnaire);
 
@@ -164,10 +167,10 @@ final class GenerateSubmissionPdf
             return null;
         }
 
-        return $this->formatAnswer($answer->value());
+        return $this->formatAnswer($answer->value(), $question->type());
     }
 
-    private function formatAnswer(AnswerValue $value): ?string
+    private function formatAnswer(AnswerValue $value, QuestionType $type): ?string
     {
         if (!$value->isProvided()) {
             return null;
@@ -183,7 +186,28 @@ final class GenerateSubmissionPdf
             return implode(', ', $raw);
         }
 
-        return $raw;
+        if ($type === QuestionType::Number) {
+            return $this->formatNumber($raw);
+        }
+
+        if (is_string($raw) || is_int($raw) || is_float($raw)) {
+            return (string) $raw;
+        }
+
+        return null;
+    }
+
+    private function formatNumber(mixed $raw): ?string
+    {
+        if (is_int($raw) || is_float($raw)) {
+            return number_format((float) $raw, 2, '.', '');
+        }
+
+        if (is_string($raw) && is_numeric($raw)) {
+            return number_format((float) $raw, 2, '.', '');
+        }
+
+        return null;
     }
 
     private function formatComputed(int|float|string $value): string

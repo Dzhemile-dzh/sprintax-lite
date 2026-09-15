@@ -26,4 +26,15 @@
             </ol>
         </section>
     {% endfor %}
+
+    <h2>PDF mappings</h2>
+    {% if questionnaire.mappings is empty %}
+        <p>No mappings yet.</p>
+    {% else %}
+        <ul>
+            {% for mapping in questionnaire.mappings %}
+                <li>{{ ui.mapping_summary(mapping) }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
 {% endblock %}
