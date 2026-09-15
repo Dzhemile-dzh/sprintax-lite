@@ -1,0 +1,5 @@
+{
+    "intelephense.environment.phpVersion": "8.4.0",
+    "php.version": "8.4",
+    "php.validate.enable": true
+}

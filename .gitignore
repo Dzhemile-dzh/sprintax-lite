@@ -25,3 +25,7 @@
 /compose.override.yaml
 /identifier.sqlite
 /AGENTS.md
+/INTERVIEW.md
+.cursor
+.vscode
+.
