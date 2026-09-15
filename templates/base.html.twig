@@ -20,15 +20,20 @@
             .flash-error { background: #fdecea; }
             .error { color: #b00020; }
             form.inline { display: inline; }
+            table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+            th, td { border: 1px solid #ccc; padding: 0.4rem 0.6rem; text-align: left; }
+            th { background: #f5f5f5; }
         </style>
         {% block stylesheets %}{% endblock %}
-        {% block javascripts %}{% endblock %}
     </head>
     <body>
         {% import 'macros/ui.html.twig' as ui %}
         {% set extra_links = {} %}
         {% if is_granted('ROLE_ADMIN') %}
-            {% set extra_links = extra_links|merge({'Admin': path('admin_home')}) %}
+            {% set extra_links = extra_links|merge({
+                'Admin': path('admin_home'),
+                'Analytics': path('admin_analytics'),
+            }) %}
         {% endif %}
         {% if is_granted('ROLE_CLIENT') %}
             {% set extra_links = extra_links|merge({'Client area': path('client_home')}) %}
@@ -43,5 +48,6 @@
         ) }}
         {{ ui.flashes(app.flashes()) }}
         {% block body %}{% endblock %}
+        {% block javascripts %}{% endblock %}
     </body>
 </html>

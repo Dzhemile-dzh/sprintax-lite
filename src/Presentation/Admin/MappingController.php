@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Presentation\Admin;
 
 use App\Application\Calculation\ListCalculatorFields;
+use App\Application\Pdf\ResolveQuestionnairePdfTemplate;
 use App\Application\Questionnaire\AddMapping\AddQuestionMapping;
 use App\Application\Questionnaire\Get\GetQuestionnaire;
 use App\Application\Questionnaire\RemoveMapping\RemoveQuestionMapping;
@@ -18,8 +19,10 @@ use App\Presentation\Admin\Form\MappingFormType;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\Form\FormInterface;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
@@ -33,6 +36,7 @@ final class MappingController extends AbstractController
         private readonly RemoveQuestionMapping $removeQuestionMapping,
         private readonly ListCalculatorFields $calculatorFields,
         private readonly GetQuestionnaire $getQuestionnaire,
+        private readonly ResolveQuestionnairePdfTemplate $resolvePdfTemplate,
     ) {
     }
 
@@ -47,10 +51,7 @@ final class MappingController extends AbstractController
             return $this->redirectToRoute('admin_questionnaire_show', ['id' => $id]);
         }
 
-        return $this->render('admin/structure/form.html.twig', [
-            'form' => $form,
-            'title' => 'Add PDF mapping',
-        ]);
+        return $this->renderMappingForm($form, 'Add PDF mapping', $id);
     }
 
     #[Route('/questionnaires/{id}/mappings/{mappingId}/edit', name: 'admin_mapping_edit', methods: ['GET', 'POST'])]
@@ -102,10 +103,7 @@ final class MappingController extends AbstractController
             }
         }
 
-        return $this->render('admin/structure/form.html.twig', [
-            'form' => $form,
-            'title' => 'Edit PDF mapping',
-        ]);
+        return $this->renderMappingForm($form, 'Edit PDF mapping', $id);
     }
 
     #[Route('/questionnaires/{id}/mappings/{mappingId}/delete', name: 'admin_mapping_delete', methods: ['POST'])]
@@ -124,6 +122,40 @@ final class MappingController extends AbstractController
         }
 
         return $this->redirectToRoute('admin_questionnaire_show', ['id' => $id]);
+    }
+
+    #[Route('/questionnaires/{id}/pdf-template', name: 'admin_questionnaire_pdf_template', methods: ['GET'])]
+    public function pdfTemplate(string $id): Response
+    {
+        $this->questionnaire($id);
+        $path = $this->resolvePdfTemplate->execute($id);
+
+        if ($path === null) {
+            throw $this->createNotFoundException('PDF template is not available for this form type.');
+        }
+
+        $response = new BinaryFileResponse($path);
+        $response->headers->set('Content-Type', 'application/pdf');
+        $response->setContentDisposition(ResponseHeaderBag::DISPOSITION_INLINE, 'template.pdf');
+        $response->headers->set('Cache-Control', 'private, no-store');
+
+        return $response;
+    }
+
+    /**
+     * @param FormInterface<mixed> $form
+     */
+    private function renderMappingForm(FormInterface $form, string $title, string $questionnaireId): Response
+    {
+        $templatePath = $this->resolvePdfTemplate->execute($questionnaireId);
+
+        return $this->render('admin/structure/mapping_form.html.twig', [
+            'form' => $form,
+            'title' => $title,
+            'pdf_template_url' => $templatePath === null
+                ? null
+                : $this->generateUrl('admin_questionnaire_pdf_template', ['id' => $questionnaireId]),
+        ]);
     }
 
     /**

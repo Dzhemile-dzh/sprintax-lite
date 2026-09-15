@@ -1,0 +1,15 @@
+{% extends 'base.html.twig' %}
+{% import 'macros/ui.html.twig' as ui %}
+{% import 'macros/analytics.html.twig' as analytics %}
+
+{% block title %}Analytics{% endblock %}
+
+{% block body %}
+    <h1>Analytics</h1>
+    <p>{{ ui.link(path('admin_home'), 'Back to questionnaires') }}</p>
+
+    {{ analytics.summary(overview) }}
+
+    <h2>By questionnaire</h2>
+    {{ analytics.questionnaire_table(overview.byQuestionnaire) }}
+{% endblock %}

@@ -5,7 +5,11 @@
 
 {% block body %}
     <h1>Questionnaires</h1>
-    <p>{{ ui.link(path('admin_questionnaire_new'), 'New questionnaire') }}</p>
+    <p>
+        {{ ui.link(path('admin_questionnaire_new'), 'New questionnaire') }}
+        ·
+        {{ ui.link(path('admin_analytics'), 'Analytics') }}
+    </p>
 
     {% if questionnaires is empty %}
         <p>No questionnaires yet.</p>

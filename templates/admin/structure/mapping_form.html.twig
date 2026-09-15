@@ -1,0 +1,30 @@
+{% extends 'base.html.twig' %}
+{% import 'macros/ui.html.twig' as ui %}
+{% import 'macros/mapping.html.twig' as mapping %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block stylesheets %}
+    {{ mapping.picker_styles() }}
+{% endblock %}
+
+{% block body %}
+    <h1>{{ title }}</h1>
+
+    {{ form_start(form) }}
+        {{ form_errors(form) }}
+        {% for field in form %}
+            {% if not field.rendered %}
+                {{ ui.field(field) }}
+            {% endif %}
+        {% endfor %}
+
+        {{ mapping.picker(pdf_template_url|default(null), form.page.vars.id, form.xMm.vars.id, form.yMm.vars.id) }}
+
+        {{ ui.submit('Save') }}
+    {{ form_end(form) }}
+{% endblock %}
+
+{% block javascripts %}
+    {{ mapping.picker_script(pdf_template_url|default(null), form.page.vars.id, form.xMm.vars.id, form.yMm.vars.id) }}
+{% endblock %}

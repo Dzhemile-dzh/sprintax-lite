@@ -34,6 +34,8 @@ security:
         - { path: ^/register, roles: PUBLIC_ACCESS }
         - { path: ^/(_profiler|_wdt), roles: ROLE_ADMIN }
         - { path: ^/admin, roles: ROLE_ADMIN }
+        - { path: ^/api/questionnaires, roles: ROLE_ADMIN }
+        - { path: ^/api/submissions, roles: IS_AUTHENTICATED }
         - { path: ^/client, roles: ROLE_CLIENT }
         - { path: ^/submissions, roles: IS_AUTHENTICATED }
 

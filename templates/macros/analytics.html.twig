@@ -1,0 +1,45 @@
+{% macro summary(overview) %}
+    <ul>
+        <li>Total submissions: {{ overview.totalSubmissions }}</li>
+        <li>In progress: {{ overview.countForStatus('in_progress') }}</li>
+        <li>Finalized (awaiting PDF): {{ overview.countForStatus('finalized') }}</li>
+        <li>PDF ready: {{ overview.countForStatus('pdf_ready') }}</li>
+        <li>PDFs emailed: {{ overview.pdfEmailed }}</li>
+        <li>Stored answers: {{ overview.answeredQuestions }}</li>
+    </ul>
+{% endmacro %}
+
+{% macro questionnaire_table(rows) %}
+    {% if rows is empty %}
+        <p>No questionnaires yet.</p>
+    {% else %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Questionnaire</th>
+                    <th>Started</th>
+                    <th>In progress</th>
+                    <th>Finalized</th>
+                    <th>PDF ready</th>
+                    <th>Emailed</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                    <tr>
+                        <td>{{ _self.questionnaire_link(row) }}</td>
+                        <td>{{ row.started }}</td>
+                        <td>{{ row.inProgress }}</td>
+                        <td>{{ row.finalized }}</td>
+                        <td>{{ row.pdfReady }}</td>
+                        <td>{{ row.pdfEmailed }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+{% endmacro %}
+
+{% macro questionnaire_link(row) %}
+    <a href="{{ path('admin_questionnaire_show', {id: row.questionnaireId}) }}">{{ row.questionnaireName }}</a>
+{% endmacro %}

@@ -44,6 +44,10 @@ services:
             $templatesDirectory: '%app.pdf.templates_dir%'
             $outputDirectory: '%app.pdf.output_dir%'
 
+    App\Application\Pdf\ResolveQuestionnairePdfTemplate:
+        arguments:
+            $templatesDirectory: '%app.pdf.templates_dir%'
+
     App\Application\Pdf\EmailSubmissionPdf:
         arguments:
             $outputDirectory: '%app.pdf.output_dir%'
@@ -70,6 +74,10 @@ services:
 
     App\Domain\Audit\Repository\QuestionnaireRevisionRepositoryInterface:
         alias: App\Infrastructure\Persistence\Doctrine\DoctrineQuestionnaireRevisionRepository
+        public: true
+
+    App\Domain\Analytics\Repository\AnalyticsRepositoryInterface:
+        alias: App\Infrastructure\Persistence\Doctrine\DoctrineAnalyticsRepository
         public: true
 
     App\Domain\Questionnaire\Repository\QuestionnaireRepositoryInterface:
