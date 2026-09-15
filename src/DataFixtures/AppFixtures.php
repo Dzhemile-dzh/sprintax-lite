@@ -96,7 +96,7 @@ final class AppFixtures extends Fixture
             null,
             QuestionValidation::required(),
         );
-        $spouseName = $questionnaire->addQuestion(
+        $questionnaire->addQuestion(
             $personal->id(),
             $this->id(),
             'spouse_name',
@@ -171,8 +171,7 @@ final class AppFixtures extends Fixture
         $this->mapQuestion($questionnaire, $birthDate->key(), 1, 168.0, 43.0, 8);
         $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_FILING_SINGLE, 1, 36.5, 74.2, 10);
         $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_FILING_MFS, 1, 58.0, 74.2, 10);
-        // 2025 1040-NR filing-status name write-in (IRS label is QSS child; demo stamps spouse).
-        $this->mapQuestion($questionnaire, $spouseName->key(), 1, 108.0, 81.8, 8);
+        // 2025 1040-NR has no MFS spouse-name write-in; do not stamp spouse_name on the QSS child line.
         $this->mapQuestion($questionnaire, $wages->key(), 1, $amountX, 143.1);
         $this->mapQuestion($questionnaire, $treatyExempt->key(), 1, $amountX, 189.7);
         $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_TOTAL_INCOME, 1, $amountX, 193.9);

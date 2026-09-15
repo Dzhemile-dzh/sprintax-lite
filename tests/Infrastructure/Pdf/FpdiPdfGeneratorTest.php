@@ -84,6 +84,30 @@ final class FpdiPdfGeneratorTest extends TestCase
         }
     }
 
+    public function testItFailsWhenAMappedPageIsOutsideTheTemplateEvenWithoutAValue(): void
+    {
+        $source = $this->blankPdf(2);
+        $output = $this->tempFile('out');
+        $generator = new FpdiPdfGenerator(new LocalFileStorage(), compressStreams: false);
+
+        try {
+            $generator->generate(new PdfGenerationRequest(
+                $source,
+                $output,
+                [],
+                [1, 3],
+            ));
+            self::fail('Expected PDF generation to fail when a mapping page is outside the template.');
+        } catch (PdfGenerationFailed $exception) {
+            self::assertFalse($exception->isRetryable());
+            self::assertSame(
+                'PDF mapping page 3 is outside the template (2 pages).',
+                $exception->getMessage(),
+            );
+            self::assertFileDoesNotExist($output);
+        }
+    }
+
     public function testItCreatesTheOutputDirectory(): void
     {
         $source = $this->blankPdf(1);

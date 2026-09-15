@@ -11,8 +11,6 @@ final readonly class StoredDate
 {
     private const STORAGE_FORMAT = 'Y-m-d';
 
-    private const OVERLAY_FORMAT = 'm/d/Y';
-
     private function __construct(
         private DateTimeImmutable $value,
     ) {
@@ -34,17 +32,6 @@ final readonly class StoredDate
         return new self(DateTimeImmutable::createFromInterface($date)->setTime(0, 0));
     }
 
-    public static function overlay(string $raw): string
-    {
-        $date = self::tryFrom($raw);
-
-        if ($date instanceof self) {
-            return $date->formatMonthDayYear();
-        }
-
-        return $raw;
-    }
-
     public function toDateTime(): DateTimeImmutable
     {
         return $this->value;
@@ -57,6 +44,6 @@ final readonly class StoredDate
 
     public function formatMonthDayYear(): string
     {
-        return $this->value->format(self::OVERLAY_FORMAT);
+        return $this->value->format('m/d/Y');
     }
 }

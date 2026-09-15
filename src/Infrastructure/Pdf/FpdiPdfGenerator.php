@@ -43,6 +43,7 @@ final class FpdiPdfGenerator implements PdfGeneratorInterface
             $pdf = new Fpdi('P', 'mm');
             $pdf->SetCompression($this->compressStreams);
             $pageCount = $pdf->setSourceFile($request->sourcePdfPath);
+            $this->assertPagesInRange($request->mappedPages, $pageCount);
             $fieldsByPage = $this->fieldsByPage($request->fields, $pageCount);
 
             for ($pageNo = 1; $pageNo <= $pageCount; ++$pageNo) {
@@ -100,6 +101,23 @@ final class FpdiPdfGenerator implements PdfGeneratorInterface
     }
 
     /**
+     * @param list<int> $pages
+     */
+    private function assertPagesInRange(array $pages, int $pageCount): void
+    {
+        foreach ($pages as $page) {
+            $this->assertPageInRange($page, $pageCount);
+        }
+    }
+
+    private function assertPageInRange(int $page, int $pageCount): void
+    {
+        if ($page < 1 || $page > $pageCount) {
+            throw PdfGenerationFailed::pageOutOfRange($page, $pageCount);
+        }
+    }
+
+    /**
      * @param list<array{placement: PdfFieldPlacement, value: string}> $fields
      *
      * @return array<int, list<array{placement: PdfFieldPlacement, value: string}>>
@@ -110,11 +128,7 @@ final class FpdiPdfGenerator implements PdfGeneratorInterface
 
         foreach ($fields as $field) {
             $page = $field['placement']->page;
-
-            if ($page < 1 || $page > $pageCount) {
-                throw PdfGenerationFailed::pageOutOfRange($page, $pageCount);
-            }
-
+            $this->assertPageInRange($page, $pageCount);
             $fieldsByPage[$page][] = $field;
         }
 

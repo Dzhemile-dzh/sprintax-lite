@@ -28,13 +28,6 @@ final class StoredDateTest extends TestCase
         self::assertNull(StoredDate::tryFrom('1995-02-29'));
     }
 
-    public function testOverlayFormatsStoredDatesAndLeavesInvalidRaw(): void
-    {
-        self::assertSame('07/12/1995', StoredDate::overlay('1995-07-12'));
-        self::assertSame('12/07/1995', StoredDate::overlay('12/07/1995'));
-        self::assertSame('not-a-date', StoredDate::overlay('not-a-date'));
-    }
-
     public function testItStoresADateTimeAsTheCanonicalDate(): void
     {
         $date = StoredDate::fromDateTime(new DateTimeImmutable('1995-07-12T15:30:00+00:00'));

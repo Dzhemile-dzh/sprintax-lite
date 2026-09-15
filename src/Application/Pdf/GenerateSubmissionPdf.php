@@ -65,6 +65,7 @@ final class GenerateSubmissionPdf
             $this->templatePath($questionnaire->formType()),
             $outputPath,
             $this->overlayFields($submission, $questionnaire, $answersByKey, $calculation),
+            $this->mappedPages($questionnaire),
         ));
 
         $submission->markPdfReady(new DateTimeImmutable(), $this->storedPdfPath($submission->id()));
@@ -149,7 +150,7 @@ final class GenerateSubmissionPdf
                 return null;
             }
 
-            return $this->formatComputed($calculation->value($source->reference));
+            return $this->formatComputed($source->reference, $calculation->value($source->reference));
         }
 
         $question = $questionnaire->findQuestionByKey($source->reference);
@@ -179,6 +180,10 @@ final class GenerateSubmissionPdf
 
         $raw = $value->raw();
 
+        if ($type === QuestionType::Date) {
+            return $this->formatMonthDayYear($raw);
+        }
+
         if (is_array($raw)) {
             if ($raw === []) {
                 return null;
@@ -191,11 +196,22 @@ final class GenerateSubmissionPdf
             return $this->formatNumber($raw);
         }
 
-        if ($type === QuestionType::Date) {
-            return StoredDate::overlay($raw);
+        return $raw;
+    }
+
+    private function formatMonthDayYear(mixed $raw): string
+    {
+        if (!is_string($raw)) {
+            throw PdfGenerationFailed::invalidDate('');
         }
 
-        return $raw;
+        $date = StoredDate::tryFrom($raw);
+
+        if (!$date instanceof StoredDate) {
+            throw PdfGenerationFailed::invalidDate($raw);
+        }
+
+        return $date->formatMonthDayYear();
     }
 
     private function formatNumber(mixed $raw): ?string
@@ -211,8 +227,12 @@ final class GenerateSubmissionPdf
         return null;
     }
 
-    private function formatComputed(int|float|string $value): string
+    private function formatComputed(string $field, int|float|string $value): ?string
     {
+        if ($this->isUnusedBalanceLine($field, $value)) {
+            return null;
+        }
+
         if (is_string($value)) {
             return $value;
         }
@@ -222,6 +242,29 @@ final class GenerateSubmissionPdf
         }
 
         return number_format($value, 2, '.', '');
+    }
+
+    private function isUnusedBalanceLine(string $field, int|float|string $value): bool
+    {
+        if ($field !== 'amount_owed' && $field !== 'amount_overpaid') {
+            return false;
+        }
+
+        return (is_int($value) || is_float($value)) && (float) $value === 0.0;
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function mappedPages(Questionnaire $questionnaire): array
+    {
+        $pages = [];
+
+        foreach ($questionnaire->mappings() as $mapping) {
+            $pages[] = $mapping->coordinates()->page;
+        }
+
+        return $pages;
     }
 
     private function calculationIfNeeded(

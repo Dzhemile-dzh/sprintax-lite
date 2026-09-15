@@ -88,8 +88,8 @@ final class Form1040NrCalculator implements CalculatorInterface
             self::FIELD_TOTAL_TAX => $taxOwed,
             self::FIELD_TAX_WITHHELD => $withheld,
             self::FIELD_TOTAL_PAYMENTS => $withheld,
-            self::FIELD_AMOUNT_OWED => $amountOwed > 0.0 ? $amountOwed : '',
-            self::FIELD_AMOUNT_OVERPAID => $amountOverpaid > 0.0 ? $amountOverpaid : '',
+            self::FIELD_AMOUNT_OWED => $amountOwed,
+            self::FIELD_AMOUNT_OVERPAID => $amountOverpaid,
             self::FIELD_FILING_SINGLE => $isMarried ? '' : 'X',
             self::FIELD_FILING_MFS => $isMarried ? 'X' : '',
         ]);

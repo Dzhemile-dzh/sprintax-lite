@@ -96,11 +96,11 @@ final class AppFixturesTest extends WebDatabaseTestCase
         self::assertContains(Form1040NrCalculator::FIELD_TOTAL_PAYMENTS, $mappingSources);
         self::assertContains(Form1040NrCalculator::FIELD_AMOUNT_OVERPAID, $mappingSources);
         self::assertContains(Form1040NrCalculator::FIELD_AMOUNT_OWED, $mappingSources);
-        self::assertContains('spouse_name', $mappingSources);
+        self::assertNotContains('spouse_name', $mappingSources);
         self::assertNotContains('married', $mappingSources);
         self::assertNotContains('residency', $mappingSources);
         self::assertNotContains('income_types', $mappingSources);
-        self::assertCount(21, $questionnaire->mappings());
+        self::assertCount(20, $questionnaire->mappings());
 
         $this->signIn(AppFixtures::ADMIN_EMAIL, AppFixtures::ADMIN_PASSWORD);
         $this->client->request('GET', '/admin');

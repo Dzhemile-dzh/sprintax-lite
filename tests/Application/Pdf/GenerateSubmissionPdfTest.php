@@ -226,6 +226,138 @@ final class GenerateSubmissionPdfTest extends TestCase
         self::assertSame('07/12/1995', $recorder->last->fields[0]['value']);
     }
 
+    public function testItFailsWhenAStoredDateIsNotCanonical(): void
+    {
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
+        $questionnaire->addStep('step-1', 'Personal');
+        $birthDate = $questionnaire->addQuestion(
+            'step-1',
+            'q-dob',
+            'birth_date',
+            'Date of birth',
+            QuestionType::Date,
+        );
+        $questionnaire->addMapping(QuestionMapping::forQuestion(
+            'map-dob',
+            $birthDate->key(),
+            new PdfCoordinates(1, 168.0, 43.0, 8),
+        ));
+
+        $submission = QuestionnaireSubmission::start(
+            'sub-1',
+            $questionnaire,
+            User::registerClient('user-1', new Email('client@example.test'), 'hashed-password'),
+            new DateTimeImmutable('2026-01-01T10:00:00+00:00'),
+        );
+        $submission->recordAnswer(
+            $birthDate,
+            AnswerValue::text('12/07/1995'),
+            new DateTimeImmutable('2026-01-01T10:05:00+00:00'),
+        );
+        $this->finalized($submission);
+
+        $useCase = $this->useCase(
+            $submission,
+            new RecordingPdfGenerator(),
+            $this->templatesDirectoryWith('1040-nr.pdf'),
+            sys_get_temp_dir().DIRECTORY_SEPARATOR.'sprintax-pdf-out-'.uniqid('', true),
+        );
+
+        try {
+            $useCase->execute('sub-1');
+            self::fail('Expected PDF generation to fail when a stored date is not canonical.');
+        } catch (PdfGenerationFailed $exception) {
+            self::assertFalse($exception->isRetryable());
+            self::assertSame(
+                'PDF mapping has an invalid stored date "12/07/1995".',
+                $exception->getMessage(),
+            );
+            self::assertSame(SubmissionStatus::Finalized, $submission->status());
+            self::assertNull($submission->pdfPath());
+            self::assertSame(0, $this->submissions->saveCount);
+        }
+    }
+
+    public function testItIncludesHiddenAndBlankMappingPagesInTheRequest(): void
+    {
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
+        $questionnaire->addStep('step-1', 'Personal');
+        $firstName = $questionnaire->addQuestion(
+            'step-1',
+            'q-name',
+            'first_name',
+            'First name',
+            QuestionType::ShortText,
+        );
+        $married = $questionnaire->addQuestion(
+            'step-1',
+            'q-married',
+            'married',
+            'Married?',
+            QuestionType::YesNo,
+        );
+        $spouseName = $questionnaire->addQuestion(
+            'step-1',
+            'q-spouse',
+            'spouse_name',
+            'Spouse name',
+            QuestionType::ShortText,
+            visibility: new VisibilityRule([
+                new VisibilityCondition('married', VisibilityOperator::Equals, 'yes'),
+            ]),
+        );
+        $notes = $questionnaire->addQuestion(
+            'step-1',
+            'q-notes',
+            'notes',
+            'Notes',
+            QuestionType::ShortText,
+        );
+        $questionnaire->addMapping(QuestionMapping::forQuestion(
+            'map-name',
+            $firstName->key(),
+            new PdfCoordinates(1, 20.5, 40.25, 11),
+        ));
+        $questionnaire->addMapping(QuestionMapping::forQuestion(
+            'map-spouse',
+            $spouseName->key(),
+            new PdfCoordinates(3, 20.5, 50.0, 11),
+        ));
+        $questionnaire->addMapping(QuestionMapping::forQuestion(
+            'map-notes',
+            $notes->key(),
+            new PdfCoordinates(4, 15.0, 70.0),
+        ));
+
+        $now = new DateTimeImmutable('2026-01-01T10:00:00+00:00');
+        $submission = QuestionnaireSubmission::start(
+            'sub-1',
+            $questionnaire,
+            User::registerClient('user-1', new Email('client@example.test'), 'hashed-password'),
+            $now,
+        );
+        $submission->recordAnswer($firstName, AnswerValue::text('Ada'), $now);
+        $submission->recordAnswer($married, AnswerValue::text('no'), $now);
+        $submission->recordAnswer($spouseName, AnswerValue::text('hidden-spouse'), $now);
+        $submission->recordAnswer($notes, AnswerValue::text('   '), $now);
+        $this->finalized($submission);
+
+        $recorder = new RecordingPdfGenerator();
+        $useCase = $this->useCase(
+            $submission,
+            $recorder,
+            $this->templatesDirectoryWith('1040-nr.pdf'),
+            sys_get_temp_dir().DIRECTORY_SEPARATOR.'sprintax-pdf-out-'.uniqid('', true),
+        );
+
+        $useCase->execute('sub-1');
+
+        self::assertNotNull($recorder->last);
+        self::assertSame([1, 3, 4], $recorder->last->mappedPages);
+        self::assertCount(1, $recorder->last->fields);
+        self::assertSame('Ada', $recorder->last->fields[0]['value']);
+    }
+
     public function testItOmitsTheUnusedZeroBalanceLine(): void
     {
         $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
@@ -305,6 +437,87 @@ final class GenerateSubmissionPdfTest extends TestCase
 
         self::assertSame('2000.00', $tax);
         self::assertSame('500.00', $overpaid);
+        self::assertNull($owed);
+    }
+
+    public function testItStillPrintsZeroOnTaxAndIncomeLines(): void
+    {
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
+        $questionnaire->addStep('step-1', 'Income');
+        $wages = $questionnaire->addQuestion(
+            'step-1',
+            'q-wages',
+            'income_wages',
+            'Wages',
+            QuestionType::Number,
+        );
+        $treaty = $questionnaire->addQuestion(
+            'step-1',
+            'q-treaty',
+            'treaty_exempt_amount',
+            'Treaty exemption',
+            QuestionType::Number,
+        );
+        $questionnaire->addMapping(QuestionMapping::forComputedField(
+            'map-agi',
+            Form1040NrCalculator::FIELD_ADJUSTED_GROSS_INCOME,
+            new PdfCoordinates(1, 188.0, 257.2, 9),
+        ));
+        $questionnaire->addMapping(QuestionMapping::forComputedField(
+            'map-tax',
+            Form1040NrCalculator::FIELD_TAX_OWED,
+            new PdfCoordinates(2, 188.0, 52.1, 9),
+        ));
+        $questionnaire->addMapping(QuestionMapping::forComputedField(
+            'map-owed',
+            Form1040NrCalculator::FIELD_AMOUNT_OWED,
+            new PdfCoordinates(2, 188.0, 208.7, 9),
+        ));
+
+        $now = new DateTimeImmutable('2026-01-01T10:00:00+00:00');
+        $submission = QuestionnaireSubmission::start(
+            'sub-1',
+            $questionnaire,
+            User::registerClient('user-1', new Email('client@example.test'), 'hashed-password'),
+            $now,
+        );
+        $submission->recordAnswer($wages, AnswerValue::text('1000'), $now);
+        $submission->recordAnswer($treaty, AnswerValue::text('5000'), $now);
+        $this->finalized($submission);
+
+        $recorder = new RecordingPdfGenerator();
+        $useCase = $this->useCase(
+            $submission,
+            $recorder,
+            $this->templatesDirectoryWith('1040-nr.pdf'),
+            sys_get_temp_dir().DIRECTORY_SEPARATOR.'sprintax-pdf-out-'.uniqid('', true),
+        );
+
+        $useCase->execute('sub-1');
+
+        self::assertNotNull($recorder->last);
+
+        $agi = null;
+        $tax = null;
+        $owed = null;
+        foreach ($recorder->last->fields as $field) {
+            $yMm = $field['placement']->yMm;
+
+            if ($yMm === 257.2) {
+                $agi = $field['value'];
+            }
+
+            if ($yMm === 52.1) {
+                $tax = $field['value'];
+            }
+
+            if ($yMm === 208.7) {
+                $owed = $field['value'];
+            }
+        }
+
+        self::assertSame('0.00', $agi);
+        self::assertSame('0.00', $tax);
         self::assertNull($owed);
     }
 

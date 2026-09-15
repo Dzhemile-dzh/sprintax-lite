@@ -39,6 +39,11 @@ final class PdfGenerationFailed extends RuntimeException
         return self::permanent(sprintf('PDF mapping references unknown question "%s".', $questionId));
     }
 
+    public static function invalidDate(string $raw): self
+    {
+        return self::permanent(sprintf('PDF mapping has an invalid stored date "%s".', $raw));
+    }
+
     public static function writeFailed(string $path, Throwable $previous): self
     {
         return new self(sprintf('Failed to write generated PDF to "%s".', $path), 0, $previous);
