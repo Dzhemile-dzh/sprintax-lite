@@ -167,7 +167,7 @@ Finalize does **not** build the PDF in the HTTP request. It marks the submission
 php bin/console messenger:consume async
 ```
 
-Docker Compose already runs that in the `worker` service (`docker compose logs -f worker`). Jobs retry up to three times, then move to `failed` (`doctrine://default?queue_name=failed`). The handler is idempotent: a second delivery does not write another file if the PDF is already there. After the file is stored, the worker emails it to the client (`MAILER_FROM`) with the PDF attached. A second delivery does not send another email. Mailer uses `MAILER_DSN` (`null://null` locally, so messages are discarded unless you point it at SMTP). Email send runs inside the PDF worker (`message_bus: false`) so `pdf_emailed_at` is recorded only after the transport accepts the message. If sending fails, the PDF stays `pdf_ready` for download and the job retries the email.
+Docker Compose already runs that in the `worker` service (`docker compose logs -f worker`). Jobs retry up to three times, then move to `failed` (`doctrine://default?queue_name=failed`). The handler is idempotent: a second delivery does not write another file if the PDF is already there. After the file is stored, the worker emails it to the **client account email** (`MAILER_FROM` is only the From address) with the PDF attached. A second delivery does not send another email. Mailer uses `MAILER_DSN`. Docker always sends to Mailpit (`smtp://mailer:1025`, inbox at http://localhost:8025), which **catches** mail and does not forward it to Gmail. For local PHP, point `MAILER_DSN` at a real SMTP server in `.env.local` for internet delivery. Email send runs inside the PDF worker (`message_bus: false`) so `pdf_emailed_at` is recorded only after the transport accepts the message. If sending fails, the PDF stays `pdf_ready` for download and the job retries the email.
 
 ## Running tests
 
@@ -244,7 +244,7 @@ Rules live on the question (`equals` / `not_equals`). `QuestionVisibilityEvaluat
 - The IRS 1040-NR blank is not shipped. Without `resources/pdf/1040-nr.pdf`, Messenger PDF jobs fail. Overlay is coordinate-based; there is no interactive form-field fill.
 - Messenger `messenger_messages` is created by Doctrine transport auto-setup in `dev`, not by migrations.
 - Demo passwords are fixtures for local/CI use, not a production identity store.
-- `MAILER_DSN` defaults to Mailpit in Docker (`smtp://mailer:1025`, inbox at http://localhost:8025). Local PHP uses `smtp://127.0.0.1:1025`. Use `null://null` to discard mail.
+- `MAILER_DSN` defaults to Mailpit in Docker (`smtp://mailer:1025`, inbox at http://localhost:8025) and local PHP (`smtp://127.0.0.1:1025`). Mailpit does not send to the public internet. For local PHP, use a real SMTP DSN in `.env.local` for Gmail delivery, or `null://null` to discard mail. Docker Compose keeps `smtp://mailer:1025` so the host `.env` DSN cannot leak into containers.
 
 ## AI assistance
 
