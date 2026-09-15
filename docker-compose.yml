@@ -13,6 +13,7 @@ services:
       DATABASE_URL: sqlite:////var/www/html/var/data/app.db
       DEFAULT_URI: http://localhost:8080
       MESSENGER_TRANSPORT_DSN: doctrine://default?auto_setup=1
+      # Hardcoded to the compose Mailpit service so a host 127.0.0.1 DSN cannot leak in.
       MAILER_DSN: smtp://mailer:1025
       MAILER_FROM: ${MAILER_FROM:-noreply@localhost}
     volumes: &app-volumes
@@ -28,7 +29,7 @@ services:
       start_period: 300s
 
   mailer:
-    image: axllent/mailpit
+    image: axllent/mailpit:v1.31.0
     ports:
       - "1025:1025"
       - "8025:8025"

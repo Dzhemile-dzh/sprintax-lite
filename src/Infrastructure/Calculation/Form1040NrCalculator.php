@@ -10,8 +10,9 @@ use App\Domain\Calculation\DTO\CalculationResult;
 use App\Domain\Questionnaire\ValueObject\FormType;
 
 /**
- * Simplified 1040-NR stand-in: 10% of taxable income after a treaty exemption.
- * Real IRS tables are intentionally out of scope.
+ * Simplified 1040-NR stand-in: 10% of net income after a treaty exemption.
+ * Wages stay on the wages line; total income, ECI, AGI, and taxable income all
+ * use max(0, wages − treaty) so printed totals foot. Real IRS tables are out of scope.
  */
 final class Form1040NrCalculator implements CalculatorInterface
 {
@@ -68,27 +69,27 @@ final class Form1040NrCalculator implements CalculatorInterface
         $withheld = $this->number($input->answers, 'tax_withheld');
         $married = $this->text($input->answers, 'married');
 
-        $taxableIncome = max(0.0, $wages - $treaty);
-        $taxOwed = round($taxableIncome * self::RATE, 2);
+        $netIncome = max(0.0, $wages - $treaty);
+        $taxOwed = round($netIncome * self::RATE, 2);
         $amountOwed = round(max(0.0, $taxOwed - $withheld), 2);
         $amountOverpaid = round(max(0.0, $withheld - $taxOwed), 2);
         $isMarried = $married === 'yes';
 
         return new CalculationResult([
-            self::FIELD_TOTAL_INCOME => $wages,
-            self::FIELD_TOTAL_ECI => $wages,
+            self::FIELD_TOTAL_INCOME => $netIncome,
+            self::FIELD_TOTAL_ECI => $netIncome,
             self::FIELD_TREATY_EXEMPTION => $treaty,
-            self::FIELD_ADJUSTED_GROSS_INCOME => $wages,
-            self::FIELD_ADJUSTED_GROSS_INCOME_B => $wages,
-            self::FIELD_TAXABLE_INCOME => $taxableIncome,
+            self::FIELD_ADJUSTED_GROSS_INCOME => $netIncome,
+            self::FIELD_ADJUSTED_GROSS_INCOME_B => $netIncome,
+            self::FIELD_TAXABLE_INCOME => $netIncome,
             self::FIELD_TAX_OWED => $taxOwed,
             self::FIELD_TAX_SUBTOTAL => $taxOwed,
             self::FIELD_TAX_AFTER_CREDITS => $taxOwed,
             self::FIELD_TOTAL_TAX => $taxOwed,
             self::FIELD_TAX_WITHHELD => $withheld,
             self::FIELD_TOTAL_PAYMENTS => $withheld,
-            self::FIELD_AMOUNT_OWED => $amountOwed,
-            self::FIELD_AMOUNT_OVERPAID => $amountOverpaid,
+            self::FIELD_AMOUNT_OWED => $amountOwed > 0.0 ? $amountOwed : '',
+            self::FIELD_AMOUNT_OVERPAID => $amountOverpaid > 0.0 ? $amountOverpaid : '',
             self::FIELD_FILING_SINGLE => $isMarried ? '' : 'X',
             self::FIELD_FILING_MFS => $isMarried ? 'X' : '',
         ]);

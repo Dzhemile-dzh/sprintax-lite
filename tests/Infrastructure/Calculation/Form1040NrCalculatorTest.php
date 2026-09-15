@@ -29,10 +29,10 @@ final class Form1040NrCalculatorTest extends TestCase
             'tax_withheld' => '3000',
         ]));
 
-        self::assertSame(50000.0, $result->value(Form1040NrCalculator::FIELD_TOTAL_INCOME));
-        self::assertSame(50000.0, $result->value(Form1040NrCalculator::FIELD_TOTAL_ECI));
-        self::assertSame(50000.0, $result->value(Form1040NrCalculator::FIELD_ADJUSTED_GROSS_INCOME));
-        self::assertSame(50000.0, $result->value(Form1040NrCalculator::FIELD_ADJUSTED_GROSS_INCOME_B));
+        self::assertSame(40000.0, $result->value(Form1040NrCalculator::FIELD_TOTAL_INCOME));
+        self::assertSame(40000.0, $result->value(Form1040NrCalculator::FIELD_TOTAL_ECI));
+        self::assertSame(40000.0, $result->value(Form1040NrCalculator::FIELD_ADJUSTED_GROSS_INCOME));
+        self::assertSame(40000.0, $result->value(Form1040NrCalculator::FIELD_ADJUSTED_GROSS_INCOME_B));
         self::assertSame(10000.0, $result->value(Form1040NrCalculator::FIELD_TREATY_EXEMPTION));
         self::assertSame(40000.0, $result->value(Form1040NrCalculator::FIELD_TAXABLE_INCOME));
         self::assertSame(4000.0, $result->value(Form1040NrCalculator::FIELD_TAX_OWED));
@@ -42,7 +42,7 @@ final class Form1040NrCalculatorTest extends TestCase
         self::assertSame(3000.0, $result->value(Form1040NrCalculator::FIELD_TAX_WITHHELD));
         self::assertSame(3000.0, $result->value(Form1040NrCalculator::FIELD_TOTAL_PAYMENTS));
         self::assertSame(1000.0, $result->value(Form1040NrCalculator::FIELD_AMOUNT_OWED));
-        self::assertSame(0.0, $result->value(Form1040NrCalculator::FIELD_AMOUNT_OVERPAID));
+        self::assertSame('', $result->value(Form1040NrCalculator::FIELD_AMOUNT_OVERPAID));
         self::assertSame('X', $result->value(Form1040NrCalculator::FIELD_FILING_SINGLE));
         self::assertSame('', $result->value(Form1040NrCalculator::FIELD_FILING_MFS));
     }
@@ -58,7 +58,7 @@ final class Form1040NrCalculatorTest extends TestCase
 
         self::assertSame(20000.0, $result->value(Form1040NrCalculator::FIELD_TAXABLE_INCOME));
         self::assertSame(2000.0, $result->value(Form1040NrCalculator::FIELD_TAX_OWED));
-        self::assertSame(0.0, $result->value(Form1040NrCalculator::FIELD_AMOUNT_OWED));
+        self::assertSame('', $result->value(Form1040NrCalculator::FIELD_AMOUNT_OWED));
         self::assertSame(500.0, $result->value(Form1040NrCalculator::FIELD_AMOUNT_OVERPAID));
     }
 
@@ -71,8 +71,12 @@ final class Form1040NrCalculatorTest extends TestCase
             'treaty_exempt_amount' => '5000',
         ]));
 
+        self::assertSame(0.0, $result->value(Form1040NrCalculator::FIELD_TOTAL_INCOME));
+        self::assertSame(0.0, $result->value(Form1040NrCalculator::FIELD_ADJUSTED_GROSS_INCOME));
         self::assertSame(0.0, $result->value(Form1040NrCalculator::FIELD_TAXABLE_INCOME));
         self::assertSame(0.0, $result->value(Form1040NrCalculator::FIELD_TAX_OWED));
+        self::assertSame('', $result->value(Form1040NrCalculator::FIELD_AMOUNT_OWED));
+        self::assertSame('', $result->value(Form1040NrCalculator::FIELD_AMOUNT_OVERPAID));
     }
 
     public function testMarriedAnswerMarksTheMfsCheckbox(): void

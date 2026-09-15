@@ -56,27 +56,32 @@ final class FpdiPdfGeneratorTest extends TestCase
         ));
     }
 
-    public function testItSkipsFieldsWhosePageIsOutsideTheTemplate(): void
+    public function testItFailsWhenAMappingPageIsOutsideTheTemplate(): void
     {
         $source = $this->blankPdf(1);
         $output = $this->tempFile('out');
         $generator = new FpdiPdfGenerator(new LocalFileStorage(), compressStreams: false);
 
-        $generator->generate(new PdfGenerationRequest($source, $output, [
-            [
-                'placement' => new PdfFieldPlacement(1, 20.0, 30.0, 11),
-                'value' => 'on page',
-            ],
-            [
-                'placement' => new PdfFieldPlacement(3, 10.0, 10.0),
-                'value' => 'too far',
-            ],
-        ]));
-
-        $contents = file_get_contents($output);
-        self::assertNotFalse($contents);
-        self::assertStringContainsString('on page', $contents);
-        self::assertStringNotContainsString('too far', $contents);
+        try {
+            $generator->generate(new PdfGenerationRequest($source, $output, [
+                [
+                    'placement' => new PdfFieldPlacement(1, 20.0, 30.0, 11),
+                    'value' => 'on page',
+                ],
+                [
+                    'placement' => new PdfFieldPlacement(3, 10.0, 10.0),
+                    'value' => 'too far',
+                ],
+            ]));
+            self::fail('Expected PDF generation to fail when a mapping page is outside the template.');
+        } catch (PdfGenerationFailed $exception) {
+            self::assertFalse($exception->isRetryable());
+            self::assertSame(
+                'PDF mapping page 3 is outside the template (1 pages).',
+                $exception->getMessage(),
+            );
+            self::assertFileDoesNotExist($output);
+        }
     }
 
     public function testItCreatesTheOutputDirectory(): void

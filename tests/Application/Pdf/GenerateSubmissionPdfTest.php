@@ -181,6 +181,133 @@ final class GenerateSubmissionPdfTest extends TestCase
         self::assertNotContains('   ', $values);
     }
 
+    public function testItFormatsStoredDatesAsMonthDayYear(): void
+    {
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
+        $questionnaire->addStep('step-1', 'Personal');
+        $birthDate = $questionnaire->addQuestion(
+            'step-1',
+            'q-dob',
+            'birth_date',
+            'Date of birth',
+            QuestionType::Date,
+        );
+        $questionnaire->addMapping(QuestionMapping::forQuestion(
+            'map-dob',
+            $birthDate->key(),
+            new PdfCoordinates(1, 168.0, 43.0, 8),
+        ));
+
+        $submission = QuestionnaireSubmission::start(
+            'sub-1',
+            $questionnaire,
+            User::registerClient('user-1', new Email('client@example.test'), 'hashed-password'),
+            new DateTimeImmutable('2026-01-01T10:00:00+00:00'),
+        );
+        $submission->recordAnswer(
+            $birthDate,
+            AnswerValue::text('1995-07-12'),
+            new DateTimeImmutable('2026-01-01T10:05:00+00:00'),
+        );
+        $this->finalized($submission);
+
+        $recorder = new RecordingPdfGenerator();
+        $useCase = $this->useCase(
+            $submission,
+            $recorder,
+            $this->templatesDirectoryWith('1040-nr.pdf'),
+            sys_get_temp_dir().DIRECTORY_SEPARATOR.'sprintax-pdf-out-'.uniqid('', true),
+        );
+
+        $useCase->execute('sub-1');
+
+        self::assertNotNull($recorder->last);
+        self::assertCount(1, $recorder->last->fields);
+        self::assertSame('07/12/1995', $recorder->last->fields[0]['value']);
+    }
+
+    public function testItOmitsTheUnusedZeroBalanceLine(): void
+    {
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
+        $questionnaire->addStep('step-1', 'Income');
+        $wages = $questionnaire->addQuestion(
+            'step-1',
+            'q-wages',
+            'income_wages',
+            'Wages',
+            QuestionType::Number,
+        );
+        $withheld = $questionnaire->addQuestion(
+            'step-1',
+            'q-withheld',
+            'tax_withheld',
+            'Tax withheld',
+            QuestionType::Number,
+        );
+        $questionnaire->addMapping(QuestionMapping::forComputedField(
+            'map-tax',
+            Form1040NrCalculator::FIELD_TAX_OWED,
+            new PdfCoordinates(2, 188.0, 52.1, 9),
+        ));
+        $questionnaire->addMapping(QuestionMapping::forComputedField(
+            'map-overpaid',
+            Form1040NrCalculator::FIELD_AMOUNT_OVERPAID,
+            new PdfCoordinates(2, 188.0, 177.0, 9),
+        ));
+        $questionnaire->addMapping(QuestionMapping::forComputedField(
+            'map-owed',
+            Form1040NrCalculator::FIELD_AMOUNT_OWED,
+            new PdfCoordinates(2, 188.0, 208.7, 9),
+        ));
+
+        $now = new DateTimeImmutable('2026-01-01T10:00:00+00:00');
+        $submission = QuestionnaireSubmission::start(
+            'sub-1',
+            $questionnaire,
+            User::registerClient('user-1', new Email('client@example.test'), 'hashed-password'),
+            $now,
+        );
+        $submission->recordAnswer($wages, AnswerValue::text('20000'), $now);
+        $submission->recordAnswer($withheld, AnswerValue::text('2500'), $now);
+        $this->finalized($submission);
+
+        $recorder = new RecordingPdfGenerator();
+        $useCase = $this->useCase(
+            $submission,
+            $recorder,
+            $this->templatesDirectoryWith('1040-nr.pdf'),
+            sys_get_temp_dir().DIRECTORY_SEPARATOR.'sprintax-pdf-out-'.uniqid('', true),
+        );
+
+        $useCase->execute('sub-1');
+
+        self::assertNotNull($recorder->last);
+        self::assertCount(2, $recorder->last->fields);
+
+        $tax = null;
+        $overpaid = null;
+        $owed = null;
+        foreach ($recorder->last->fields as $field) {
+            $yMm = $field['placement']->yMm;
+
+            if ($yMm === 52.1) {
+                $tax = $field['value'];
+            }
+
+            if ($yMm === 177.0) {
+                $overpaid = $field['value'];
+            }
+
+            if ($yMm === 208.7) {
+                $owed = $field['value'];
+            }
+        }
+
+        self::assertSame('2000.00', $tax);
+        self::assertSame('500.00', $overpaid);
+        self::assertNull($owed);
+    }
+
     public function testItDoesNotCalculateWhenThereAreNoComputedMappings(): void
     {
         $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);

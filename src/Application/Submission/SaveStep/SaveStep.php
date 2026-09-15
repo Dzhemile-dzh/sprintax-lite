@@ -13,6 +13,7 @@ use App\Domain\Submission\Exception\InvalidSubmission;
 use App\Domain\Submission\QuestionAnswerValidator;
 use App\Domain\Submission\Repository\SubmissionRepositoryInterface;
 use App\Domain\Submission\ValueObject\AnswerValue;
+use App\Domain\Submission\ValueObject\StoredDate;
 use App\Domain\Submission\ValueObject\SubmissionStatus;
 use DateTimeImmutable;
 use DateTimeInterface;
@@ -121,7 +122,7 @@ final class SaveStep
         }
 
         if ($raw instanceof DateTimeInterface) {
-            return AnswerValue::text($raw->format('Y-m-d'));
+            return AnswerValue::text(StoredDate::fromDateTime($raw)->toStorage());
         }
 
         if ($raw === null) {

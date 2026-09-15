@@ -7,7 +7,7 @@ namespace App\Presentation\Client\Form;
 use App\Domain\Questionnaire\Entity\Question;
 use App\Domain\Questionnaire\ValueObject\QuestionType;
 use App\Domain\Submission\ValueObject\AnswerValue;
-use DateTimeImmutable;
+use App\Domain\Submission\ValueObject\StoredDate;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\DateType;
@@ -69,10 +69,10 @@ final class WizardStepFormType extends AbstractType
                     continue;
                 }
 
-                $date = DateTimeImmutable::createFromFormat('!Y-m-d', $raw);
+                $date = StoredDate::tryFrom($raw);
 
-                if ($date instanceof DateTimeImmutable && $date->format('Y-m-d') === $raw) {
-                    $data[$question->key()] = $date;
+                if ($date instanceof StoredDate) {
+                    $data[$question->key()] = $date->toDateTime();
                 }
 
                 continue;

@@ -21,6 +21,7 @@ use App\Domain\Submission\Entity\QuestionnaireSubmission;
 use App\Domain\Submission\Exception\InvalidSubmission;
 use App\Domain\Submission\Repository\SubmissionRepositoryInterface;
 use App\Domain\Submission\ValueObject\AnswerValue;
+use App\Domain\Submission\ValueObject\StoredDate;
 use App\Domain\Submission\ValueObject\SubmissionStatus;
 use DateTimeImmutable;
 
@@ -190,11 +191,11 @@ final class GenerateSubmissionPdf
             return $this->formatNumber($raw);
         }
 
-        if (is_string($raw) || is_int($raw) || is_float($raw)) {
-            return (string) $raw;
+        if ($type === QuestionType::Date) {
+            return StoredDate::overlay($raw);
         }
 
-        return null;
+        return $raw;
     }
 
     private function formatNumber(mixed $raw): ?string

@@ -9,7 +9,7 @@ use App\Domain\Questionnaire\ValueObject\QuestionType;
 use App\Domain\Questionnaire\ValueObject\QuestionValidation;
 use App\Domain\Submission\Exception\InvalidSubmission;
 use App\Domain\Submission\ValueObject\AnswerValue;
-use DateTimeImmutable;
+use App\Domain\Submission\ValueObject\StoredDate;
 
 final class QuestionAnswerValidator
 {
@@ -65,9 +65,7 @@ final class QuestionAnswerValidator
         }
 
         if ($question->type() === QuestionType::Date) {
-            $date = DateTimeImmutable::createFromFormat('!Y-m-d', $raw);
-
-            if ($date === false || $date->format('Y-m-d') !== $raw) {
+            if (StoredDate::tryFrom($raw) === null) {
                 throw InvalidSubmission::invalidAnswer($question->key(), 'must be a valid date');
             }
         }

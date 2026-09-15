@@ -101,7 +101,7 @@ composer install
 cp .env.example .env
 ```
 
-On Windows use `copy .env.example .env`. Docker Compose injects its own environment and does not need a committed `.env`. Put machine secrets in `.env.local`.
+On Windows use `copy .env.example .env`. Docker Compose interpolates `APP_ENV`, `APP_DEBUG`, `APP_SECRET`, and `MAILER_FROM` from the host environment. `MAILER_DSN` is hardcoded in `docker-compose.yml` as `smtp://mailer:1025` (Mailpit). Local PHP uses `MAILER_DSN` from `.env` (`smtp://127.0.0.1:1025` when Mailpit is on the host).
 
 | Variable | Purpose |
 | --- | --- |
@@ -109,7 +109,7 @@ On Windows use `copy .env.example .env`. Docker Compose injects its own environm
 | `APP_SECRET` | Symfony secret |
 | `DATABASE_URL` | SQLite path |
 | `MESSENGER_TRANSPORT_DSN` | Async Messenger transport (Doctrine queue by default) |
-| `MAILER_DSN` | Mailer transport (`null://null` discards mail) |
+| `MAILER_DSN` | Local PHP SMTP to Mailpit (`smtp://127.0.0.1:1025`). Docker always uses `smtp://mailer:1025` |
 | `MAILER_FROM` | From address for the client PDF email |
 
 ## Database migration
@@ -167,7 +167,7 @@ Finalize does **not** build the PDF in the HTTP request. It marks the submission
 php bin/console messenger:consume async
 ```
 
-Docker Compose already runs that in the `worker` service (`docker compose logs -f worker`). Jobs retry up to three times, then move to `failed` (`doctrine://default?queue_name=failed`). The handler is idempotent: a second delivery does not write another file if the PDF is already there. After the file is stored, the worker emails it to the **client account email** (`MAILER_FROM` is only the From address) with the PDF attached. A second delivery does not send another email. Mailer uses `MAILER_DSN`. Docker always sends to Mailpit (`smtp://mailer:1025`, inbox at http://localhost:8025), which **catches** mail and does not forward it to Gmail. For local PHP, point `MAILER_DSN` at a real SMTP server in `.env.local` for internet delivery. Email send runs inside the PDF worker (`message_bus: false`) so `pdf_emailed_at` is recorded only after the transport accepts the message. If sending fails, the PDF stays `pdf_ready` for download and the job retries the email.
+Docker Compose already runs that in the `worker` service (`docker compose logs -f worker`). Jobs retry up to three times, then move to `failed` (`doctrine://default?queue_name=failed`). The handler is idempotent: a second delivery does not write another file if the PDF is already there. After the file is stored, the worker emails it to the **client account email** (`MAILER_FROM` is only the From address) with the PDF attached. A second delivery does not send another email. Email send runs inside the PDF worker (`message_bus: false`) so `pdf_emailed_at` is recorded only after the transport accepts the message. If sending fails, the PDF stays `pdf_ready` for download and the job retries the email. Mail stays local: Docker sends to Mailpit (`smtp://mailer:1025`, inbox at http://localhost:8025); local PHP uses `MAILER_DSN` from `.env` (`smtp://127.0.0.1:1025`).
 
 ## Running tests
 
@@ -235,7 +235,7 @@ Rules live on the question (`equals` / `not_equals`). `QuestionVisibilityEvaluat
 
 ## Calculation architecture
 
-`CalculateSubmission` picks a `CalculatorInterface` by the questionnaire's `FormType` (selected when the questionnaire is created, independent of the display name). `Form1040NrCalculator` is a simplified 10% tax stand-in (`taxable_income = max(0, wages − treaty)`, `tax_owed = 10%`). Output keys (`taxable_income`, `tax_owed`, …) are for PDF mappings, not IRS rate tables. Form type cannot change after a client has started the questionnaire.
+`CalculateSubmission` picks a `CalculatorInterface` by the questionnaire's `FormType` (selected when the questionnaire is created, independent of the display name). `Form1040NrCalculator` is a simplified 10% tax stand-in. Wages print on the wages line; `total_income`, ECI, AGI, and `taxable_income` are all `max(0, wages − treaty)` so those lines foot. `tax_owed` is 10% of that net. Unused `amount_owed` / `amount_overpaid` values are blank rather than `0.00`. Output keys are for PDF mappings, not IRS rate tables. Form type cannot change after a client has started the questionnaire.
 
 ## Known limitations
 
@@ -244,7 +244,7 @@ Rules live on the question (`equals` / `not_equals`). `QuestionVisibilityEvaluat
 - The IRS 1040-NR blank is not shipped. Without `resources/pdf/1040-nr.pdf`, Messenger PDF jobs fail. Overlay is coordinate-based; there is no interactive form-field fill.
 - Messenger `messenger_messages` is created by Doctrine transport auto-setup in `dev`, not by migrations.
 - Demo passwords are fixtures for local/CI use, not a production identity store.
-- `MAILER_DSN` defaults to Mailpit in Docker (`smtp://mailer:1025`, inbox at http://localhost:8025) and local PHP (`smtp://127.0.0.1:1025`). Mailpit does not send to the public internet. For local PHP, use a real SMTP DSN in `.env.local` for Gmail delivery, or `null://null` to discard mail. Docker Compose keeps `smtp://mailer:1025` so the host `.env` DSN cannot leak into containers.
+- `MAILER_DSN` is local Mailpit only: Docker `smtp://mailer:1025` (inbox at http://localhost:8025), local PHP `smtp://127.0.0.1:1025`. Mailpit does not send to the public internet.
 
 ## AI assistance
 
