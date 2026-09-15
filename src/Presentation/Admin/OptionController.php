@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace App\Presentation\Admin;
 
-use App\Application\Questionnaire\AddOption\AddQuestionOption;
 use App\Application\Questionnaire\Get\GetQuestionnaire;
-use App\Application\Questionnaire\RemoveOption\RemoveQuestionOption;
-use App\Application\Questionnaire\UpdateOption\UpdateQuestionOption;
+use App\Application\Questionnaire\WriteOptions;
 use App\Domain\Questionnaire\Entity\Question;
 use App\Domain\Questionnaire\Entity\QuestionOption;
 use App\Domain\Questionnaire\Entity\Questionnaire;
@@ -26,9 +24,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class OptionController extends AbstractController
 {
     public function __construct(
-        private readonly AddQuestionOption $addQuestionOption,
-        private readonly UpdateQuestionOption $updateQuestionOption,
-        private readonly RemoveQuestionOption $removeQuestionOption,
+        private readonly WriteOptions $options,
         private readonly GetQuestionnaire $getQuestionnaire,
     ) {
     }
@@ -46,7 +42,7 @@ final class OptionController extends AbstractController
 
             if (is_string($label) && is_string($value)) {
                 try {
-                    $this->addQuestionOption->execute($id, $questionId, $label, $value);
+                    $this->options->add($id, $questionId, $label, $value);
 
                     return $this->redirectToRoute('admin_questionnaire_show', ['id' => $id]);
                 } catch (InvalidQuestionnaire $exception) {
@@ -77,7 +73,7 @@ final class OptionController extends AbstractController
 
             if (is_string($label) && is_string($value)) {
                 try {
-                    $this->updateQuestionOption->execute($id, $questionId, $optionId, $label, $value);
+                    $this->options->update($id, $questionId, $optionId, $label, $value);
 
                     return $this->redirectToRoute('admin_questionnaire_show', ['id' => $id]);
                 } catch (InvalidQuestionnaire $exception) {
@@ -102,7 +98,7 @@ final class OptionController extends AbstractController
         }
 
         try {
-            $this->removeQuestionOption->execute($id, $questionId, $optionId);
+            $this->options->remove($id, $questionId, $optionId);
         } catch (InvalidQuestionnaire $exception) {
             $this->addFlash('error', $exception->getMessage());
         }

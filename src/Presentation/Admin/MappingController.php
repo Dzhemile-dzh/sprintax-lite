@@ -6,10 +6,8 @@ namespace App\Presentation\Admin;
 
 use App\Application\Calculation\ListCalculatorFields;
 use App\Application\Pdf\ResolveQuestionnairePdfTemplate;
-use App\Application\Questionnaire\AddMapping\AddQuestionMapping;
 use App\Application\Questionnaire\Get\GetQuestionnaire;
-use App\Application\Questionnaire\RemoveMapping\RemoveQuestionMapping;
-use App\Application\Questionnaire\UpdateMapping\UpdateQuestionMapping;
+use App\Application\Questionnaire\WriteMappings;
 use App\Domain\Questionnaire\Entity\QuestionMapping;
 use App\Domain\Questionnaire\Entity\Questionnaire;
 use App\Domain\Questionnaire\Exception\InvalidQuestionnaire;
@@ -31,9 +29,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class MappingController extends AbstractController
 {
     public function __construct(
-        private readonly AddQuestionMapping $addQuestionMapping,
-        private readonly UpdateQuestionMapping $updateQuestionMapping,
-        private readonly RemoveQuestionMapping $removeQuestionMapping,
+        private readonly WriteMappings $mappings,
         private readonly ListCalculatorFields $calculatorFields,
         private readonly GetQuestionnaire $getQuestionnaire,
         private readonly ResolveQuestionnairePdfTemplate $resolvePdfTemplate,
@@ -87,7 +83,7 @@ final class MappingController extends AbstractController
                 && ($fontSize === null || is_int($fontSize))
             ) {
                 try {
-                    $this->updateQuestionMapping->execute(
+                    $this->mappings->update(
                         $id,
                         $mappingId,
                         $page,
@@ -116,7 +112,7 @@ final class MappingController extends AbstractController
         }
 
         try {
-            $this->removeQuestionMapping->execute($id, $mappingId);
+            $this->mappings->remove($id, $mappingId);
         } catch (InvalidQuestionnaire $exception) {
             $this->addFlash('error', $exception->getMessage());
         }
@@ -184,7 +180,7 @@ final class MappingController extends AbstractController
         }
 
         try {
-            $this->addQuestionMapping->execute(
+            $this->mappings->add(
                 $id,
                 $sourceType,
                 $sourceReference,

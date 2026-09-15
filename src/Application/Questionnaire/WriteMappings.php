@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Questionnaire\AddMapping;
+namespace App\Application\Questionnaire;
 
 use App\Application\Audit\RecordQuestionnaireRevision;
 use App\Application\Calculation\ListCalculatorFields;
@@ -14,7 +14,7 @@ use App\Domain\Questionnaire\ValueObject\FormType;
 use App\Domain\Questionnaire\ValueObject\MappingSourceType;
 use App\Domain\Questionnaire\ValueObject\PdfCoordinates;
 
-final class AddQuestionMapping
+final class WriteMappings
 {
     public function __construct(
         private readonly QuestionnaireRepositoryInterface $questionnaires,
@@ -23,7 +23,7 @@ final class AddQuestionMapping
     ) {
     }
 
-    public function execute(
+    public function add(
         string $questionnaireId,
         MappingSourceType $sourceType,
         string $sourceReference,
@@ -59,6 +59,43 @@ final class AddQuestionMapping
         );
 
         return $mapping;
+    }
+
+    public function update(
+        string $questionnaireId,
+        string $mappingId,
+        int $page,
+        float $xMm,
+        float $yMm,
+        ?int $fontSize,
+    ): void {
+        $questionnaire = $this->questionnaires->get($questionnaireId);
+        $questionnaire->relocateMapping($mappingId, new PdfCoordinates($page, $xMm, $yMm, $fontSize));
+        $this->questionnaires->save($questionnaire);
+        $this->revisions->execute(
+            $questionnaire,
+            RevisionAction::MappingRelocated,
+            sprintf(
+                'Moved "%s" to page %d at %gmm, %gmm',
+                $questionnaire->findMapping($mappingId)?->source()->reference ?? $mappingId,
+                $page,
+                $xMm,
+                $yMm,
+            ),
+        );
+    }
+
+    public function remove(string $questionnaireId, string $mappingId): void
+    {
+        $questionnaire = $this->questionnaires->get($questionnaireId);
+        $removed = $questionnaire->findMapping($mappingId);
+        $questionnaire->removeMapping($mappingId);
+        $this->questionnaires->save($questionnaire);
+        $this->revisions->execute(
+            $questionnaire,
+            RevisionAction::MappingRemoved,
+            sprintf('Removed the mapping for "%s"', $removed?->source()->reference ?? $mappingId),
+        );
     }
 
     private function assertComputedField(FormType $formType, string $fieldName): void

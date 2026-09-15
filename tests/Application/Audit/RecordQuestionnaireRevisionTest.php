@@ -5,9 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Application\Audit;
 
 use App\Application\Audit\RecordQuestionnaireRevision;
-use App\Application\Questionnaire\AddStep\AddQuestionnaireStep;
-use App\Application\Questionnaire\RemoveStep\RemoveQuestionnaireStep;
-use App\Application\Questionnaire\UpdateStep\UpdateQuestionnaireStep;
+use App\Application\Questionnaire\WriteSteps;
 use App\Domain\Audit\QuestionnaireStructureSnapshot;
 use App\Domain\Audit\ValueObject\RevisionAction;
 use App\Domain\Audit\ValueObject\RevisionActor;
@@ -69,13 +67,10 @@ final class RecordQuestionnaireRevisionTest extends TestCase
         $questionnaires = InMemoryQuestionnaireRepository::with($questionnaire);
         $recorder = $this->recorder($revisions);
 
-        $step = (new AddQuestionnaireStep($questionnaires, $recorder))->execute('q-1', 'Personal');
-        (new UpdateQuestionnaireStep($questionnaires, $recorder))->execute('q-1', $step->id(), 'About you');
-        (new RemoveQuestionnaireStep(
-            $questionnaires,
-            new InMemorySubmissionRepository(),
-            $recorder,
-        ))->execute('q-1', $step->id());
+        $steps = new WriteSteps($questionnaires, new InMemorySubmissionRepository(), $recorder);
+        $step = $steps->add('q-1', 'Personal');
+        $steps->update('q-1', $step->id(), 'About you');
+        $steps->remove('q-1', $step->id());
 
         $trail = array_reverse($revisions->forQuestionnaire('q-1'));
 

@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace App\Presentation\Admin;
 
-use App\Application\Questionnaire\Create\CreateQuestionnaire;
 use App\Application\Questionnaire\Get\GetQuestionnaire;
 use App\Application\Questionnaire\Preview\PreviewQuestionnaire;
-use App\Application\Questionnaire\Update\UpdateQuestionnaire;
+use App\Application\Questionnaire\WriteQuestionnaire;
 use App\Domain\Questionnaire\Entity\Questionnaire;
 use App\Domain\Questionnaire\Exception\InvalidQuestionnaire;
 use App\Domain\Questionnaire\Exception\QuestionnaireNotFound;
@@ -27,8 +26,7 @@ final class QuestionnaireController extends AbstractController
 {
     public function __construct(
         private readonly QuestionnaireRepositoryInterface $questionnaires,
-        private readonly CreateQuestionnaire $createQuestionnaire,
-        private readonly UpdateQuestionnaire $updateQuestionnaire,
+        private readonly WriteQuestionnaire $writeQuestionnaire,
         private readonly PreviewQuestionnaire $previewQuestionnaire,
         private readonly GetQuestionnaire $getQuestionnaire,
     ) {
@@ -55,7 +53,7 @@ final class QuestionnaireController extends AbstractController
 
             if (is_string($name) && $formType instanceof FormType && ($description === null || is_string($description))) {
                 try {
-                    $questionnaire = $this->createQuestionnaire->execute($name, $formType, $description);
+                    $questionnaire = $this->writeQuestionnaire->create($name, $formType, $description);
 
                     return $this->redirectToRoute('admin_questionnaire_show', ['id' => $questionnaire->id()]);
                 } catch (InvalidQuestionnaire $exception) {
@@ -104,7 +102,7 @@ final class QuestionnaireController extends AbstractController
 
             if (is_string($name) && $formType instanceof FormType && ($description === null || is_string($description))) {
                 try {
-                    $this->updateQuestionnaire->execute($id, $name, $description, $formType);
+                    $this->writeQuestionnaire->update($id, $name, $description, $formType);
 
                     return $this->redirectToRoute('admin_questionnaire_show', ['id' => $id]);
                 } catch (InvalidQuestionnaire $exception) {

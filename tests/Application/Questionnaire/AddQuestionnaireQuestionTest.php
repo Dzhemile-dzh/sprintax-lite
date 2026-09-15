@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Application\Questionnaire;
 
-use App\Application\Questionnaire\AddQuestion\AddQuestionnaireQuestion;
+use App\Application\Questionnaire\WriteQuestions;
+use App\Tests\Support\InMemorySubmissionRepository;
 use App\Domain\Questionnaire\Entity\Questionnaire;
 use App\Domain\Questionnaire\ValueObject\FormType;
 use App\Domain\Questionnaire\ValueObject\QuestionType;
@@ -20,12 +21,13 @@ final class AddQuestionnaireQuestionTest extends TestCase
         $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
         $questionnaire->addStep('step-1', 'Personal');
         $questionnaire->addQuestion('step-1', 'q-married', 'married', 'Married?', QuestionType::YesNo);
-        $useCase = new AddQuestionnaireQuestion(
+        $useCase = new WriteQuestions(
             InMemoryQuestionnaireRepository::with($questionnaire),
+            new InMemorySubmissionRepository(),
             TestRevisionRecorder::create(),
         );
 
-        $question = $useCase->execute(
+        $question = $useCase->add(
             'q-1',
             'step-1',
             'spouse_name',
@@ -55,12 +57,13 @@ final class AddQuestionnaireQuestionTest extends TestCase
     {
         $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
         $questionnaire->addStep('step-1', 'Personal');
-        $useCase = new AddQuestionnaireQuestion(
+        $useCase = new WriteQuestions(
             InMemoryQuestionnaireRepository::with($questionnaire),
+            new InMemorySubmissionRepository(),
             TestRevisionRecorder::create(),
         );
 
-        $question = $useCase->execute(
+        $question = $useCase->add(
             'q-1',
             'step-1',
             'first_name',
@@ -87,12 +90,13 @@ final class AddQuestionnaireQuestionTest extends TestCase
     {
         $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
         $questionnaire->addStep('step-1', 'Personal');
-        $useCase = new AddQuestionnaireQuestion(
+        $useCase = new WriteQuestions(
             InMemoryQuestionnaireRepository::with($questionnaire),
+            new InMemorySubmissionRepository(),
             TestRevisionRecorder::create(),
         );
 
-        $question = $useCase->execute(
+        $question = $useCase->add(
             'q-1',
             'step-1',
             'spouse_name',

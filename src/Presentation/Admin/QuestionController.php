@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace App\Presentation\Admin;
 
-use App\Application\Questionnaire\AddQuestion\AddQuestionnaireQuestion;
 use App\Application\Questionnaire\Get\GetQuestionnaire;
-use App\Application\Questionnaire\RemoveQuestion\RemoveQuestionnaireQuestion;
-use App\Application\Questionnaire\UpdateQuestion\UpdateQuestionnaireQuestion;
+use App\Application\Questionnaire\WriteQuestions;
 use App\Domain\Questionnaire\Entity\Question;
 use App\Domain\Questionnaire\Entity\Questionnaire;
 use App\Domain\Questionnaire\Exception\InvalidQuestionnaire;
@@ -27,9 +25,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class QuestionController extends AbstractController
 {
     public function __construct(
-        private readonly AddQuestionnaireQuestion $addQuestionnaireQuestion,
-        private readonly UpdateQuestionnaireQuestion $updateQuestionnaireQuestion,
-        private readonly RemoveQuestionnaireQuestion $removeQuestionnaireQuestion,
+        private readonly WriteQuestions $questions,
         private readonly GetQuestionnaire $getQuestionnaire,
     ) {
     }
@@ -56,7 +52,7 @@ final class QuestionController extends AbstractController
 
             if (is_string($key) && is_string($label) && $type instanceof QuestionType && ($helpText === null || is_string($helpText))) {
                 try {
-                    $this->addQuestionnaireQuestion->execute(
+                    $this->questions->add(
                         $id,
                         $stepId,
                         $key,
@@ -107,7 +103,7 @@ final class QuestionController extends AbstractController
 
             if (is_string($label) && ($helpText === null || is_string($helpText))) {
                 try {
-                    $this->updateQuestionnaireQuestion->execute(
+                    $this->questions->update(
                         $id,
                         $questionId,
                         $label,
@@ -144,7 +140,7 @@ final class QuestionController extends AbstractController
         }
 
         try {
-            $this->removeQuestionnaireQuestion->execute($id, $questionId);
+            $this->questions->remove($id, $questionId);
         } catch (InvalidQuestionnaire $exception) {
             $this->addFlash('error', $exception->getMessage());
         }

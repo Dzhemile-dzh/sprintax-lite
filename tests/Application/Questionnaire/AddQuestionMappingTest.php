@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Application\Questionnaire;
 
 use App\Application\Calculation\ListCalculatorFields;
-use App\Application\Questionnaire\AddMapping\AddQuestionMapping;
+use App\Application\Questionnaire\WriteMappings;
 use App\Domain\Questionnaire\Entity\Questionnaire;
 use App\Domain\Questionnaire\Exception\InvalidQuestionnaire;
 use App\Domain\Questionnaire\ValueObject\FormType;
@@ -21,7 +21,7 @@ final class AddQuestionMappingTest extends TestCase
     public function testItStoresAQuestionMappingByKey(): void
     {
         $questionnaire = $this->questionnaire();
-        $this->useCase($questionnaire)->execute(
+        $this->useCase($questionnaire)->add(
             'q-1',
             MappingSourceType::Question,
             'first_name',
@@ -42,7 +42,7 @@ final class AddQuestionMappingTest extends TestCase
 
         $this->expectException(InvalidQuestionnaire::class);
         $this->expectExceptionMessage('"not_a_field" is not a computed field for this form type.');
-        $this->useCase($questionnaire)->execute(
+        $this->useCase($questionnaire)->add(
             'q-1',
             MappingSourceType::ComputedField,
             'not_a_field',
@@ -56,7 +56,7 @@ final class AddQuestionMappingTest extends TestCase
     public function testItAcceptsACalculatorOutputField(): void
     {
         $questionnaire = $this->questionnaire();
-        $this->useCase($questionnaire)->execute(
+        $this->useCase($questionnaire)->add(
             'q-1',
             MappingSourceType::ComputedField,
             Form1040NrCalculator::FIELD_TAX_OWED,
@@ -69,9 +69,9 @@ final class AddQuestionMappingTest extends TestCase
         self::assertSame(Form1040NrCalculator::FIELD_TAX_OWED, $questionnaire->mappings()[0]->source()->reference);
     }
 
-    private function useCase(Questionnaire $questionnaire): AddQuestionMapping
+    private function useCase(Questionnaire $questionnaire): WriteMappings
     {
-        return new AddQuestionMapping(
+        return new WriteMappings(
             InMemoryQuestionnaireRepository::with($questionnaire),
             new ListCalculatorFields([new Form1040NrCalculator()]),
             TestRevisionRecorder::create(),

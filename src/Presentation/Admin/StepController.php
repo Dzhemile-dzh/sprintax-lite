@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace App\Presentation\Admin;
 
-use App\Application\Questionnaire\AddStep\AddQuestionnaireStep;
 use App\Application\Questionnaire\Get\GetQuestionnaire;
-use App\Application\Questionnaire\RemoveStep\RemoveQuestionnaireStep;
-use App\Application\Questionnaire\UpdateStep\UpdateQuestionnaireStep;
+use App\Application\Questionnaire\WriteSteps;
 use App\Domain\Questionnaire\Entity\Questionnaire;
 use App\Domain\Questionnaire\Exception\InvalidQuestionnaire;
 use App\Domain\Questionnaire\Exception\QuestionnaireNotFound;
@@ -24,9 +22,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class StepController extends AbstractController
 {
     public function __construct(
-        private readonly AddQuestionnaireStep $addQuestionnaireStep,
-        private readonly UpdateQuestionnaireStep $updateQuestionnaireStep,
-        private readonly RemoveQuestionnaireStep $removeQuestionnaireStep,
+        private readonly WriteSteps $steps,
         private readonly GetQuestionnaire $getQuestionnaire,
     ) {
     }
@@ -43,7 +39,7 @@ final class StepController extends AbstractController
 
             if (is_string($title)) {
                 try {
-                    $this->addQuestionnaireStep->execute($id, $title);
+                    $this->steps->add($id, $title);
 
                     return $this->redirectToRoute('admin_questionnaire_show', ['id' => $id]);
                 } catch (InvalidQuestionnaire $exception) {
@@ -76,7 +72,7 @@ final class StepController extends AbstractController
 
             if (is_string($title)) {
                 try {
-                    $this->updateQuestionnaireStep->execute($id, $stepId, $title);
+                    $this->steps->update($id, $stepId, $title);
 
                     return $this->redirectToRoute('admin_questionnaire_show', ['id' => $id]);
                 } catch (InvalidQuestionnaire $exception) {
@@ -101,7 +97,7 @@ final class StepController extends AbstractController
         }
 
         try {
-            $this->removeQuestionnaireStep->execute($id, $stepId);
+            $this->steps->remove($id, $stepId);
         } catch (InvalidQuestionnaire $exception) {
             $this->addFlash('error', $exception->getMessage());
         }
