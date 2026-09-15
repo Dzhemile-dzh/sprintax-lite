@@ -21,11 +21,11 @@ Infrastructure implementations
 | Layer | Namespace | Responsibility |
 | --- | --- | --- |
 | Domain | `App\Domain` | Entities, value objects, repository interfaces, calculation/PDF contracts. No Symfony, HTTP, Forms, or Twig. Doctrine mapping attributes and collections only. |
-| Application | `App\Application` | Use cases: start/save/finalize a submission, calculate, generate and download a PDF. |
+| Application | `App\Application` | Use cases: start/save/finalize a submission, calculate, generate and download a PDF, record structure revisions, analytics overview. |
 | Infrastructure | `App\Infrastructure` | Doctrine repositories, FPDI adapter, local filesystem, 1040-NR calculator, Messenger. |
-| Presentation | `App\Presentation` | Thin controllers and forms for admin, client, and security. |
+| Presentation | `App\Presentation` | Thin controllers and forms for admin, client, security, and a read-only JSON API. |
 
-Ports: `CalculatorInterface`, `PdfGeneratorInterface`, `FileStorageInterface`, `QuestionnaireRepositoryInterface`, `SubmissionRepositoryInterface`, `UserRepositoryInterface`.
+Ports: `CalculatorInterface`, `PdfGeneratorInterface`, `FileStorageInterface`, `QuestionnaireRepositoryInterface`, `SubmissionRepositoryInterface`, `UserRepositoryInterface`, `QuestionnaireRevisionRepositoryInterface`, `AnalyticsRepositoryInterface`, `ActorProvider`.
 
 There are no generic managers, base CRUD services, or abstract domain service classes. Business rules do not live in controllers or Twig.
 
@@ -42,6 +42,8 @@ User
 ```
 
 `QuestionMapping` belongs to the questionnaire and points at a question **or** a computed field (page + X/Y mm + optional font size).
+
+`QuestionnaireRevision` is an append-only trail of structure changes (version, action, actor, summary, full structure snapshot). It references the questionnaire by id so history survives independent of cascade deletes.
 
 Invariants:
 
@@ -159,6 +161,15 @@ Docker: [http://localhost:8080](http://localhost:8080) after `docker compose up 
 
 Admins manage questionnaires at `/admin`: ordered steps, questions (types, validation, visibility), choice options, and PDF mappings. Clients start and resume at `/client`. Each wizard step is its own route, saved with POST/redirect/GET. Clients can go back but cannot skip ahead of `current_step`. Review is shown before submit.
 
+Bonus surfaces (admin unless noted):
+
+| Feature | Where |
+| --- | --- |
+| Structure history | `/admin/questionnaires/{id}/history` and `/history/{version}` — every create/update/delete of steps, questions, options, and mappings stores a versioned snapshot with the editing admin |
+| Analytics | `/admin/analytics` — submission counts by status and per questionnaire, plus emailed PDFs and stored answers |
+| Coordinate picker | Add/Edit PDF mapping — click the blank form (served from `resources/pdf/{formType}.pdf`) to fill page + X/Y mm; manual fields still work if the template file is missing |
+| JSON API | `GET /api/questionnaires` and `GET /api/questionnaires/{id}` (`ROLE_ADMIN`); `GET /api/submissions/{id}` (owner or admin; other clients get 404). Session auth (same form login), read-only |
+
 ## Running the Messenger worker
 
 Finalize does **not** build the PDF in the HTTP request. It marks the submission finalized and dispatches `GenerateSubmissionPdfMessage` on the `async` transport.
@@ -182,7 +193,7 @@ composer lint
 | Suite | Covers |
 | --- | --- |
 | unit | Visibility, calculation, domain rules, PDF orchestration, voters, architecture |
-| functional | Register, login, admin builder, wizard, resume, conditionals, review, finalize, authorization, PDF download, waiting UX, PDF email |
+| functional | Register, login, admin builder, structure history, analytics, coordinate picker, JSON API, wizard, resume, conditionals, review, finalize, authorization, PDF download, waiting UX, PDF email |
 | messenger | Handler behavior and idempotency |
 
 `composer test` runs all three. PHPUnit uses SQLite at `var/test.db`.
@@ -213,7 +224,7 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on push to `main` and on pull r
 
 Overlay goes through `PdfGeneratorInterface`. `GenerateSubmissionPdf` resolves `resources/pdf/{formType}.pdf` from the questionnaire's `FormType` (locked after a client starts; for Form 1040-NR, `resources/pdf/1040-nr.pdf`). It maps **visible** answers and computed fields through admin `QuestionMapping` coordinates (mm), and `FpdiPdfGenerator` stamps those values. The generator has no hardcoded field positions. File checks and directory creation go through `FileStorageInterface`. The worker writes the file under `var/pdf/` and stores `{id}.pdf` on the submission. It then emails that file to the client. The display name can be renamed without changing the template.
 
-The official IRS form is **not** in this repository (`resources/pdf/` is empty aside from `.gitkeep`). Download a blank Form 1040-NR and save it as `resources/pdf/1040-nr.pdf` before generating a real overlay. Tests use their own dummy PDFs.
+The official IRS form is **not** in this repository (`resources/pdf/` is empty aside from `.gitkeep`). Download a blank Form 1040-NR and save it as `resources/pdf/1040-nr.pdf` before generating a real overlay **or** using the admin coordinate picker. Tests use their own dummy PDFs. Without the template, mapping forms fall back to manual millimetre fields.
 
 Download is `GET /submissions/{id}/pdf` (`BinaryFileResponse`). `SubmissionVoter::DOWNLOAD`: another client gets 403; a PDF that is not ready returns 404.
 
@@ -241,7 +252,9 @@ Rules live on the question (`equals` / `not_equals`). `QuestionVisibilityEvaluat
 
 - Tax figures are a stand-in, not IRS Publication 519 / 1040-NR worksheets.
 - SQLite is the only supported database; the schema is not tuned for concurrent production traffic.
-- The IRS 1040-NR blank is not shipped. Without `resources/pdf/1040-nr.pdf`, Messenger PDF jobs fail. Overlay is coordinate-based; there is no interactive form-field fill.
+- The IRS 1040-NR blank is not shipped. Without `resources/pdf/1040-nr.pdf`, Messenger PDF jobs fail and the coordinate picker shows a fallback message.
+- Overlay is coordinate-based (admin mm placements or the click picker). There is no IRS AcroForm field fill.
+- The JSON API is session-backed and read-only; unauthenticated calls follow the form-login redirect rather than a dedicated JSON `401`.
 - Messenger `messenger_messages` is created by Doctrine transport auto-setup in `dev`, not by migrations.
 - Demo passwords are fixtures for local/CI use, not a production identity store.
 - `MAILER_DSN` is local Mailpit only: Docker `smtp://mailer:1025` (inbox at http://localhost:8025), local PHP `smtp://127.0.0.1:1025`. Mailpit does not send to the public internet.
