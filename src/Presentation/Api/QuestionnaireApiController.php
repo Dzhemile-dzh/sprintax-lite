@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Presentation\Api;
 
 use App\Application\Questionnaire\Get\GetQuestionnaire;
-use App\Application\Questionnaire\List\ListQuestionnaires;
 use App\Domain\Questionnaire\Exception\QuestionnaireNotFound;
+use App\Domain\Questionnaire\Repository\QuestionnaireRepositoryInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
@@ -17,7 +17,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class QuestionnaireApiController extends AbstractController
 {
     public function __construct(
-        private readonly ListQuestionnaires $listQuestionnaires,
+        private readonly QuestionnaireRepositoryInterface $questionnaires,
         private readonly GetQuestionnaire $getQuestionnaire,
         private readonly ApiSerializer $serializer,
     ) {
@@ -28,7 +28,7 @@ final class QuestionnaireApiController extends AbstractController
     {
         $items = [];
 
-        foreach ($this->listQuestionnaires->execute() as $questionnaire) {
+        foreach ($this->questionnaires->all() as $questionnaire) {
             $items[] = $this->serializer->questionnaireSummary($questionnaire);
         }
 

@@ -6,7 +6,6 @@ namespace App\Presentation\Client;
 
 use App\Application\Submission\ClientHome\ListClientHome;
 use App\Application\Submission\Finalize\FinalizeSubmission;
-use App\Application\Submission\Get\GetSubmission;
 use App\Application\Submission\GetWizardStep\GetWizardStep;
 use App\Application\Submission\Review\ReviewSubmission;
 use App\Application\Submission\SaveStep\SaveStep;
@@ -15,6 +14,7 @@ use App\Domain\Questionnaire\Exception\QuestionnaireNotFound;
 use App\Domain\Submission\Entity\QuestionnaireSubmission;
 use App\Domain\Submission\Exception\InvalidSubmission;
 use App\Domain\Submission\Exception\SubmissionNotFound;
+use App\Domain\Submission\Repository\SubmissionRepositoryInterface;
 use App\Domain\Submission\ValueObject\SubmissionStatus;
 use App\Infrastructure\Security\SecurityUser;
 use App\Infrastructure\Security\SubmissionVoter;
@@ -40,7 +40,7 @@ final class WizardController extends AbstractController
         private readonly SaveStep $saveStep,
         private readonly ReviewSubmission $reviewSubmission,
         private readonly FinalizeSubmission $finalizeSubmission,
-        private readonly GetSubmission $getSubmission,
+        private readonly SubmissionRepositoryInterface $submissions,
     ) {
     }
 
@@ -235,7 +235,7 @@ final class WizardController extends AbstractController
     private function authorizedSubmission(string $id, string $attribute): QuestionnaireSubmission
     {
         try {
-            $submission = $this->getSubmission->execute($id);
+            $submission = $this->submissions->get($id);
         } catch (SubmissionNotFound) {
             throw $this->createNotFoundException();
         }

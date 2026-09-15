@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace App\Presentation\Admin;
 
-use App\Application\Audit\GetQuestionnaireRevision;
-use App\Application\Audit\ListQuestionnaireRevisions;
 use App\Application\Questionnaire\Get\GetQuestionnaire;
-use App\Domain\Audit\Exception\RevisionNotFound;
+use App\Domain\Audit\Repository\QuestionnaireRevisionRepositoryInterface;
 use App\Domain\Questionnaire\Entity\Questionnaire;
 use App\Domain\Questionnaire\Exception\QuestionnaireNotFound;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -21,8 +19,7 @@ final class RevisionController extends AbstractController
 {
     public function __construct(
         private readonly GetQuestionnaire $getQuestionnaire,
-        private readonly ListQuestionnaireRevisions $listRevisions,
-        private readonly GetQuestionnaireRevision $getRevision,
+        private readonly QuestionnaireRevisionRepositoryInterface $revisions,
     ) {
     }
 
@@ -31,7 +28,7 @@ final class RevisionController extends AbstractController
     {
         return $this->render('admin/questionnaire/history.html.twig', [
             'questionnaire' => $this->questionnaire($id),
-            'revisions' => $this->listRevisions->execute($id),
+            'revisions' => $this->revisions->forQuestionnaire($id),
         ]);
     }
 
@@ -44,10 +41,9 @@ final class RevisionController extends AbstractController
     public function revision(string $id, int $version): Response
     {
         $questionnaire = $this->questionnaire($id);
+        $revision = $this->revisions->find($id, $version);
 
-        try {
-            $revision = $this->getRevision->execute($id, $version);
-        } catch (RevisionNotFound) {
+        if ($revision === null) {
             throw $this->createNotFoundException();
         }
 

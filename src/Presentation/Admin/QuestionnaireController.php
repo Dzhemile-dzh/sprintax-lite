@@ -6,12 +6,12 @@ namespace App\Presentation\Admin;
 
 use App\Application\Questionnaire\Create\CreateQuestionnaire;
 use App\Application\Questionnaire\Get\GetQuestionnaire;
-use App\Application\Questionnaire\List\ListQuestionnaires;
 use App\Application\Questionnaire\Preview\PreviewQuestionnaire;
 use App\Application\Questionnaire\Update\UpdateQuestionnaire;
 use App\Domain\Questionnaire\Entity\Questionnaire;
 use App\Domain\Questionnaire\Exception\InvalidQuestionnaire;
 use App\Domain\Questionnaire\Exception\QuestionnaireNotFound;
+use App\Domain\Questionnaire\Repository\QuestionnaireRepositoryInterface;
 use App\Domain\Questionnaire\ValueObject\FormType;
 use App\Presentation\Admin\Form\QuestionnaireFormType;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -26,7 +26,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class QuestionnaireController extends AbstractController
 {
     public function __construct(
-        private readonly ListQuestionnaires $listQuestionnaires,
+        private readonly QuestionnaireRepositoryInterface $questionnaires,
         private readonly CreateQuestionnaire $createQuestionnaire,
         private readonly UpdateQuestionnaire $updateQuestionnaire,
         private readonly PreviewQuestionnaire $previewQuestionnaire,
@@ -38,7 +38,7 @@ final class QuestionnaireController extends AbstractController
     public function index(): Response
     {
         return $this->render('admin/questionnaire/index.html.twig', [
-            'questionnaires' => $this->listQuestionnaires->execute(),
+            'questionnaires' => $this->questionnaires->all(),
         ]);
     }
 

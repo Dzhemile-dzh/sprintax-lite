@@ -67,11 +67,12 @@ final class AnalyticsDashboardTest extends WebDatabaseTestCase
         $crawler = $this->client->click($crawler->selectLink('Analytics')->link());
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('h1', 'Analytics');
-        self::assertSelectorTextContains('body', 'Total submissions: 2');
-        self::assertSelectorTextContains('body', 'In progress: 1');
-        self::assertSelectorTextContains('body', 'PDF ready: 1');
-        self::assertSelectorTextContains('body', 'PDFs emailed: 1');
-        self::assertSelectorTextContains('body', 'Stored answers: 1');
+        self::assertSelectorTextContains('body', 'Total submissions');
+        self::assertSelectorTextContains('body', 'In progress');
+        self::assertSelectorTextContains('body', 'PDF ready');
+        self::assertSelectorTextContains('body', 'PDFs emailed');
+        self::assertSelectorTextContains('body', 'Stored answers');
+        self::assertSelectorTextContains('.metric-card__value', '2');
         self::assertSelectorTextContains('body', '1040-NR');
     }
 

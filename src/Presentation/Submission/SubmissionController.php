@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Presentation\Submission;
 
 use App\Application\Pdf\DownloadSubmissionPdf;
-use App\Application\Submission\Get\GetSubmission;
 use App\Domain\Submission\Entity\QuestionnaireSubmission;
 use App\Domain\Submission\Exception\InvalidSubmission;
 use App\Domain\Submission\Exception\SubmissionNotFound;
+use App\Domain\Submission\Repository\SubmissionRepositoryInterface;
 use App\Infrastructure\Security\SecurityUser;
 use App\Infrastructure\Security\SubmissionVoter;
 use App\Presentation\Http\RendersPdfWaitingPage;
@@ -23,7 +23,7 @@ final class SubmissionController extends AbstractController
     use RendersPdfWaitingPage;
 
     public function __construct(
-        private readonly GetSubmission $getSubmission,
+        private readonly SubmissionRepositoryInterface $submissions,
         private readonly DownloadSubmissionPdf $downloadSubmissionPdf,
     ) {
     }
@@ -61,7 +61,7 @@ final class SubmissionController extends AbstractController
     private function authorizedSubmission(string $id, string $attribute): QuestionnaireSubmission
     {
         try {
-            $submission = $this->getSubmission->execute($id);
+            $submission = $this->submissions->get($id);
         } catch (SubmissionNotFound) {
             throw $this->createNotFoundException();
         }
