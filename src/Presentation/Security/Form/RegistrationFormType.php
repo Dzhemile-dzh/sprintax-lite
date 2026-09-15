@@ -32,6 +32,7 @@ final class RegistrationFormType extends AbstractType
             ])
             ->add('plainPassword', RepeatedType::class, [
                 'type' => PasswordType::class,
+                'invalid_message' => 'The values do not match.',
                 'first_options' => ['label' => 'Password'],
                 'second_options' => ['label' => 'Confirm password'],
                 'constraints' => [

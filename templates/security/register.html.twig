@@ -2,18 +2,42 @@
 {% import 'macros/ui.html.twig' as ui %}
 
 {% block title %}Create account{% endblock %}
+{% block body_class %}auth-page auth-page--register{% endblock %}
 
 {% block body %}
-    <h1>Create a client account</h1>
-    <p>Administrators cannot self-register.</p>
+    <aside class="auth-brand" aria-hidden="true">
+        <div>
+            <p class="auth-brand__mark">sprintax-lite</p>
+        </div>
+        <div>
+            <p class="auth-brand__title">Open a client account</p>
+            <p class="auth-brand__copy">Registration is for clients only. Administrators are provisioned separately.</p>
+        </div>
+        <p class="auth-brand__foot">Confidential portal</p>
+    </aside>
 
-    {{ form_start(form) }}
-        {{ form_errors(form) }}
-        {{ ui.field(form.email) }}
-        {{ ui.field(form.plainPassword.first) }}
-        {{ ui.field(form.plainPassword.second) }}
-        {{ ui.submit('Create account') }}
-    {{ form_end(form) }}
+    <div class="auth-form">
+        <div class="auth-form__panel">
+            <h1>Create account</h1>
+            <p class="auth-form__lead">Administrators cannot self-register.</p>
 
-    <p><a href="{{ path('app_login') }}">Already have an account? Sign in</a></p>
+            {{ form_start(form) }}
+                {{ form_errors(form) }}
+                {{ ui.field(form.email) }}
+                {{ ui.field(form.plainPassword.first) }}
+                {{ ui.field(form.plainPassword.second) }}
+                {% if not form.plainPassword.vars.valid %}
+                    <div class="auth-form__error" role="alert">
+                        {{ form_errors(form.plainPassword) }}
+                    </div>
+                {% endif %}
+                {{ ui.submit('Create account') }}
+            {{ form_end(form) }}
+
+            <p class="auth-form__switch">
+                Already registered?
+                <a href="{{ path('app_login') }}">Sign in</a>
+            </p>
+        </div>
+    </div>
 {% endblock %}

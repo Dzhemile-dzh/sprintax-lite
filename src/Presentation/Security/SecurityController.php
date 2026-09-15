@@ -80,7 +80,7 @@ final class SecurityController extends AbstractController
 
                 try {
                     $this->registerClient->execute($email, $password);
-                    $this->addFlash('success', 'Your account was created. You can now sign in.');
+                    $this->addFlash('account_created', 'Your account was created. You can now sign in.');
 
                     return $this->redirectToRoute('app_login');
                 } catch (EmailAlreadyRegistered) {

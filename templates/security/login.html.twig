@@ -2,20 +2,40 @@
 {% import 'macros/ui.html.twig' as ui %}
 
 {% block title %}Sign in{% endblock %}
+{% block body_class %}auth-page{% endblock %}
 
 {% block body %}
-    <h1>Sign in</h1>
+    <aside class="auth-brand" aria-hidden="true">
+        <div>
+            <p class="auth-brand__mark">sprintax-lite</p>
+        </div>
+        <div>
+            <p class="auth-brand__title">Secure client access</p>
+            <p class="auth-brand__copy">Sign in to continue your tax questionnaire, review answers, and download prepared forms.</p>
+        </div>
+        <p class="auth-brand__foot">Confidential portal</p>
+    </aside>
 
-    {% if error %}
-        <p class="error" role="alert">Invalid email or password.</p>
-    {% endif %}
+    <div class="auth-form">
+        <div class="auth-form__panel">
+            <h1>Sign in</h1>
+            <p class="auth-form__lead">Use your client or admin account.</p>
 
-    <form method="post" action="{{ path('app_login') }}">
-        <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
-        {{ ui.text_input('_username', 'email', 'Email', last_username, 'username') }}
-        {{ ui.text_input('_password', 'password', 'Password', '', 'current-password') }}
-        {{ ui.submit('Sign in') }}
-    </form>
+            {% if error %}
+                <p class="flash flash-error" role="alert">Invalid email or password.</p>
+            {% endif %}
 
-    <p><a href="{{ path('app_register') }}">Create a client account</a></p>
+            <form method="post" action="{{ path('app_login') }}">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+                {{ ui.text_input('_username', 'email', 'Email', last_username, 'username') }}
+                {{ ui.text_input('_password', 'password', 'Password', '', 'current-password') }}
+                {{ ui.submit('Sign in') }}
+            </form>
+
+            <p class="auth-form__switch">
+                New here?
+                <a href="{{ path('app_register') }}">Create a client account</a>
+            </p>
+        </div>
+    </div>
 {% endblock %}
