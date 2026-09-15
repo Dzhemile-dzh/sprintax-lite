@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Application\Questionnaire\AddOption;
 
+use App\Application\Audit\RecordQuestionnaireRevision;
+use App\Domain\Audit\ValueObject\RevisionAction;
 use App\Domain\Questionnaire\Entity\QuestionOption;
 use App\Domain\Questionnaire\Exception\InvalidQuestionnaire;
 use App\Domain\Questionnaire\Repository\QuestionnaireRepositoryInterface;
@@ -12,6 +14,7 @@ final class AddQuestionOption
 {
     public function __construct(
         private readonly QuestionnaireRepositoryInterface $questionnaires,
+        private readonly RecordQuestionnaireRevision $revisions,
     ) {
     }
 
@@ -36,6 +39,11 @@ final class AddQuestionOption
         );
         $question->addOption($option);
         $this->questionnaires->save($questionnaire);
+        $this->revisions->execute(
+            $questionnaire,
+            RevisionAction::OptionAdded,
+            sprintf('Added option "%s" to question "%s"', $option->value(), $question->key()),
+        );
 
         return $option;
     }

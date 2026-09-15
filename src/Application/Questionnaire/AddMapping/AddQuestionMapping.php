@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Application\Questionnaire\AddMapping;
 
+use App\Application\Audit\RecordQuestionnaireRevision;
 use App\Application\Calculation\ListCalculatorFields;
+use App\Domain\Audit\ValueObject\RevisionAction;
 use App\Domain\Questionnaire\Entity\QuestionMapping;
 use App\Domain\Questionnaire\Exception\InvalidQuestionnaire;
 use App\Domain\Questionnaire\Repository\QuestionnaireRepositoryInterface;
@@ -17,6 +19,7 @@ final class AddQuestionMapping
     public function __construct(
         private readonly QuestionnaireRepositoryInterface $questionnaires,
         private readonly ListCalculatorFields $calculatorFields,
+        private readonly RecordQuestionnaireRevision $revisions,
     ) {
     }
 
@@ -42,6 +45,18 @@ final class AddQuestionMapping
 
         $questionnaire->addMapping($mapping);
         $this->questionnaires->save($questionnaire);
+        $this->revisions->execute(
+            $questionnaire,
+            RevisionAction::MappingAdded,
+            sprintf(
+                'Mapped %s "%s" to page %d at %gmm, %gmm',
+                $sourceType->value,
+                $sourceReference,
+                $page,
+                $xMm,
+                $yMm,
+            ),
+        );
 
         return $mapping;
     }

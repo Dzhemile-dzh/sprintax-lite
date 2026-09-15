@@ -1,0 +1,25 @@
+{% extends 'base.html.twig' %}
+{% import 'macros/ui.html.twig' as ui %}
+{% import 'macros/audit.html.twig' as audit %}
+
+{% block title %}History of {{ questionnaire.name }}{% endblock %}
+
+{% block body %}
+    <h1>Change history</h1>
+    <p>{{ ui.link(path('admin_questionnaire_show', {id: questionnaire.id}), 'Back to ' ~ questionnaire.name) }}</p>
+
+    {% if revisions is empty %}
+        <p>No structure changes recorded yet.</p>
+    {% else %}
+        <ul>
+            {% for revision in revisions %}
+                <li>
+                    {{ audit.revision_line(
+                        revision,
+                        path('admin_questionnaire_revision', {id: questionnaire.id, version: revision.version})
+                    ) }}
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+{% endblock %}

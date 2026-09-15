@@ -65,6 +65,13 @@ services:
     App\Domain\Pdf\Contract\PdfGeneratorInterface:
         alias: App\Infrastructure\Pdf\FpdiPdfGenerator
 
+    App\Application\Audit\ActorProvider:
+        alias: App\Infrastructure\Security\SecurityActorProvider
+
+    App\Domain\Audit\Repository\QuestionnaireRevisionRepositoryInterface:
+        alias: App\Infrastructure\Persistence\Doctrine\DoctrineQuestionnaireRevisionRepository
+        public: true
+
     App\Domain\Questionnaire\Repository\QuestionnaireRepositoryInterface:
         alias: App\Infrastructure\Persistence\Doctrine\DoctrineQuestionnaireRepository
         public: true

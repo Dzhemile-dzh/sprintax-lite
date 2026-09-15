@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Application\Questionnaire\UpdateMapping;
 
+use App\Application\Audit\RecordQuestionnaireRevision;
+use App\Domain\Audit\ValueObject\RevisionAction;
 use App\Domain\Questionnaire\Repository\QuestionnaireRepositoryInterface;
 use App\Domain\Questionnaire\ValueObject\PdfCoordinates;
 
@@ -11,6 +13,7 @@ final class UpdateQuestionMapping
 {
     public function __construct(
         private readonly QuestionnaireRepositoryInterface $questionnaires,
+        private readonly RecordQuestionnaireRevision $revisions,
     ) {
     }
 
@@ -25,5 +28,16 @@ final class UpdateQuestionMapping
         $questionnaire = $this->questionnaires->get($questionnaireId);
         $questionnaire->relocateMapping($mappingId, new PdfCoordinates($page, $xMm, $yMm, $fontSize));
         $this->questionnaires->save($questionnaire);
+        $this->revisions->execute(
+            $questionnaire,
+            RevisionAction::MappingRelocated,
+            sprintf(
+                'Moved "%s" to page %d at %gmm, %gmm',
+                $questionnaire->findMapping($mappingId)?->source()->reference ?? $mappingId,
+                $page,
+                $xMm,
+                $yMm,
+            ),
+        );
     }
 }

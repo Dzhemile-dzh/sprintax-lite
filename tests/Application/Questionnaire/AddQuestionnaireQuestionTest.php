@@ -10,6 +10,7 @@ use App\Domain\Questionnaire\ValueObject\FormType;
 use App\Domain\Questionnaire\ValueObject\QuestionType;
 use App\Domain\Questionnaire\ValueObject\VisibilityOperator;
 use App\Tests\Support\InMemoryQuestionnaireRepository;
+use App\Tests\Support\TestRevisionRecorder;
 use PHPUnit\Framework\TestCase;
 
 final class AddQuestionnaireQuestionTest extends TestCase
@@ -19,7 +20,10 @@ final class AddQuestionnaireQuestionTest extends TestCase
         $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
         $questionnaire->addStep('step-1', 'Personal');
         $questionnaire->addQuestion('step-1', 'q-married', 'married', 'Married?', QuestionType::YesNo);
-        $useCase = new AddQuestionnaireQuestion(InMemoryQuestionnaireRepository::with($questionnaire));
+        $useCase = new AddQuestionnaireQuestion(
+            InMemoryQuestionnaireRepository::with($questionnaire),
+            TestRevisionRecorder::create(),
+        );
 
         $question = $useCase->execute(
             'q-1',
@@ -51,7 +55,10 @@ final class AddQuestionnaireQuestionTest extends TestCase
     {
         $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
         $questionnaire->addStep('step-1', 'Personal');
-        $useCase = new AddQuestionnaireQuestion(InMemoryQuestionnaireRepository::with($questionnaire));
+        $useCase = new AddQuestionnaireQuestion(
+            InMemoryQuestionnaireRepository::with($questionnaire),
+            TestRevisionRecorder::create(),
+        );
 
         $question = $useCase->execute(
             'q-1',
@@ -80,7 +87,10 @@ final class AddQuestionnaireQuestionTest extends TestCase
     {
         $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
         $questionnaire->addStep('step-1', 'Personal');
-        $useCase = new AddQuestionnaireQuestion(InMemoryQuestionnaireRepository::with($questionnaire));
+        $useCase = new AddQuestionnaireQuestion(
+            InMemoryQuestionnaireRepository::with($questionnaire),
+            TestRevisionRecorder::create(),
+        );
 
         $question = $useCase->execute(
             'q-1',

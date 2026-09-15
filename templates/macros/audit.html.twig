@@ -1,0 +1,68 @@
+{% macro revision_line(revision, href) %}
+    <strong>v{{ revision.version }}</strong>
+    · {{ revision.action.label }}
+    · {{ revision.summary }}
+    · {{ revision.actor.describe }}
+    · <time datetime="{{ revision.recordedAt|date('c') }}">{{ revision.recordedAt|date('Y-m-d H:i') }}</time>
+    {% if href %}
+        · <a href="{{ href }}">View structure</a>
+    {% endif %}
+{% endmacro %}
+
+{% macro structure(snapshot) %}
+    <p>
+        Name: {{ snapshot.name }}
+        · form type {{ snapshot.formType }}
+        · {{ snapshot.steps|length }} step(s)
+        · {{ snapshot.questionCount }} question(s)
+    </p>
+    {% if snapshot.description %}
+        <p>{{ snapshot.description }}</p>
+    {% endif %}
+
+    {% if snapshot.steps is empty %}
+        <p>No steps in this version.</p>
+    {% else %}
+        {% for step in snapshot.steps %}
+            <h3>{{ step.position }}. {{ step.title }}</h3>
+            {% if step.questions is empty %}
+                <p>No questions on this step.</p>
+            {% else %}
+                <ul>
+                    {% for question in step.questions %}
+                        <li>
+                            <strong>{{ question.label }}</strong>
+                            ({{ question.key }}, {{ question.type }})
+                            {% if question.required %}· required{% endif %}
+                            {% for condition in question.conditions %}
+                                · shown when {{ condition.describe }}
+                            {% endfor %}
+                            {% if question.options is not empty %}
+                                <ul>
+                                    {% for option in question.options %}
+                                        <li>{{ option.label }} = {{ option.value }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+
+    <h3>PDF mappings</h3>
+    {% if snapshot.mappings is empty %}
+        <p>No mappings in this version.</p>
+    {% else %}
+        <ul>
+            {% for mapping in snapshot.mappings %}
+                <li>
+                    {{ mapping.sourceType }}: {{ mapping.sourceReference }}
+                    · page {{ mapping.page }}
+                    · {{ mapping.xMm }}mm, {{ mapping.yMm }}mm
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+{% endmacro %}

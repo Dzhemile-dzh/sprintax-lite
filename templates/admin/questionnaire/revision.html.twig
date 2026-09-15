@@ -1,0 +1,18 @@
+{% extends 'base.html.twig' %}
+{% import 'macros/ui.html.twig' as ui %}
+{% import 'macros/audit.html.twig' as audit %}
+
+{% block title %}{{ questionnaire.name }} v{{ revision.version }}{% endblock %}
+
+{% block body %}
+    <h1>Version {{ revision.version }}</h1>
+    <p>{{ audit.revision_line(revision, null) }}</p>
+    <p>
+        {{ ui.link(path('admin_questionnaire_history', {id: questionnaire.id}), 'Back to history') }}
+        ·
+        {{ ui.link(path('admin_questionnaire_show', {id: questionnaire.id}), 'Current structure') }}
+    </p>
+
+    <h2>Structure as of this version</h2>
+    {{ audit.structure(revision.snapshot) }}
+{% endblock %}

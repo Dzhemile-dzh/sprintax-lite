@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Application\Questionnaire\Update;
 
+use App\Application\Audit\RecordQuestionnaireRevision;
+use App\Domain\Audit\ValueObject\RevisionAction;
 use App\Domain\Questionnaire\Repository\QuestionnaireRepositoryInterface;
 use App\Domain\Questionnaire\ValueObject\FormType;
 use App\Domain\Submission\Repository\SubmissionRepositoryInterface;
@@ -13,6 +15,7 @@ final class UpdateQuestionnaire
     public function __construct(
         private readonly QuestionnaireRepositoryInterface $questionnaires,
         private readonly SubmissionRepositoryInterface $submissions,
+        private readonly RecordQuestionnaireRevision $revisions,
     ) {
     }
 
@@ -26,5 +29,10 @@ final class UpdateQuestionnaire
         $questionnaire->rename($name);
         $questionnaire->changeDescription($description);
         $this->questionnaires->save($questionnaire);
+        $this->revisions->execute(
+            $questionnaire,
+            RevisionAction::QuestionnaireUpdated,
+            sprintf('Renamed to "%s" with form type %s', $questionnaire->name(), $formType->value),
+        );
     }
 }

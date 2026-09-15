@@ -7,14 +7,14 @@ namespace App\Tests\Application\Questionnaire;
 use App\Application\Questionnaire\Update\UpdateQuestionnaire;
 use App\Domain\Questionnaire\Entity\Questionnaire;
 use App\Domain\Questionnaire\Exception\InvalidQuestionnaire;
-use App\Domain\Questionnaire\Exception\QuestionnaireNotFound;
-use App\Domain\Questionnaire\Repository\QuestionnaireRepositoryInterface;
 use App\Domain\Questionnaire\ValueObject\FormType;
 use App\Domain\Questionnaire\ValueObject\QuestionType;
 use App\Domain\Submission\Entity\QuestionnaireSubmission;
 use App\Domain\User\Entity\User;
 use App\Domain\User\ValueObject\Email;
+use App\Tests\Support\InMemoryQuestionnaireRepository;
 use App\Tests\Support\InMemorySubmissionRepository;
+use App\Tests\Support\TestRevisionRecorder;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 
@@ -26,6 +26,7 @@ final class UpdateQuestionnaireTest extends TestCase
         $useCase = new UpdateQuestionnaire(
             new InMemoryQuestionnaireRepository(['q-1' => $questionnaire]),
             new InMemorySubmissionRepository(),
+            TestRevisionRecorder::create(),
         );
 
         $useCase->execute('q-1', '1040-NR Demo', 'Updated copy', FormType::Form1040Nr);
@@ -41,6 +42,7 @@ final class UpdateQuestionnaireTest extends TestCase
         $useCase = new UpdateQuestionnaire(
             new InMemoryQuestionnaireRepository(['q-1' => $questionnaire]),
             new InMemorySubmissionRepository(),
+            TestRevisionRecorder::create(),
         );
 
         $useCase->execute('q-1', 'Draft', null, FormType::FormW8Ben);
@@ -62,6 +64,7 @@ final class UpdateQuestionnaireTest extends TestCase
         $useCase = new UpdateQuestionnaire(
             new InMemoryQuestionnaireRepository(['q-1' => $questionnaire]),
             InMemorySubmissionRepository::with($submission),
+            TestRevisionRecorder::create(),
         );
 
         try {
@@ -91,46 +94,12 @@ final class UpdateQuestionnaireTest extends TestCase
         $useCase = new UpdateQuestionnaire(
             new InMemoryQuestionnaireRepository(['q-1' => $questionnaire]),
             InMemorySubmissionRepository::with($submission),
+            TestRevisionRecorder::create(),
         );
 
         $useCase->execute('q-1', '1040-NR Demo', 'Live', FormType::Form1040Nr);
 
         self::assertSame('1040-NR Demo', $questionnaire->name());
         self::assertSame(FormType::Form1040Nr, $questionnaire->formType());
-    }
-}
-
-final class InMemoryQuestionnaireRepository implements QuestionnaireRepositoryInterface
-{
-    /**
-     * @param array<string, Questionnaire> $items
-     */
-    public function __construct(
-        private array $items = [],
-    ) {
-    }
-
-    /**
-     * @return list<Questionnaire>
-     */
-    public function all(): array
-    {
-        return array_values($this->items);
-    }
-
-    public function get(string $id): Questionnaire
-    {
-        $questionnaire = $this->items[$id] ?? null;
-
-        if (!$questionnaire instanceof Questionnaire) {
-            throw QuestionnaireNotFound::withId($id);
-        }
-
-        return $questionnaire;
-    }
-
-    public function save(Questionnaire $questionnaire): void
-    {
-        $this->items[$questionnaire->id()] = $questionnaire;
     }
 }

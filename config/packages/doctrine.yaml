@@ -8,6 +8,7 @@ doctrine:
             visibility_rule: App\Infrastructure\Persistence\Doctrine\Type\VisibilityRuleType
             answer_value: App\Infrastructure\Persistence\Doctrine\Type\AnswerValueType
             pdf_coordinates: App\Infrastructure\Persistence\Doctrine\Type\PdfCoordinatesType
+            structure_snapshot: App\Infrastructure\Persistence\Doctrine\Type\StructureSnapshotType
             datetime_immutable: App\Infrastructure\Persistence\Doctrine\Type\UtcDateTimeImmutableType
     orm:
         validate_xml_mapping: true

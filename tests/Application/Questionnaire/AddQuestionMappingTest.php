@@ -13,6 +13,7 @@ use App\Domain\Questionnaire\ValueObject\MappingSourceType;
 use App\Domain\Questionnaire\ValueObject\QuestionType;
 use App\Infrastructure\Calculation\Form1040NrCalculator;
 use App\Tests\Support\InMemoryQuestionnaireRepository;
+use App\Tests\Support\TestRevisionRecorder;
 use PHPUnit\Framework\TestCase;
 
 final class AddQuestionMappingTest extends TestCase
@@ -73,6 +74,7 @@ final class AddQuestionMappingTest extends TestCase
         return new AddQuestionMapping(
             InMemoryQuestionnaireRepository::with($questionnaire),
             new ListCalculatorFields([new Form1040NrCalculator()]),
+            TestRevisionRecorder::create(),
         );
     }
 
