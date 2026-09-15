@@ -138,8 +138,39 @@ final class FpdiPdfGenerator implements PdfGeneratorInterface
     private function drawField(Fpdi $pdf, PdfFieldPlacement $placement, string $value): void
     {
         $fontSize = $placement->fontSize ?? self::DEFAULT_FONT_SIZE;
-        $pdf->SetFont('Helvetica', '', $fontSize);
+        $pdf->SetFont('Helvetica', $this->isCheckboxMark($value) ? 'B' : '', $fontSize);
+
+        if ($this->isCheckboxMark($value)) {
+            $this->drawCheckboxMark($pdf, $placement, $value, $fontSize);
+
+            return;
+        }
+
         $pdf->Text($placement->xMm, $placement->yMm, $this->encode($value));
+    }
+
+    private function isCheckboxMark(string $value): bool
+    {
+        return preg_match('/^[Xx✓✗]$/u', $value) === 1;
+    }
+
+    private function drawCheckboxMark(
+        Fpdi $pdf,
+        PdfFieldPlacement $placement,
+        string $value,
+        int $fontSize,
+    ): void {
+        $encoded = $this->encode($value);
+        $width = $pdf->GetStringWidth($encoded);
+        $fontHeightMm = $fontSize * 25.4 / 72.0;
+
+        // Mapped coordinates are the checkbox center (picker click). FPDF Text() uses
+        // the glyph baseline and left edge, so center the mark inside the box.
+        $pdf->Text(
+            $placement->xMm - ($width / 2),
+            $placement->yMm + ($fontHeightMm * 0.32),
+            $encoded,
+        );
     }
 
     private function encode(string $value): string

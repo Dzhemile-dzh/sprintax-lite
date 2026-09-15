@@ -169,8 +169,8 @@ final class AppFixtures extends Fixture
         $this->mapQuestion($questionnaire, $firstName->key(), 1, 14.0, 43.0);
         $this->mapQuestion($questionnaire, $lastName->key(), 1, 90.0, 43.0);
         $this->mapQuestion($questionnaire, $birthDate->key(), 1, 168.0, 43.0, 8);
-        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_FILING_SINGLE, 1, 36.5, 74.2, 10);
-        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_FILING_MFS, 1, 58.0, 74.2, 10);
+        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_FILING_SINGLE, 1, 37.2, 72.8, 8);
+        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_FILING_MFS, 1, 57.5, 72.8, 8);
         // 2025 1040-NR has no MFS spouse-name write-in; do not stamp spouse_name on the QSS child line.
         $this->mapQuestion($questionnaire, $wages->key(), 1, $amountX, 143.1);
         $this->mapQuestion($questionnaire, $treatyExempt->key(), 1, $amountX, 189.7);
