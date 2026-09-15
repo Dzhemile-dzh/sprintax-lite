@@ -7,6 +7,53 @@
     </div>
 {% endmacro %}
 
+{% macro wizard_field(form_field) %}
+    {% if form_field.vars.expanded|default(false) %}
+        <div class="field field--chips">
+            <div class="field__meta">
+                {{ form_label(form_field) }}
+                {{ form_help(form_field) }}
+            </div>
+            <div class="choice-chips{% if form_field.vars.multiple %} choice-chips--multi{% endif %}">
+                {% for child in form_field %}
+                    <label class="choice-chip">
+                        {{ form_widget(child) }}
+                        <span class="choice-chip__text">{{ child.vars.label }}</span>
+                    </label>
+                {% endfor %}
+            </div>
+            {{ form_errors(form_field) }}
+        </div>
+    {% elseif 'date' in form_field.vars.block_prefixes %}
+        <div class="field field--inline field--date">
+            <div class="field__meta">
+                {{ form_label(form_field) }}
+                {{ form_help(form_field) }}
+            </div>
+            <div class="date-field">
+                {{ form_widget(form_field) }}
+                <button type="button" class="date-field__trigger" aria-label="Open calendar" data-date-trigger>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.75"/>
+                        <path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+                    </svg>
+                </button>
+                <div class="date-calendar" hidden data-date-calendar></div>
+            </div>
+            {{ form_errors(form_field) }}
+        </div>
+    {% else %}
+        <div class="field field--inline">
+            <div class="field__meta">
+                {{ form_label(form_field) }}
+                {{ form_help(form_field) }}
+            </div>
+            {{ form_widget(form_field) }}
+            {{ form_errors(form_field) }}
+        </div>
+    {% endif %}
+{% endmacro %}
+
 {% macro answer(value) %}
     {% if value is null %}
         Not answered
@@ -23,18 +70,34 @@
     {% endif %}
 {% endmacro %}
 
-{% macro submit(label) %}
-    <button type="submit">{{ label }}</button>
+{% macro submit(label, class) %}
+    <button type="submit" class="btn {{ class|default('btn-primary') }}">{{ label }}</button>
 {% endmacro %}
 
-{% macro link(href, label) %}
-    <a href="{{ href }}">{{ label }}</a>
+{% macro link(href, label, class) %}
+    <a href="{{ href }}"{% if class %} class="{{ class }}"{% endif %}>{{ label }}</a>
+{% endmacro %}
+
+{% macro back_link(href, label) %}
+    <a href="{{ href }}" class="back-link">
+        <span class="back-link__arrow" aria-hidden="true">←</span>
+        <span class="back-link__label">{{ label }}</span>
+    </a>
+{% endmacro %}
+
+{% macro page_header(title, back_href, back_label) %}
+    <div class="page-header">
+        <h1>{{ title }}</h1>
+        {% if back_href %}
+            {{ _self.back_link(back_href, back_label|default('Back')) }}
+        {% endif %}
+    </div>
 {% endmacro %}
 
 {% macro delete(action, csrf, label) %}
     <form method="post" action="{{ action }}" class="inline">
         <input type="hidden" name="_csrf_token" value="{{ csrf }}">
-        <button type="submit">{{ label }}</button>
+        <button type="submit" class="btn btn-danger">{{ label }}</button>
     </form>
 {% endmacro %}
 
@@ -46,10 +109,12 @@
 
 {% macro pdf_download(submission) %}
     {% if submission.status.value == 'pdf_ready' and is_granted('submission_download', submission) %}
-        {{ _self.link(path('submission_pdf', {id: submission.id}), 'Download PDF') }}
+        {{ _self.link(path('submission_pdf', {id: submission.id}), 'Download PDF', 'btn btn-primary') }}
     {% elseif submission.status.awaitingPdf %}
-        <span role="status" aria-live="polite">The PDF is being prepared in the background. This page refreshes automatically.</span>
-        {{ _self.link(app.request.uri, 'Check now') }}
+        <div class="status-banner" role="status" aria-live="polite">
+            <p class="status-banner__text">The PDF is being prepared in the background. This page refreshes automatically.</p>
+            {{ _self.link(app.request.uri, 'Check now', 'btn btn-secondary') }}
+        </div>
     {% endif %}
 {% endmacro %}
 
@@ -61,16 +126,29 @@
     {% endfor %}
 {% endmacro %}
 
+{% macro account_created_modal(messages, login_path) %}
+    {% for message in messages %}
+        <div class="modal" id="account-created-modal" role="dialog" aria-modal="true" aria-labelledby="account-created-title">
+            <div class="modal__backdrop" data-modal-close></div>
+            <div class="modal__dialog">
+                <h2 class="modal__title" id="account-created-title">Account created</h2>
+                <p class="modal__body">{{ message }}</p>
+                <a class="btn btn-primary modal__action" href="{{ login_path }}">Sign in</a>
+            </div>
+        </div>
+    {% endfor %}
+{% endmacro %}
+
 {% macro nav(user, login_path, register_path, logout_path, logout_csrf, extra_links) %}
-    <nav>
+    <nav class="app-nav" aria-label="Primary">
         {% for label, href in extra_links|default({}) %}
             <a href="{{ href }}">{{ label }}</a>
         {% endfor %}
         {% if user %}
-            <span>{{ user.userIdentifier }}</span>
+            <span class="app-nav__user">{{ user.userIdentifier }}</span>
             <form method="post" action="{{ logout_path }}" class="inline">
                 <input type="hidden" name="_csrf_token" value="{{ logout_csrf }}">
-                {{ _self.submit('Log out') }}
+                <button type="submit" class="btn btn-secondary">Log out</button>
             </form>
         {% else %}
             <a href="{{ login_path }}">Sign in</a>

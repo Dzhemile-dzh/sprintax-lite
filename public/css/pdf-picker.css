@@ -1,0 +1,67 @@
+.pdf-picker {
+    margin: 1.35rem 0 0.5rem;
+    padding: 1.1rem 1.15rem 1rem;
+    border: 1px solid var(--slate-200);
+    border-radius: var(--radius);
+    background: var(--white);
+    box-shadow: var(--shadow-soft);
+}
+
+.pdf-picker h2 {
+    margin: 0 0 0.75rem;
+    padding: 0;
+    border: none;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--slate-500);
+}
+
+.pdf-picker-toolbar {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 0.65rem;
+}
+
+.pdf-picker-stage {
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+    border: 1px solid var(--slate-300);
+    background: var(--slate-200);
+    line-height: 0;
+    cursor: crosshair;
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+.pdf-picker-stage canvas {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
+.pdf-picker-mark {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    margin: -6px 0 0 -6px;
+    border: 2px solid var(--danger);
+    border-radius: 50%;
+    background: rgba(180, 35, 24, 0.2);
+    pointer-events: none;
+}
+
+.pdf-picker-hint {
+    color: var(--slate-700);
+    margin: 0.65rem 0 0;
+    font-size: 0.9rem;
+}
+
+.pdf-picker-missing {
+    color: var(--slate-500);
+    margin: 0;
+}

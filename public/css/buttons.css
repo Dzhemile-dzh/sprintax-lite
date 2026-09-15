@@ -1,0 +1,117 @@
+button,
+.btn,
+input[type="submit"] {
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 500;
+    line-height: 1.2;
+    border-radius: var(--radius-pill);
+    border: 1px solid transparent;
+    padding: 0.7rem 1.45rem;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-primary,
+button.btn-primary[type="submit"],
+input.btn-primary[type="submit"] {
+    background: var(--coral);
+    color: var(--white);
+    border-color: var(--coral);
+    box-shadow: none;
+}
+
+.btn-primary:hover,
+button.btn-primary[type="submit"]:hover,
+a.btn-primary:hover {
+    background: var(--coral-hover);
+    border-color: var(--coral-hover);
+    color: var(--white);
+    text-decoration: none;
+}
+
+.btn-primary:active,
+button.btn-primary[type="submit"]:active {
+    background: var(--coral-active);
+    border-color: var(--coral-active);
+}
+
+.btn-secondary,
+button.btn-secondary[type="submit"],
+button[type="button"],
+a.btn-secondary {
+    background: var(--blue-600);
+    color: var(--white);
+    border-color: var(--blue-600);
+}
+
+.btn-secondary:hover,
+button.btn-secondary[type="submit"]:hover,
+button[type="button"]:hover,
+a.btn-secondary:hover {
+    background: var(--blue-500);
+    border-color: var(--blue-500);
+    color: var(--white);
+    text-decoration: none;
+}
+
+.btn-danger,
+button.btn-danger[type="submit"] {
+    background: var(--white);
+    color: var(--danger);
+    border-color: #f0b4b0;
+    box-shadow: none;
+    font-weight: 500;
+    padding: 0.4rem 0.9rem;
+    font-size: 0.8rem;
+}
+
+.btn-danger:hover,
+button.btn-danger[type="submit"]:hover {
+    background: var(--error-bg);
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+.btn-ghost {
+    background: transparent;
+    color: var(--navy-900);
+    border-color: var(--navy-900);
+    padding: 0.55rem 1.15rem;
+    font-size: 0.9rem;
+}
+
+.btn-ghost:hover {
+    background: var(--blue-50);
+    color: var(--blue-600);
+    border-color: var(--blue-600);
+}
+
+.btn-sm {
+    padding: 0.4rem 0.95rem;
+    font-size: 0.82rem;
+}
+
+.page-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    align-items: center;
+    margin: 0 0 1.35rem;
+}
+
+.page-toolbar--split {
+    justify-content: space-between;
+}
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    align-items: center;
+}

@@ -1,0 +1,93 @@
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html {
+    color-scheme: light;
+}
+
+body.app {
+    margin: 0;
+    min-height: 100vh;
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.5;
+    color: var(--slate-900);
+    background: var(--slate-100);
+}
+
+h1, h2, h3 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--navy-900);
+    line-height: 1.25;
+}
+
+h1 {
+    font-size: 1.75rem;
+    margin: 0 0 0.85rem;
+    letter-spacing: -0.01em;
+}
+
+h2 {
+    font-size: 1.2rem;
+    margin: 1.75rem 0 0.75rem;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid var(--slate-200);
+}
+
+h3 {
+    font-size: 1.05rem;
+    margin: 1.25rem 0 0.5rem;
+    color: var(--navy-800);
+}
+
+p {
+    margin: 0 0 0.85rem;
+    color: var(--slate-700);
+}
+
+a {
+    color: var(--blue-600);
+    text-decoration: none;
+}
+
+a:hover {
+    color: var(--navy-900);
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+}
+
+.app-panel a.btn:hover,
+a.btn:hover {
+    text-decoration: none;
+}
+
+ul {
+    margin: 0 0 1rem;
+    padding-left: 1.15rem;
+}
+
+li {
+    margin-bottom: 0.55rem;
+}
+
+li strong {
+    color: var(--navy-900);
+}
+
+code {
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    font-size: 0.9em;
+    background: var(--slate-100);
+    padding: 0.1rem 0.35rem;
+    border-radius: 0.2rem;
+}
+
+@media (max-width: 640px) {
+    h1 {
+        font-size: 1.45rem;
+    }
+}

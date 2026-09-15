@@ -1,0 +1,38 @@
+:root {
+    /* Sprintax.com brand tokens */
+    --font-sans: "Poppins", "Segoe UI", sans-serif;
+    --font-display: "Poppins", "Segoe UI", sans-serif;
+
+    --navy-950: #021018;
+    --navy-900: #031c2b;
+    --navy-800: #0a3348;
+    --navy-700: #0f4a6a;
+    --blue-600: #1360a0;
+    --blue-500: #1a74bd;
+    --blue-100: #d4e6f3;
+    --blue-50: #eef5fa;
+
+    --coral: #eb8a81;
+    --coral-hover: #e5766c;
+    --coral-active: #dc655c;
+
+    --slate-900: #031c2b;
+    --slate-700: #282828;
+    --slate-500: #6f6f6f;
+    --slate-300: #cfcfcf;
+    --slate-200: #e6e6e6;
+    --slate-100: #f8f8f8;
+    --white: #ffffff;
+
+    --success-bg: #e4f4ea;
+    --success-fg: #1b5e36;
+    --error-bg: #fde8ea;
+    --error-fg: #9b1c2c;
+    --danger: #b42318;
+
+    --radius: 0.5rem;
+    --radius-pill: 50px;
+    --shadow: 0 8px 28px rgba(3, 28, 43, 0.08);
+    --shadow-soft: 0 2px 10px rgba(3, 28, 43, 0.05);
+    --max: 56rem;
+}

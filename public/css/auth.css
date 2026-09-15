@@ -1,0 +1,297 @@
+body.auth-page {
+    height: 100vh;
+    max-height: 100vh;
+    overflow: hidden;
+    background: var(--slate-100);
+}
+
+body.auth-page .app-header,
+body.auth-page .app-footer {
+    display: none;
+}
+
+body.auth-page .app-main {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+}
+
+body.auth-page .app-panel {
+    width: 100%;
+    height: 100vh;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+    display: grid;
+    grid-template-columns: 40% 60%;
+    align-items: stretch;
+}
+
+.auth-brand {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 2.5rem 3rem;
+    color: var(--white);
+    background:
+        linear-gradient(145deg, rgba(235, 138, 129, 0.22), transparent 45%),
+        linear-gradient(160deg, var(--blue-600) 0%, var(--navy-900) 100%);
+}
+
+.auth-brand__mark {
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
+    text-transform: lowercase;
+    font-weight: 700;
+    color: var(--white);
+}
+
+.auth-brand__title {
+    margin: 0;
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    color: var(--white);
+}
+
+.auth-brand__copy {
+    margin: 1rem 0 0;
+    max-width: 22rem;
+    color: rgba(255, 255, 255, 0.88);
+    font-size: 1rem;
+    line-height: 1.55;
+    font-weight: 400;
+}
+
+.auth-brand__foot {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.65);
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem clamp(2rem, 8vw, 5rem);
+    background: var(--white);
+    overflow: hidden;
+    width: 100%;
+}
+
+.auth-form__panel {
+    width: 100%;
+    max-width: 24rem;
+}
+
+.auth-form h1 {
+    margin: 0 0 0.35rem;
+    font-size: 1.55rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--navy-900);
+}
+
+.auth-form__lead {
+    margin: 0 0 1.35rem;
+    color: var(--slate-500);
+    font-size: 0.9rem;
+}
+
+.auth-form .field {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.85rem;
+    margin: 0 0 0.35rem;
+    padding: 0.15rem 0;
+    border-bottom: 1px solid var(--slate-300);
+}
+
+.auth-form .field label,
+.auth-form .field .form-label {
+    flex: 0 0 8.5rem;
+    margin: 0;
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    text-transform: none;
+    color: var(--slate-500);
+    white-space: nowrap;
+}
+
+.auth-form .field input[type="text"],
+.auth-form .field input[type="email"],
+.auth-form .field input[type="password"],
+.auth-form .field .form-widget input {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    border: none;
+    border-radius: 0;
+    padding: 0.7rem 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.auth-form .field input:hover,
+.auth-form .field .form-widget input:hover {
+    border: none;
+}
+
+.auth-form .field input:focus,
+.auth-form .field input:focus-visible,
+.auth-form .field .form-widget input:focus,
+.auth-form .field .form-widget input:focus-visible {
+    border: none;
+    outline: none;
+    box-shadow: none;
+}
+
+.auth-form .field:focus-within {
+    border-bottom-color: var(--blue-600);
+}
+
+.auth-form .field ul,
+.auth-form .field .form-errors {
+    flex-basis: 100%;
+    width: 100%;
+    margin: 0.25rem 0 0.35rem;
+    order: 3;
+}
+
+.auth-form__error {
+    margin: 0.65rem 0 0;
+}
+
+.auth-form__error ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.auth-form__error li,
+.auth-form__error .form-error {
+    margin: 0;
+    padding: 0.75rem 0.9rem;
+    color: var(--error-fg);
+    background: var(--error-bg);
+    border: 1px solid #f0b8bf;
+    border-radius: var(--radius);
+    font-size: 0.88rem;
+    font-weight: 500;
+}
+
+.auth-form .btn-primary,
+.auth-form button.btn-primary[type="submit"] {
+    width: 100%;
+    margin-top: 1.35rem;
+    border: none;
+    border-radius: var(--radius-pill);
+    background: var(--coral);
+    color: var(--white);
+    box-shadow: none;
+    padding: 0.85rem 1.25rem;
+    font-size: 1rem;
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.auth-form .btn-primary:hover,
+.auth-form button.btn-primary[type="submit"]:hover,
+.auth-form a.btn-primary:hover {
+    background: var(--coral-hover);
+    color: var(--white);
+}
+
+.auth-form__switch {
+    margin: 1.15rem 0 0;
+    font-size: 0.88rem;
+    color: var(--slate-500);
+}
+
+.auth-form__switch a {
+    color: var(--blue-600);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.auth-form__switch a:hover {
+    color: var(--navy-900);
+    text-decoration: underline;
+}
+
+.auth-form .flash-error,
+.auth-form .error[role="alert"],
+.auth-form p.error {
+    display: block;
+    margin: 0 0 1rem;
+    padding: 0.75rem 0.9rem;
+    font-size: 0.88rem;
+    font-weight: 500;
+    line-height: 1.4;
+    color: var(--error-fg);
+    background: var(--error-bg);
+    border: 1px solid #f0b8bf;
+    border-radius: var(--radius);
+}
+
+.auth-form form > ul:not([class]),
+.auth-form .form-errors {
+    list-style: none;
+    margin: 0 0 1rem;
+    padding: 0;
+}
+
+.auth-form form > ul:not([class]) li,
+.auth-form .form-errors li,
+.auth-form .field .error,
+.auth-form .field .form-error {
+    margin: 0 0 0.5rem;
+    padding: 0.75rem 0.9rem;
+    color: var(--error-fg);
+    background: var(--error-bg);
+    border: 1px solid #f0b8bf;
+    border-radius: var(--radius);
+    font-size: 0.88rem;
+    font-weight: 500;
+}
+
+body.auth-page.auth-page--register .auth-form {
+    overflow-y: auto;
+}
+
+@media (max-width: 860px) {
+    body.auth-page .app-panel {
+        grid-template-columns: 1fr;
+    }
+
+    .auth-brand {
+        display: none;
+    }
+
+    .auth-form {
+        padding: 1.75rem 1.5rem;
+    }
+}
+
+@media (max-height: 560px) {
+    body.auth-page {
+        overflow-y: auto;
+        height: auto;
+        max-height: none;
+    }
+
+    body.auth-page .app-main,
+    body.auth-page .app-panel {
+        height: auto;
+        min-height: 100vh;
+    }
+}
