@@ -133,7 +133,7 @@ final class PdfDownloadTest extends WebDatabaseTestCase
         $this->assertReadyPdfOn('/submissions/'.$submission->id());
     }
 
-    public function testAReadySubmissionWithAMissingFileReturnsNotFound(): void
+    public function testAReadySubmissionWithAMissingFileRequeuesAndRedirects(): void
     {
         $owner = $this->persistUser(User::registerClient(
             'u-owner',
@@ -147,7 +147,11 @@ final class PdfDownloadTest extends WebDatabaseTestCase
 
         $this->client->loginUser(SecurityUser::fromUser($owner));
         $this->client->request('GET', '/submissions/'.$submission->id().'/pdf');
-        self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
+        self::assertResponseRedirects('/submissions/'.$submission->id());
+        $crawler = $this->client->followRedirect();
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', 'being rebuilt');
+        self::assertSelectorTextContains('body', 'Download PDF');
     }
 
     private function assertAwaitingPdfOn(string $path): void

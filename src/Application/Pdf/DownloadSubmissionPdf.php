@@ -14,6 +14,7 @@ final class DownloadSubmissionPdf
     public function __construct(
         private readonly SubmissionRepositoryInterface $submissions,
         private readonly FileStorageInterface $fileStorage,
+        private readonly PdfGenerationScheduler $pdfGenerationScheduler,
         private readonly string $outputDirectory,
     ) {
     }
@@ -33,6 +34,8 @@ final class DownloadSubmissionPdf
         $path = PdfOutputPath::absolute($this->outputDirectory, $submission->id());
 
         if (!$this->fileStorage->isReadable($path)) {
+            $this->pdfGenerationScheduler->schedule($submissionId);
+
             throw InvalidSubmission::pdfFileMissing();
         }
 

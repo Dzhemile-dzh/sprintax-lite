@@ -46,7 +46,16 @@ final class SubmissionController extends AbstractController
 
         try {
             $path = $this->downloadSubmissionPdf->execute($id, $actor->id(), $actor->isAdmin());
-        } catch (InvalidSubmission) {
+        } catch (InvalidSubmission $exception) {
+            if ($exception->isRetryable()) {
+                $this->addFlash(
+                    'warning',
+                    'The PDF file is being rebuilt. Wait a few seconds, then try Download PDF again.',
+                );
+
+                return $this->redirectToRoute('submission_show', ['id' => $id]);
+            }
+
             throw $this->createNotFoundException();
         }
 

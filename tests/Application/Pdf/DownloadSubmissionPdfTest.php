@@ -14,6 +14,7 @@ use App\Domain\User\Entity\User;
 use App\Domain\User\ValueObject\Email;
 use App\Infrastructure\Filesystem\LocalFileStorage;
 use App\Tests\Support\InMemorySubmissionRepository;
+use App\Tests\Support\RecordingPdfGenerationScheduler;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 
@@ -74,16 +75,25 @@ final class DownloadSubmissionPdfTest extends TestCase
         $this->useCase($this->finalizedSubmission(), $this->outputDirectory())->execute('sub-1', 'user-1', false);
     }
 
-    public function testItRejectsAMissingPdfFile(): void
+    public function testItRequeuesGenerationWhenThePdfFileIsMissing(): void
     {
-        $this->expectException(InvalidSubmission::class);
-        $this->useCase($this->readySubmission(), $this->outputDirectory())->execute('sub-1', 'user-1', false);
+        $scheduler = new RecordingPdfGenerationScheduler();
+
+        try {
+            $this->useCase($this->readySubmission(), $this->outputDirectory(), $scheduler)
+                ->execute('sub-1', 'user-1', false);
+            self::fail('Expected InvalidSubmission.');
+        } catch (InvalidSubmission $exception) {
+            self::assertTrue($exception->isRetryable());
+            self::assertSame(['sub-1'], $scheduler->scheduled);
+        }
     }
 
     public function testItIgnoresAStoredPathThatDoesNotMatchTheSubmission(): void
     {
         $outputDirectory = $this->outputDirectory();
         file_put_contents($outputDirectory.DIRECTORY_SEPARATOR.'other.pdf', '%PDF-other');
+        $scheduler = new RecordingPdfGenerationScheduler();
 
         $submission = $this->finalizedSubmission();
         $submission->markPdfReady(
@@ -91,17 +101,24 @@ final class DownloadSubmissionPdfTest extends TestCase
             'other.pdf',
         );
 
-        $this->expectException(InvalidSubmission::class);
-        $this->useCase($submission, $outputDirectory)->execute('sub-1', 'user-1', false);
+        try {
+            $this->useCase($submission, $outputDirectory, $scheduler)->execute('sub-1', 'user-1', false);
+            self::fail('Expected InvalidSubmission.');
+        } catch (InvalidSubmission $exception) {
+            self::assertTrue($exception->isRetryable());
+            self::assertSame(['sub-1'], $scheduler->scheduled);
+        }
     }
 
     private function useCase(
         QuestionnaireSubmission $submission,
         string $outputDirectory,
+        ?RecordingPdfGenerationScheduler $scheduler = null,
     ): DownloadSubmissionPdf {
         return new DownloadSubmissionPdf(
             InMemorySubmissionRepository::with($submission),
             new LocalFileStorage(),
+            $scheduler ?? new RecordingPdfGenerationScheduler(),
             $outputDirectory,
         );
     }
