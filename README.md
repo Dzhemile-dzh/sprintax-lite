@@ -1,39 +1,59 @@
 # Sprintax-Lite
 
-Symfony questionnaire engine that collects answers, runs a pluggable calculation, and overlays the result onto IRS Form 1040-NR as a PDF.
+## What is this?
 
-A client walks a multi-page wizard. Finalize queues PDF generation on Messenger. A worker writes `var/pdf/{id}.pdf`, stores `{id}.pdf` on the submission, and marks it `pdf_ready`. The owner or an admin downloads it at `/submissions/{id}/pdf`.
+Sprintax-Lite is a Symfony-based questionnaire application that guides clients through a multi-step tax questionnaire and generates a completed Form 1040-NR PDF from their answers.
+
+After submission, PDF generation runs asynchronously through Symfony Messenger. The generated PDF is stored locally, attached to the submission, and emailed to the client's account email.
+
+### Who uses it
+
+| Role | What they do |
+| --- | --- |
+| **Admin** | Builds questionnaires and can access all submissions. |
+| **Client** | Completes questionnaires and can access only their own submissions. |
+
+These terms are used consistently below. New clients register at `/register` (`ROLE_CLIENT` only). Admins cannot self-register.
+
+## How it works
+
+```
+Admin creates questionnaire
+        ↓
+Client fills in questionnaire
+        ↓
+Client reviews and submits
+        ↓
+Messenger queues PDF generation
+        ↓
+PDF is generated and stored
+        ↓
+Client can download the PDF
+        ↓
+PDF is also emailed locally via Mailpit
+```
+
+UI walkthrough: [Screenshots](#screenshots) at the end of this README.
 
 ## Contents
 
-1. [Requirements](#requirements)
-2. [Quick start](#quick-start)
-3. [Demo credentials](#demo-credentials)
-4. [Features](#features)
-5. [Architecture](#architecture)
-6. [Domain model](#domain-model)
-7. [Database schema](#database-schema)
-8. [Development](#development)
-   - [Environment variables](#environment-variables)
-   - [Database migration](#database-migration)
-   - [Docker extras](#docker-extras)
-   - [Messenger worker](#running-the-messenger-worker)
-   - [Tests](#running-tests)
-   - [PHPStan](#running-phpstan)
-   - [CI](#ci)
-9. [Application behavior](#application-behavior)
-   - [PDF generation](#pdf-generation)
-   - [Conditional visibility](#conditional-visibility)
-   - [Authorization](#authorization)
-   - [Calculation](#calculation-architecture)
-10. [Known limitations](#known-limitations)
-11. [AI assistance](#ai-assistance)
-12. [Repository](#repository)
-13. [Screenshots](#screenshots)
-    - [Login and register](#login-and-register)
-    - [Client pages](#client-pages)
-    - [Admin pages](#admin-pages)
-    - [Generated PDF](#generated-pdf)
+1. [What is this?](#what-is-this)
+2. [How it works](#how-it-works)
+3. [Requirements](#requirements)
+4. [Quick start](#quick-start)
+5. [Demo credentials](#demo-credentials)
+6. [Features](#features)
+7. [Architecture](#architecture)
+8. [Project structure](#project-structure)
+9. [Domain model](#domain-model)
+10. [Database schema](#database-schema)
+11. [Development](#development)
+12. [Application behavior](#application-behavior)
+13. [Troubleshooting](#troubleshooting)
+14. [Known limitations](#known-limitations)
+15. [AI assistance](#ai-assistance)
+16. [Repository](#repository)
+17. [Screenshots](#screenshots)
 
 ## Requirements
 
@@ -111,7 +131,7 @@ Open: [http://127.0.0.1:8000](http://127.0.0.1:8000)
 php bin/console messenger:consume async
 ```
 
-Optional: run [Mailpit](https://github.com/axllent/mailpit) locally to view PDF emails at [http://localhost:8025](http://localhost:8025) (`MAILER_DSN` in `.env` defaults to `smtp://127.0.0.1:1025`).
+Optional: run [Mailpit](https://github.com/axllent/mailpit) locally to view PDF emails at [http://localhost:8025](http://localhost:8025).
 
 ## Demo credentials
 
@@ -120,23 +140,23 @@ Optional: run [Mailpit](https://github.com/axllent/mailpit) locally to view PDF 
 | Admin | `admin@example.test` | `admin123` | `/admin` |
 | Client | `client@example.test` | `client123` | `/client` |
 
-New clients register at `/register` (`ROLE_CLIENT` only). Admins cannot self-register.
-
-If demo logins fail after a partial first boot: reload fixtures (local: `php bin/console doctrine:fixtures:load --no-interaction`; Docker: see [Docker extras](#docker-extras) below), or on Docker run `docker compose down -v` and start again.
+If demo logins fail after a partial first boot, see [Troubleshooting](#troubleshooting).
 
 ## Features
 
-- **Admin** (`/admin`): build questionnaires - ordered steps, questions (types, validation, visibility), choice options, PDF mappings.
+- **Admin** (`/admin`): build questionnaires - ordered steps, questions (types, validation, visibility), choice options, and PDF mappings.
 - **Client** (`/client`): start or resume a submission. Each wizard step is its own route (POST/redirect/GET). Clients can go back but cannot skip ahead of `current_step`. Review is shown before submit. Finalize queues PDF generation; keep the worker running (Docker does this for you).
 
-### Bonus / stretch goals
+### Implemented extras
+
+Assignment stretch goals that are already in this repository:
 
 | Feature | Where |
 | --- | --- |
 | Structure history / audit trail | `/admin/questionnaires/{id}/history` and `/admin/questionnaires/{id}/history/{version}` - every create/update/delete of steps, questions, options, and mappings stores a versioned snapshot with the editing admin |
 | Admin analytics | `/admin/analytics` - submission counts by status and per questionnaire, plus emailed PDFs and stored answers |
 | Visual coordinate picker | Add/Edit PDF mapping - click the blank form (served from `resources/pdf/{formType}.pdf`) to fill page + X/Y mm; manual fields still work if the template file is missing |
-| JSON API | `GET /api/questionnaires` and `GET /api/questionnaires/{id}` (`ROLE_ADMIN`); `GET /api/submissions/{id}` (owner or admin; other clients get 404). Session auth (same form login), read-only |
+| JSON API | `GET /api/questionnaires` and `GET /api/questionnaires/{id}` (`ROLE_ADMIN`); `GET /api/submissions/{id}` (owning client or admin; other clients get 404). Session auth (same form login), read-only |
 | Email PDF delivery | After async PDF generation, the worker emails the file to the client account (Mailpit locally); see Messenger section |
 | CI pipeline | GitHub Actions with parallel backend and frontend jobs (see CI section) |
 
@@ -165,6 +185,33 @@ Infrastructure implementations
 Ports: `CalculatorInterface`, `PdfGeneratorInterface`, `FileStorageInterface`, `QuestionnaireRepositoryInterface`, `SubmissionRepositoryInterface`, `UserRepositoryInterface`, `QuestionnaireRevisionRepositoryInterface`, `AnalyticsRepositoryInterface`, `ActorProvider`, `PasswordHasherInterface`, `SubmissionPdfMailer`, `PdfGenerationScheduler`.
 
 There are no generic managers, base CRUD services, or abstract domain service classes. Business rules do not live in controllers or Twig.
+
+## Project structure
+
+```
+src/
+├── Domain/           # entities, value objects, ports
+├── Application/      # use cases
+├── Infrastructure/   # Doctrine, PDF, Messenger, Mailer, security adapters
+└── Presentation/     # thin controllers and forms
+
+resources/
+└── pdf/              # blank Form 1040-NR template (1040-nr.pdf)
+
+tests/
+├── Domain/
+├── Application/
+├── Infrastructure/
+├── Presentation/
+├── Architecture/
+└── Support/
+
+var/
+├── data.db           # local SQLite (dev)
+└── pdf/              # generated submission PDFs
+```
+
+Composer suites group those tests as `test:unit`, `test:functional`, and `test:messenger` (see [Running tests](#running-tests)).
 
 ## Domain model
 
@@ -311,16 +358,16 @@ Local commands for schema, Docker helpers, async PDF, tests, static analysis, an
 
 ### Environment variables
 
-Docker Compose interpolates `APP_ENV`, `APP_DEBUG`, `APP_SECRET`, and `MAILER_FROM` from the host environment. `MAILER_DSN` is hardcoded in `docker-compose.yml` as `smtp://mailer:1025` (Mailpit). Local PHP uses `MAILER_DSN` from `.env`.
-
 | Variable | Purpose |
 | --- | --- |
 | `APP_ENV` | `dev`, `test`, or `prod` |
 | `APP_SECRET` | Symfony secret |
 | `DATABASE_URL` | SQLite path |
 | `MESSENGER_TRANSPORT_DSN` | Async Messenger transport (Doctrine queue by default) |
-| `MAILER_DSN` | Local PHP SMTP to Mailpit (`smtp://127.0.0.1:1025`). Docker always uses `smtp://mailer:1025` |
-| `MAILER_FROM` | From address for the client PDF email |
+| `MAILER_DSN` | SMTP for PDF email. Local PHP defaults to Mailpit at `smtp://127.0.0.1:1025`. Docker Compose sets `smtp://mailer:1025`. |
+| `MAILER_FROM` | From address on the PDF email (not the recipient) |
+
+Docker Compose interpolates `APP_ENV`, `APP_DEBUG`, `APP_SECRET`, and `MAILER_FROM` from the host. `MAILER_DSN` is set in `docker-compose.yml` for the Mailpit service.
 
 ### Database migration
 
@@ -357,18 +404,6 @@ docker compose exec app composer phpstan
 docker compose logs -f worker
 ```
 
-If the worker service is not running:
-
-```bash
-docker compose run --rm --user www-data worker php bin/console messenger:consume async
-```
-
-Readonly-database after a root-owned volume:
-
-```bash
-docker compose exec app chown -R www-data:www-data /var/www/html/var/data
-```
-
 ### Running the Messenger worker
 
 Finalize does **not** build the PDF in the HTTP request. It marks the submission finalized and dispatches `GenerateSubmissionPdfMessage` on the `async` transport.
@@ -377,7 +412,9 @@ Finalize does **not** build the PDF in the HTTP request. It marks the submission
 php bin/console messenger:consume async
 ```
 
-Docker Compose already runs that in the `worker` service (`docker compose logs -f worker`). Jobs retry up to three times, then move to `failed` (`doctrine://default?queue_name=failed`). The handler is idempotent: a second delivery does not write another file if the PDF is already there. After the file is stored, the worker emails it to the **client account email** (`MAILER_FROM` is only the From address) with the PDF attached. A second delivery does not send another email. Email send runs inside the PDF worker (`message_bus: false`) so `pdf_emailed_at` is recorded only after the transport accepts the message. If sending fails, the PDF stays `pdf_ready` for download and the job retries the email. Mail stays local: Docker sends to Mailpit (`smtp://mailer:1025`, inbox at http://localhost:8025); local PHP uses `MAILER_DSN` from `.env` (`smtp://127.0.0.1:1025`).
+Docker Compose already runs that in the `worker` service (`docker compose logs -f worker`).
+
+Jobs retry up to three times, then move to `failed`. The handler is idempotent: a second delivery does not write another file or send another email if the PDF was already stored. After the file is written, the worker emails it to the **client account email**. Email send runs inside the PDF worker (`message_bus: false`) so `pdf_emailed_at` is recorded only after the transport accepts the message. If sending fails, the PDF stays `pdf_ready` for download and the job retries the email.
 
 ### Running tests
 
@@ -426,7 +463,7 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on push to `main` and on pull r
 | Backend | lint & PHP syntax, unit tests, messenger tests, PHPStan, Doctrine schema & migrations |
 | Frontend | Twig lint, static CSS/JS checks (`node --check`), Presentation functional tests |
 
-Local equivalents (plus Doctrine validate under `backend-doctrine`, Twig lint / `node --check` under frontend jobs):
+Local equivalents:
 
 ```bash
 composer lint
@@ -446,22 +483,35 @@ How PDF overlay, visibility, security, and calculation work.
 
 ### PDF generation
 
-Overlay goes through `PdfGeneratorInterface`. `GenerateSubmissionPdf` resolves `resources/pdf/{formType}.pdf` from the questionnaire's `FormType` (locked after a client starts; for Form 1040-NR, `resources/pdf/1040-nr.pdf`). It maps **visible** answers and computed fields through admin `QuestionMapping` coordinates (mm), and `FpdiPdfGenerator` stamps those values. The generator has no hardcoded field positions. Amount mappings use the **left** edge of the IRS amount column. Checkbox marks (`X`) are centered on the mapped point. Yes/no answers are never stamped as the words "yes"/"no" - filing status uses computed fields `filing_single` / `filing_mfs` that emit `X`. File checks and directory creation go through `FileStorageInterface`. The worker writes the file under `var/pdf/` and stores `{id}.pdf` on the submission. It then emails that file to the client. The display name can be renamed without changing the template.
+Overlay goes through `PdfGeneratorInterface`. `GenerateSubmissionPdf` drives the flow; `FpdiPdfGenerator` stamps values. The generator has no hardcoded field positions.
 
-Demo fixtures map names, wages/treaty, tax totals, and filing-status checkmarks only. Do **not** map `married`, `residency`, or `income_types` onto the form (that prints stray text like `no` or `resident`). After changing fixtures or cleaning bad admin mappings, reload fixtures, delete cached PDFs, and start a **new** submission:
+#### Template
 
-```bash
-php bin/console doctrine:fixtures:load --no-interaction
-# Windows PowerShell:
-Remove-Item -Force var/pdf/*.pdf -ErrorAction SilentlyContinue
-# then start a new client submission and keep the Messenger worker running
-```
+The blank form is `resources/pdf/{formType}.pdf` from the questionnaire's `FormType` (locked after a client starts). For Form 1040-NR that is `resources/pdf/1040-nr.pdf`, which is shipped in the repo so overlay and the coordinate picker work after clone. Other PDFs under `resources/pdf/` stay gitignored. Tests use their own dummy PDFs. Renaming the questionnaire display name does not change the template.
 
-The blank Form 1040-NR template is included at `resources/pdf/1040-nr.pdf` so PDF generation and the coordinate picker work after clone. Other PDFs under `resources/pdf/` stay gitignored. Tests still use their own dummy PDFs.
+#### Field mapping
 
-Download is `GET /submissions/{id}/pdf` (`BinaryFileResponse`). `SubmissionVoter::DOWNLOAD` gates access; another client or an unauthenticated user gets **404** (not 403) so existence is not leaked. A PDF that is not ready also returns 404.
+Admin `QuestionMapping` entries supply page + X/Y in mm for **visible** answers and computed fields. Amount mappings use the **left** edge of the IRS amount column. Checkbox marks (`X`) are centered on the mapped point.
+
+Demo fixtures map names, wages/treaty, tax totals, and filing-status checkmarks only. Do **not** map `married`, `residency`, or `income_types` onto the form (that prints stray text like `no` or `resident`).
+
+#### Computed fields
+
+Yes/no answers are never stamped as the words "yes"/"no". Filing status uses computed fields `filing_single` / `filing_mfs` that emit `X`.
+
+#### File storage
+
+File checks and directory creation go through `FileStorageInterface`. The worker writes under `var/pdf/` and stores `{id}.pdf` on the submission when status becomes `pdf_ready`.
+
+#### Download and waiting UX
+
+Download is `GET /submissions/{id}/pdf` (`BinaryFileResponse`). `SubmissionVoter::DOWNLOAD` gates access; another client or an unauthenticated visitor gets **404** (not 403) so existence is not leaked. A PDF that is not ready also returns 404.
 
 While status is `finalized`, the confirmation, review, client home, and submission pages refresh every 5 seconds, send `Cache-Control: no-store`, and show a preparing message with a **Check now** link. Refresh stops when the status becomes `pdf_ready` and the download link appears.
+
+#### Email delivery
+
+After the file is stored, the worker emails it to the client account. Mail stays local via Mailpit (see [Troubleshooting](#troubleshooting)).
 
 ### Conditional visibility
 
@@ -481,6 +531,24 @@ Rules live on the question (`equals` / `not_equals`). `QuestionVisibilityEvaluat
 
 `CalculateSubmission` picks a `CalculatorInterface` by the questionnaire's `FormType` (selected when the questionnaire is created, independent of the display name). `Form1040NrCalculator` is a simplified 10% tax stand-in. Wages print on the wages line; `total_income`, ECI, AGI, and `taxable_income` are all `max(0, wages - treaty)` so those lines foot. `tax_owed` is 10% of that net. The calculator may still return `0.0` for unused `amount_owed` / `amount_overpaid`; the PDF overlay blanks those zero balance lines instead of printing `0.00`. Output keys are for PDF mappings, not IRS rate tables. Form type cannot change after a client has started the questionnaire.
 
+## Troubleshooting
+
+| Problem | What to try |
+| --- | --- |
+| Docker engine error / pipe not found | Start Docker Desktop and wait until it is fully running, then retry `docker compose up --build`. |
+| Demo logins fail | Reload fixtures. Local: `php bin/console doctrine:fixtures:load --no-interaction`. Docker: `docker compose exec --user www-data app php bin/console doctrine:fixtures:load --no-interaction`, or `docker compose down -v` and start again. |
+| PDF never becomes ready | Keep the Messenger worker running. Local: `php bin/console messenger:consume async`. Docker: `docker compose logs -f worker`, or `docker compose run --rm --user www-data worker php bin/console messenger:consume async`. |
+| Readonly SQLite / permission errors in Docker | Fix ownership: `docker compose exec app chown -R www-data:www-data /var/www/html/var/data` |
+| Bad or stale PDF overlays | Reload fixtures, delete cached PDFs, and start a **new** client submission with the worker running. |
+| No PDF email in inbox | Open Mailpit at [http://localhost:8025](http://localhost:8025). Docker uses `smtp://mailer:1025`; local PHP uses `MAILER_DSN` from `.env` (`smtp://127.0.0.1:1025`). Mailpit does not send to the public internet. |
+
+Clear cached PDFs (Windows PowerShell):
+
+```bash
+php bin/console doctrine:fixtures:load --no-interaction
+Remove-Item -Force var/pdf/*.pdf -ErrorAction SilentlyContinue
+```
+
 ## Known limitations
 
 - Tax figures are a stand-in, not IRS Publication 519 / 1040-NR worksheets.
@@ -490,7 +558,7 @@ Rules live on the question (`equals` / `not_equals`). `QuestionVisibilityEvaluat
 - The JSON API is session-backed and read-only; unauthenticated calls follow the form-login redirect rather than a dedicated JSON `401`.
 - Messenger `messenger_messages` is created by Doctrine transport auto-setup in `dev`, not by migrations.
 - Demo passwords are fixtures for local/CI use, not a production identity store.
-- `MAILER_DSN` is local Mailpit only: Docker `smtp://mailer:1025` (inbox at http://localhost:8025), local PHP `smtp://127.0.0.1:1025`. Mailpit does not send to the public internet.
+- Mail stays on local Mailpit only; it does not send to the public internet.
 
 ## AI assistance
 
