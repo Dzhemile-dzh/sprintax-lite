@@ -4,6 +4,142 @@ Symfony questionnaire engine that collects answers, runs a pluggable calculation
 
 A client walks a multi-page wizard. Finalize queues PDF generation on Messenger. A worker writes `var/pdf/{id}.pdf`, stores `{id}.pdf` on the submission, and marks it `pdf_ready`. The owner or an admin downloads it at `/submissions/{id}/pdf`.
 
+## Contents
+
+1. [Requirements](#requirements)
+2. [Quick start](#quick-start)
+3. [Demo credentials](#demo-credentials)
+4. [Features](#features)
+5. [Architecture](#architecture)
+6. [Domain model](#domain-model)
+7. [Database schema](#database-schema)
+8. [Development](#development)
+   - [Environment variables](#environment-variables)
+   - [Database migration](#database-migration)
+   - [Docker extras](#docker-extras)
+   - [Messenger worker](#running-the-messenger-worker)
+   - [Tests](#running-tests)
+   - [PHPStan](#running-phpstan)
+   - [CI](#ci)
+9. [Application behavior](#application-behavior)
+   - [PDF generation](#pdf-generation)
+   - [Conditional visibility](#conditional-visibility)
+   - [Authorization](#authorization)
+   - [Calculation](#calculation-architecture)
+10. [Known limitations](#known-limitations)
+11. [AI assistance](#ai-assistance)
+12. [Repository](#repository)
+13. [Screenshots](#screenshots)
+    - [Login and register](#login-and-register)
+    - [Client pages](#client-pages)
+    - [Admin pages](#admin-pages)
+    - [Generated PDF](#generated-pdf)
+
+## Requirements
+
+Pick **one** way to run the app:
+
+| Option | You need |
+| --- | --- |
+| **Docker** (recommended if installed) | [Docker Desktop](https://www.docker.com/products/docker-desktop/) running |
+| **Local PHP** (XAMPP / system PHP) | PHP 8.4+ with `pdo_sqlite`, Composer 2 |
+
+Stack: PHP 8.4+, Symfony 7.4, Doctrine ORM, SQLite, Twig, Forms, Security, Messenger, Mailer, FPDI/FPDF, PHPUnit, PHPStan.
+
+## Quick start
+
+### Option A - Docker
+
+1. **Start Docker Desktop** and wait until it says it is running.
+   If you see `open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified`, Docker Desktop is not running (or not installed).
+
+2. From the project root:
+
+```bash
+docker compose up --build
+```
+
+3. Open the app: [http://localhost:8080](http://localhost:8080)
+   Mailpit inbox (PDF emails): [http://localhost:8025](http://localhost:8025)
+
+Apache, the Messenger worker, and Mailpit start together. On first boot the app container runs migrations and loads demo fixtures. Log in with the [demo credentials](#demo-credentials) below.
+
+To stop: `Ctrl+C`, or `docker compose down`. To wipe the database volume and start fresh: `docker compose down -v`, then `docker compose up --build` again.
+
+### Option B - Local PHP (Windows / XAMPP)
+
+Use **two terminals**. Run every command from the project root (`c:\xampp\htdocs\sprintax-lite` or your clone path).
+
+#### First time only
+
+```bash
+composer install
+```
+
+Create `.env` from the example:
+
+```bash
+# macOS / Linux
+cp .env.example .env
+
+# Windows (PowerShell or cmd)
+copy .env.example .env
+```
+
+Then create the schema and load demo data:
+
+```bash
+php bin/console doctrine:migrations:migrate --no-interaction
+php bin/console doctrine:fixtures:load --no-interaction
+```
+
+`doctrine:fixtures:load` **purges** existing data and seeds demo users plus a two-step **1040-NR** questionnaire.
+
+#### Every time you open the project
+
+**Terminal 1 - web server**
+
+```bash
+php -S 127.0.0.1:8000 -t public
+```
+
+Open: [http://127.0.0.1:8000](http://127.0.0.1:8000)
+
+**Terminal 2 - PDF worker** (required after a client finalizes a submission)
+
+```bash
+php bin/console messenger:consume async
+```
+
+Optional: run [Mailpit](https://github.com/axllent/mailpit) locally to view PDF emails at [http://localhost:8025](http://localhost:8025) (`MAILER_DSN` in `.env` defaults to `smtp://127.0.0.1:1025`).
+
+## Demo credentials
+
+| Role | Email | Password | Entry |
+| --- | --- | --- | --- |
+| Admin | `admin@example.test` | `admin123` | `/admin` |
+| Client | `client@example.test` | `client123` | `/client` |
+
+New clients register at `/register` (`ROLE_CLIENT` only). Admins cannot self-register.
+
+If demo logins fail after a partial first boot: reload fixtures (local: `php bin/console doctrine:fixtures:load --no-interaction`; Docker: see [Docker extras](#docker-extras) below), or on Docker run `docker compose down -v` and start again.
+
+## Features
+
+- **Admin** (`/admin`): build questionnaires - ordered steps, questions (types, validation, visibility), choice options, PDF mappings.
+- **Client** (`/client`): start or resume a submission. Each wizard step is its own route (POST/redirect/GET). Clients can go back but cannot skip ahead of `current_step`. Review is shown before submit. Finalize queues PDF generation; keep the worker running (Docker does this for you).
+
+### Bonus / stretch goals
+
+| Feature | Where |
+| --- | --- |
+| Structure history / audit trail | `/admin/questionnaires/{id}/history` and `/admin/questionnaires/{id}/history/{version}` - every create/update/delete of steps, questions, options, and mappings stores a versioned snapshot with the editing admin |
+| Admin analytics | `/admin/analytics` - submission counts by status and per questionnaire, plus emailed PDFs and stored answers |
+| Visual coordinate picker | Add/Edit PDF mapping - click the blank form (served from `resources/pdf/{formType}.pdf`) to fill page + X/Y mm; manual fields still work if the template file is missing |
+| JSON API | `GET /api/questionnaires` and `GET /api/questionnaires/{id}` (`ROLE_ADMIN`); `GET /api/submissions/{id}` (owner or admin; other clients get 404). Session auth (same form login), read-only |
+| Email PDF delivery | After async PDF generation, the worker emails the file to the client account (Mailpit locally); see Messenger section |
+| CI pipeline | GitHub Actions with parallel backend and frontend jobs (see CI section) |
+
 ## Architecture
 
 Pragmatic Clean Architecture / hexagonal layout. HTTP never talks to Doctrine or PDF libraries directly.
@@ -169,112 +305,11 @@ erDiagram
 | `questionnaire_submission` | Client run of a questionnaire (status + PDF path) |
 | `submission_answer` | One stored answer per question per submission |
 
-## Requirements
+## Development
 
-Pick **one** way to run the app:
+Local commands for schema, Docker helpers, async PDF, tests, static analysis, and CI.
 
-| Option | You need |
-| --- | --- |
-| **Docker** (recommended if installed) | [Docker Desktop](https://www.docker.com/products/docker-desktop/) running |
-| **Local PHP** (XAMPP / system PHP) | PHP 8.4+ with `pdo_sqlite`, Composer 2 |
-
-Stack: PHP 8.4+, Symfony 7.4, Doctrine ORM, SQLite, Twig, Forms, Security, Messenger, Mailer, FPDI/FPDF, PHPUnit, PHPStan.
-
-## Quick start - choose a path
-
-### Option A - Docker
-
-1. **Start Docker Desktop** and wait until it says it is running.
-   If you see `open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified`, Docker Desktop is not running (or not installed).
-
-2. From the project root:
-
-```bash
-docker compose up --build
-```
-
-3. Open the app: [http://localhost:8080](http://localhost:8080)
-   Mailpit inbox (PDF emails): [http://localhost:8025](http://localhost:8025)
-
-Apache, the Messenger worker, and Mailpit start together. On first boot the app container runs migrations and loads demo fixtures. Log in with the [demo credentials](#demo-credentials) below.
-
-To stop: `Ctrl+C`, or `docker compose down`. To wipe the database volume and start fresh: `docker compose down -v`, then `docker compose up --build` again.
-
-### Option B - Local PHP (Windows / XAMPP)
-
-Use **two terminals**. Run every command from the project root (`c:\xampp\htdocs\sprintax-lite` or your clone path).
-
-#### First time only
-
-```bash
-composer install
-```
-
-Create `.env` from the example:
-
-```bash
-# macOS / Linux
-cp .env.example .env
-
-# Windows (PowerShell or cmd)
-copy .env.example .env
-```
-
-Then create the schema and load demo data:
-
-```bash
-php bin/console doctrine:migrations:migrate --no-interaction
-php bin/console doctrine:fixtures:load --no-interaction
-```
-
-`doctrine:fixtures:load` **purges** existing data and seeds demo users plus a two-step **1040-NR** questionnaire.
-
-#### Every time you open the project
-
-**Terminal 1 - web server**
-
-```bash
-php -S 127.0.0.1:8000 -t public
-```
-
-Open: [http://127.0.0.1:8000](http://127.0.0.1:8000)
-
-**Terminal 2 - PDF worker** (required after a client finalizes a submission)
-
-```bash
-php bin/console messenger:consume async
-```
-
-Optional: run [Mailpit](https://github.com/axllent/mailpit) locally to view PDF emails at [http://localhost:8025](http://localhost:8025) (`MAILER_DSN` in `.env` defaults to `smtp://127.0.0.1:1025`).
-
-### Demo credentials
-
-| Role | Email | Password | Entry |
-| --- | --- | --- | --- |
-| Admin | `admin@example.test` | `admin123` | `/admin` |
-| Client | `client@example.test` | `client123` | `/client` |
-
-New clients register at `/register` (`ROLE_CLIENT` only). Admins cannot self-register.
-
-If demo logins fail after a partial first boot: reload fixtures (local: `php bin/console doctrine:fixtures:load --no-interaction`; Docker: see [Docker extras](#docker-extras) below), or on Docker run `docker compose down -v` and start again.
-
-### What to do in the app
-
-- **Admin** (`/admin`): build questionnaires - ordered steps, questions (types, validation, visibility), choice options, PDF mappings.
-- **Client** (`/client`): start or resume a submission. Each wizard step is its own route (POST/redirect/GET). Clients can go back but cannot skip ahead of `current_step`. Review is shown before submit. Finalize queues PDF generation; keep the worker running (Docker does this for you).
-
-Bonus / stretch goals (assignment optional items implemented):
-
-| Feature | Where |
-| --- | --- |
-| Structure history / audit trail | `/admin/questionnaires/{id}/history` and `/admin/questionnaires/{id}/history/{version}` - every create/update/delete of steps, questions, options, and mappings stores a versioned snapshot with the editing admin |
-| Admin analytics | `/admin/analytics` - submission counts by status and per questionnaire, plus emailed PDFs and stored answers |
-| Visual coordinate picker | Add/Edit PDF mapping - click the blank form (served from `resources/pdf/{formType}.pdf`) to fill page + X/Y mm; manual fields still work if the template file is missing |
-| JSON API | `GET /api/questionnaires` and `GET /api/questionnaires/{id}` (`ROLE_ADMIN`); `GET /api/submissions/{id}` (owner or admin; other clients get 404). Session auth (same form login), read-only |
-| Email PDF delivery | After async PDF generation, the worker emails the file to the client account (Mailpit locally); see Messenger section |
-| CI pipeline | GitHub Actions with parallel backend and frontend jobs (see CI section) |
-
-## Environment variables
+### Environment variables
 
 Docker Compose interpolates `APP_ENV`, `APP_DEBUG`, `APP_SECRET`, and `MAILER_FROM` from the host environment. `MAILER_DSN` is hardcoded in `docker-compose.yml` as `smtp://mailer:1025` (Mailpit). Local PHP uses `MAILER_DSN` from `.env`.
 
@@ -287,7 +322,7 @@ Docker Compose interpolates `APP_ENV`, `APP_DEBUG`, `APP_SECRET`, and `MAILER_FR
 | `MAILER_DSN` | Local PHP SMTP to Mailpit (`smtp://127.0.0.1:1025`). Docker always uses `smtp://mailer:1025` |
 | `MAILER_FROM` | From address for the client PDF email |
 
-## Database migration
+### Database migration
 
 Local schema (default env):
 
@@ -305,7 +340,7 @@ php bin/console doctrine:migrations:up-to-date --env=test
 
 In `dev`, Messenger uses the Doctrine transport and expects `messenger_messages`, which migrations do not create.
 
-## Docker extras
+### Docker extras
 
 Apache and the Messenger worker start together. SQLite lives in the `sqlite_data` volume. Linux `vendor/` packages live in `vendor_data` so Windows and container PHP builds do not mix.
 
@@ -334,7 +369,7 @@ Readonly-database after a root-owned volume:
 docker compose exec app chown -R www-data:www-data /var/www/html/var/data
 ```
 
-## Running the Messenger worker
+### Running the Messenger worker
 
 Finalize does **not** build the PDF in the HTTP request. It marks the submission finalized and dispatches `GenerateSubmissionPdfMessage` on the `async` transport.
 
@@ -344,7 +379,7 @@ php bin/console messenger:consume async
 
 Docker Compose already runs that in the `worker` service (`docker compose logs -f worker`). Jobs retry up to three times, then move to `failed` (`doctrine://default?queue_name=failed`). The handler is idempotent: a second delivery does not write another file if the PDF is already there. After the file is stored, the worker emails it to the **client account email** (`MAILER_FROM` is only the From address) with the PDF attached. A second delivery does not send another email. Email send runs inside the PDF worker (`message_bus: false`) so `pdf_emailed_at` is recorded only after the transport accepts the message. If sending fails, the PDF stays `pdf_ready` for download and the job retries the email. Mail stays local: Docker sends to Mailpit (`smtp://mailer:1025`, inbox at http://localhost:8025); local PHP uses `MAILER_DSN` from `.env` (`smtp://127.0.0.1:1025`).
 
-## Running tests
+### Running tests
 
 Development workflow: after each functionality, add or update tests for that behavior, run the matching suite, fix failures, then stop for review before the next phase. Prefer unit tests for domain rules, visibility, and calculation; functional (WebTestCase) tests for admin builder, client wizard, auth, and PDF download; messenger tests for async PDF handling.
 
@@ -366,7 +401,7 @@ composer lint
 
 Docker: `docker compose exec app composer test`.
 
-## Running PHPStan
+### Running PHPStan
 
 Level 8, `src/` and `tests/`, PHP 8.4, no baseline. Warm the container XML first:
 
@@ -382,7 +417,7 @@ docker compose exec --user www-data app php bin/console cache:warmup --env=dev -
 docker compose exec app composer phpstan
 ```
 
-## CI
+### CI
 
 GitHub Actions (`.github/workflows/ci.yml`) runs on push to `main` and on pull requests. Jobs run in parallel (PHP 8.4 + SQLite; no MySQL/PostgreSQL). A final `CI status` job fails the workflow unless every job succeeds.
 
@@ -405,7 +440,11 @@ php bin/console doctrine:migrations:migrate --no-interaction --env=test
 php bin/console doctrine:schema:validate --env=test
 ```
 
-## PDF generation
+## Application behavior
+
+How PDF overlay, visibility, security, and calculation work.
+
+### PDF generation
 
 Overlay goes through `PdfGeneratorInterface`. `GenerateSubmissionPdf` resolves `resources/pdf/{formType}.pdf` from the questionnaire's `FormType` (locked after a client starts; for Form 1040-NR, `resources/pdf/1040-nr.pdf`). It maps **visible** answers and computed fields through admin `QuestionMapping` coordinates (mm), and `FpdiPdfGenerator` stamps those values. The generator has no hardcoded field positions. Amount mappings use the **left** edge of the IRS amount column. Checkbox marks (`X`) are centered on the mapped point. Yes/no answers are never stamped as the words "yes"/"no" - filing status uses computed fields `filing_single` / `filing_mfs` that emit `X`. File checks and directory creation go through `FileStorageInterface`. The worker writes the file under `var/pdf/` and stores `{id}.pdf` on the submission. It then emails that file to the client. The display name can be renamed without changing the template.
 
@@ -424,7 +463,7 @@ Download is `GET /submissions/{id}/pdf` (`BinaryFileResponse`). `SubmissionVoter
 
 While status is `finalized`, the confirmation, review, client home, and submission pages refresh every 5 seconds, send `Cache-Control: no-store`, and show a preparing message with a **Check now** link. Refresh stops when the status becomes `pdf_ready` and the download link appears.
 
-## Conditional visibility
+### Conditional visibility
 
 Rules live on the question (`equals` / `not_equals`). `QuestionVisibilityEvaluator` applies them **server-side** against answers keyed by question key - not JavaScript.
 
@@ -434,13 +473,13 @@ Rules live on the question (`equals` / `not_equals`). `QuestionVisibilityEvaluat
 - A hidden or missing controller hides its dependents. Cyclic rules hide both sides.
 - Extra POST fields for a hidden question are not stored. When a condition hides a question, its previous answer is dropped. Finalize does not require hidden questions.
 
-## Authorization
+### Authorization
 
 `SecurityUser` adapts the domain `User` so the domain stays free of Symfony. Routes use `#[IsGranted('ROLE_ADMIN')]` / `ROLE_CLIENT`. `SubmissionVoter` allows a client to view/edit/download only their own submission; admins can access any submission. Denied submission and PDF HTML/API access typically returns **404** rather than 403 (same privacy pattern as the JSON API).
 
-## Calculation architecture
+### Calculation architecture
 
-`CalculateSubmission` picks a `CalculatorInterface` by the questionnaire's `FormType` (selected when the questionnaire is created, independent of the display name). `Form1040NrCalculator` is a simplified 10% tax stand-in. Wages print on the wages line; `total_income`, ECI, AGI, and `taxable_income` are all `max(0, wages − treaty)` so those lines foot. `tax_owed` is 10% of that net. The calculator may still return `0.0` for unused `amount_owed` / `amount_overpaid`; the PDF overlay blanks those zero balance lines instead of printing `0.00`. Output keys are for PDF mappings, not IRS rate tables. Form type cannot change after a client has started the questionnaire.
+`CalculateSubmission` picks a `CalculatorInterface` by the questionnaire's `FormType` (selected when the questionnaire is created, independent of the display name). `Form1040NrCalculator` is a simplified 10% tax stand-in. Wages print on the wages line; `total_income`, ECI, AGI, and `taxable_income` are all `max(0, wages - treaty)` so those lines foot. `tax_owed` is 10% of that net. The calculator may still return `0.0` for unused `amount_owed` / `amount_overpaid`; the PDF overlay blanks those zero balance lines instead of printing `0.00`. Output keys are for PDF mappings, not IRS rate tables. Form type cannot change after a client has started the questionnaire.
 
 ## Known limitations
 
@@ -554,4 +593,3 @@ Example overlay onto Form 1040-NR after a client finalizes (names, Single filing
 #### Page 2
 
 ![Generated 1040-NR page 2](docs/screenshots/pdf/1040nr-page2.png)
-
