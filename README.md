@@ -608,11 +608,17 @@ Client home, wizard steps, review, submit, and PDF-ready confirmation. Mailpit s
 
 ### Admin pages
 
-Questionnaire list, builder, question forms, analytics, structure history, and the PDF coordinate picker.
+Questionnaire list, submissions (with PDF download), builder, question forms, analytics, structure history, and the PDF coordinate picker.
 
 #### Questionnaires
 
 ![Admin questionnaires](docs/screenshots/admin/questionnaires.png)
+
+#### Submissions
+
+Admin list of client runs at `/admin/submissions`. When status is `pdf_ready`, **Download** fetches the generated PDF.
+
+![Admin submissions](docs/screenshots/admin/submissions.png)
 
 #### New questionnaire
 

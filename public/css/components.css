@@ -133,36 +133,25 @@ table.data-table td:first-child {
     font-weight: 500;
 }
 
-table.data-table a {
+table.data-table a:not(.btn) {
     color: var(--blue-600);
     font-weight: 600;
     text-decoration: none;
 }
 
-table.data-table a:hover {
+table.data-table a:not(.btn):hover {
     color: var(--navy-900);
     text-decoration: underline;
 }
 
-table.data-table a.btn,
-table.data-table a.btn:hover {
+table.data-table td.table-actions a.btn {
+    color: #ffffff;
     text-decoration: none;
 }
 
-table.data-table a.btn-secondary {
-    color: var(--white);
-}
-
-table.data-table a.btn-secondary:hover {
-    color: var(--white);
-}
-
-table.data-table a.btn-primary {
-    color: var(--white);
-}
-
-table.data-table a.btn-primary:hover {
-    color: var(--white);
+table.data-table td.table-actions a.btn:hover {
+    color: #ffffff;
+    text-decoration: none;
 }
 
 table.data-table td.table-actions {

@@ -12,18 +12,19 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
         {% set css_base = app.request.basePath %}
-        <link rel="stylesheet" href="{{ css_base }}/css/tokens.css">
-        <link rel="stylesheet" href="{{ css_base }}/css/base.css">
-        <link rel="stylesheet" href="{{ css_base }}/css/layout.css">
-        <link rel="stylesheet" href="{{ css_base }}/css/forms.css">
-        <link rel="stylesheet" href="{{ css_base }}/css/buttons.css">
-        <link rel="stylesheet" href="{{ css_base }}/css/components.css">
-        <link rel="stylesheet" href="{{ css_base }}/css/lists.css">
-        <link rel="stylesheet" href="{{ css_base }}/css/metrics.css">
-        <link rel="stylesheet" href="{{ css_base }}/css/builder.css">
-        <link rel="stylesheet" href="{{ css_base }}/css/review.css">
-        <link rel="stylesheet" href="{{ css_base }}/css/pdf-picker.css">
-        <link rel="stylesheet" href="{{ css_base }}/css/auth.css">
+        {% set css_v = '20260916c' %}
+        <link rel="stylesheet" href="{{ css_base }}/css/tokens.css?v={{ css_v }}">
+        <link rel="stylesheet" href="{{ css_base }}/css/base.css?v={{ css_v }}">
+        <link rel="stylesheet" href="{{ css_base }}/css/layout.css?v={{ css_v }}">
+        <link rel="stylesheet" href="{{ css_base }}/css/forms.css?v={{ css_v }}">
+        <link rel="stylesheet" href="{{ css_base }}/css/buttons.css?v={{ css_v }}">
+        <link rel="stylesheet" href="{{ css_base }}/css/components.css?v={{ css_v }}">
+        <link rel="stylesheet" href="{{ css_base }}/css/lists.css?v={{ css_v }}">
+        <link rel="stylesheet" href="{{ css_base }}/css/metrics.css?v={{ css_v }}">
+        <link rel="stylesheet" href="{{ css_base }}/css/builder.css?v={{ css_v }}">
+        <link rel="stylesheet" href="{{ css_base }}/css/review.css?v={{ css_v }}">
+        <link rel="stylesheet" href="{{ css_base }}/css/pdf-picker.css?v={{ css_v }}">
+        <link rel="stylesheet" href="{{ css_base }}/css/auth.css?v={{ css_v }}">
         {% block stylesheets %}{% endblock %}
     </head>
     <body class="app {% block body_class %}{% endblock %}">
