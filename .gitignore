@@ -24,6 +24,7 @@
 .idea/
 /compose.override.yaml
 /resources/pdf/*.pdf
+!/resources/pdf/1040-nr.pdf
 /identifier.sqlite
 /AGENTS.md
 /INTERVIEW.md

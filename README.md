@@ -418,7 +418,7 @@ Remove-Item -Force var/pdf/*.pdf -ErrorAction SilentlyContinue
 # then start a new client submission and keep the Messenger worker running
 ```
 
-The official IRS form is **not** in this repository (`resources/pdf/` is empty aside from `.gitkeep`). Download a blank Form 1040-NR and save it as `resources/pdf/1040-nr.pdf` before generating a real overlay **or** using the admin coordinate picker. Tests use their own dummy PDFs. Without the template, mapping forms fall back to manual millimetre fields.
+The blank Form 1040-NR template is included at `resources/pdf/1040-nr.pdf` so PDF generation and the coordinate picker work after clone. Other PDFs under `resources/pdf/` stay gitignored. Tests still use their own dummy PDFs.
 
 Download is `GET /submissions/{id}/pdf` (`BinaryFileResponse`). `SubmissionVoter::DOWNLOAD` gates access; another client or an unauthenticated user gets **404** (not 403) so existence is not leaked. A PDF that is not ready also returns 404.
 
@@ -446,7 +446,7 @@ Rules live on the question (`equals` / `not_equals`). `QuestionVisibilityEvaluat
 
 - Tax figures are a stand-in, not IRS Publication 519 / 1040-NR worksheets.
 - SQLite is the only supported database; the schema is not tuned for concurrent production traffic.
-- The IRS 1040-NR blank is not shipped. Without `resources/pdf/1040-nr.pdf`, Messenger PDF jobs fail and the coordinate picker shows a fallback message.
+- The blank Form 1040-NR template is shipped at `resources/pdf/1040-nr.pdf` for local PDF overlay and the coordinate picker.
 - Overlay is coordinate-based (admin mm placements or the click picker). There is no IRS AcroForm field fill.
 - The JSON API is session-backed and read-only; unauthenticated calls follow the form-login redirect rather than a dedicated JSON `401`.
 - Messenger `messenger_messages` is created by Doctrine transport auto-setup in `dev`, not by migrations.
