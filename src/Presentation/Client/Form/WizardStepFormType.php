@@ -123,10 +123,6 @@ final class WizardStepFormType extends AbstractType
                 'widget' => 'single_text',
                 'input' => 'datetime_immutable',
                 'html5' => true,
-                'attr' => [
-                    'class' => 'date-input',
-                    'autocomplete' => 'off',
-                ],
             ],
             QuestionType::YesNo => [
                 ...$options,

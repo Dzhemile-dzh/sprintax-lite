@@ -32,17 +32,28 @@ form.inline {
 .field input[type="email"],
 .field input[type="password"],
 .field input[type="number"],
-.field input[type="date"],
 .field input[type="search"],
 .field input[type="tel"],
 .field input[type="url"],
 .field select,
 .field textarea,
-.field .form-widget input:not([type="checkbox"]):not([type="radio"]),
+.field .form-widget input:not([type="checkbox"]):not([type="radio"]):not([type="date"]),
 .field .form-widget select,
 .field .form-widget textarea {
     width: 100%;
     appearance: none;
+    background: var(--white);
+    border: 1px solid var(--slate-300);
+    border-radius: var(--radius);
+    padding: 0.65rem 0.75rem;
+    font: inherit;
+    color: var(--slate-900);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.field input[type="date"],
+.field .form-widget input[type="date"] {
+    width: 100%;
     background: var(--white);
     border: 1px solid var(--slate-300);
     border-radius: var(--radius);
@@ -307,161 +318,6 @@ ul li .error {
     box-shadow: 0 0 0 3px rgba(19, 96, 160, 0.2);
 }
 
-.date-field {
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    min-width: 0;
-}
-
-.date-field input[type="date"] {
-    flex: 1 1 auto;
-    min-width: 0;
-    color-scheme: light;
-}
-
-.date-field input[type="date"]::-webkit-calendar-picker-indicator {
-    opacity: 0;
-    position: absolute;
-    right: 0;
-    width: 2.25rem;
-    height: 100%;
-    cursor: pointer;
-}
-
-.date-field__trigger {
-    flex: 0 0 auto;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 2.25rem;
-    height: 2.25rem;
-    padding: 0;
-    border: none;
-    border-radius: 0.45rem;
-    background: var(--blue-50);
-    color: var(--blue-600);
-    cursor: pointer;
-}
-
-.date-field__trigger:hover {
-    background: var(--blue-100);
-    color: var(--navy-900);
-}
-
-.date-calendar {
-    position: absolute;
-    top: calc(100% + 0.4rem);
-    right: 0;
-    z-index: 30;
-    width: 17.5rem;
-    padding: 0.85rem;
-    background: var(--white);
-    border: 1px solid var(--slate-200);
-    border-radius: calc(var(--radius) + 0.1rem);
-    box-shadow: var(--shadow);
-}
-
-.date-calendar__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    margin-bottom: 0.65rem;
-}
-
-.date-calendar__title {
-    font-size: 0.92rem;
-    font-weight: 600;
-    color: var(--navy-900);
-}
-
-.date-calendar__nav {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.85rem;
-    height: 1.85rem;
-    border: 1px solid var(--slate-200);
-    border-radius: 999px;
-    background: var(--white);
-    color: var(--navy-900);
-    cursor: pointer;
-}
-
-.date-calendar__nav:hover {
-    border-color: var(--blue-500);
-    color: var(--blue-600);
-}
-
-.date-calendar__weekdays,
-.date-calendar__grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 0.2rem;
-}
-
-.date-calendar__weekdays span {
-    text-align: center;
-    font-size: 0.68rem;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--slate-500);
-    padding: 0.2rem 0;
-}
-
-.date-calendar__day {
-    aspect-ratio: 1;
-    border: none;
-    border-radius: 0.4rem;
-    background: transparent;
-    color: var(--navy-900);
-    font: inherit;
-    font-size: 0.85rem;
-    cursor: pointer;
-}
-
-.date-calendar__day:hover {
-    background: var(--blue-50);
-    color: var(--blue-600);
-}
-
-.date-calendar__day.is-muted {
-    color: var(--slate-300);
-}
-
-.date-calendar__day.is-selected {
-    background: var(--blue-600);
-    color: var(--white);
-}
-
-.date-calendar__day.is-today:not(.is-selected) {
-    box-shadow: inset 0 0 0 1px var(--blue-500);
-}
-
-.date-calendar__footer {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 0.65rem;
-}
-
-.date-calendar__footer button {
-    border: none;
-    background: transparent;
-    color: var(--blue-600);
-    font: inherit;
-    font-size: 0.82rem;
-    font-weight: 600;
-    cursor: pointer;
-    padding: 0.25rem 0.2rem;
-}
-
-.date-calendar__footer button:hover {
-    color: var(--navy-900);
-}
-
 .form-actions--end {
     justify-content: flex-end;
 }
@@ -474,11 +330,6 @@ ul li .error {
 
     .wizard-form .field__meta {
         padding-top: 0;
-    }
-
-    .date-calendar {
-        left: 0;
-        right: auto;
     }
 }
 

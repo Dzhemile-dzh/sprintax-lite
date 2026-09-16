@@ -253,11 +253,16 @@ jobs:
           test -d public/css
           test -d public/js
           test "$(find public/css -name '*.css' | wc -l)" -gt 0
-          test "$(find public/js -name '*.js' | wc -l)" -gt 0
 
       - name: Syntax-check JavaScript
         run: |
-          for file in public/js/*.js; do
+          shopt -s nullglob
+          files=(public/js/*.js)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No public/js/*.js files to check"
+            exit 0
+          fi
+          for file in "${files[@]}"; do
             echo "Checking $file"
             node --check "$file"
           done
