@@ -77,8 +77,14 @@
         "test:messenger": "phpunit --testsuite messenger",
         "phpstan": "phpstan analyse --memory-limit=512M",
         "lint": [
+            "@lint:backend",
+            "@lint:frontend"
+        ],
+        "lint:backend": [
             "php bin/console lint:container",
-            "php bin/console lint:yaml config --parse-tags",
+            "php bin/console lint:yaml config --parse-tags"
+        ],
+        "lint:frontend": [
             "php bin/console lint:twig templates --show-deprecations"
         ]
     },

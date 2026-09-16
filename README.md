@@ -218,7 +218,22 @@ docker compose exec app composer phpstan
 
 ## CI
 
-GitHub Actions (`.github/workflows/ci.yml`) runs on push to `main` and on pull requests. PHP 8.4 and SQLite only — no MySQL/PostgreSQL. The job fails if Composer install, Symfony lint (test + prod), PHP syntax, PHPUnit, PHPStan, Doctrine mapping, or migrations fail.
+GitHub Actions (`.github/workflows/ci.yml`) runs on push to `main` and on pull requests. Jobs run in parallel (PHP 8.4 + SQLite; no MySQL/PostgreSQL). A final `CI status` job fails the workflow unless every job succeeds.
+
+| Area | Jobs |
+| --- | --- |
+| Backend | lint & PHP syntax, unit tests, messenger tests, PHPStan, Doctrine schema & migrations |
+| Frontend | Twig lint, static CSS/JS checks (`node --check`), Presentation functional tests |
+
+Local equivalents:
+
+```bash
+composer lint
+composer test:unit
+composer test:messenger
+composer test:functional
+composer phpstan
+```
 
 ## PDF generation
 

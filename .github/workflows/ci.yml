@@ -9,19 +9,21 @@ on:
 permissions:
   contents: read
 
+env:
+  APP_ENV: test
+  APP_DEBUG: '1'
+  APP_SECRET: test-secret
+  MESSENGER_TRANSPORT_DSN: 'doctrine://default?auto_setup=1'
+  DEFAULT_URI: 'http://localhost'
+  MAILER_DSN: 'null://null'
+  MAILER_FROM: 'noreply@example.test'
+  COMPOSER_PROCESS_TIMEOUT: 600
+
 jobs:
-  ci:
-    name: Lint, test, and analyse
+  backend-lint:
+    name: Backend · lint & PHP syntax
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    env:
-      APP_ENV: test
-      APP_DEBUG: '1'
-      APP_SECRET: test-secret
-      MESSENGER_TRANSPORT_DSN: 'doctrine://default?auto_setup=1'
-      DEFAULT_URI: 'http://localhost'
-      MAILER_DSN: 'null://null'
-      MAILER_FROM: 'noreply@example.test'
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -32,34 +34,297 @@ jobs:
           php-version: '8.4'
           extensions: ctype, iconv, mbstring, pdo_sqlite, sqlite3
           coverage: none
+          tools: composer:v2
           ini-values: memory_limit=512M
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ runner.os }}-php8.4-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            composer-${{ runner.os }}-php8.4-
 
       - name: Install Composer dependencies
         run: |
           cp .env.example .env
           composer install --prefer-dist --no-interaction --no-progress
 
-      - name: Lint Symfony configuration
-        run: |
-          composer lint
-          php bin/console lint:container --env=prod
+      - name: Validate composer.json
+        run: composer validate --strict --no-check-publish
 
       - name: Check PHP syntax
         run: find src tests migrations -name '*.php' -print0 | xargs -0 -n1 php -l
 
-      - name: Run PHPUnit
-        run: composer test
+      - name: Lint Symfony container and YAML
+        run: |
+          php bin/console lint:container --env=test
+          php bin/console lint:container --env=prod
+          php bin/console lint:yaml config --parse-tags
+
+  backend-unit:
+    name: Backend · unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: ctype, iconv, mbstring, pdo_sqlite, sqlite3
+          coverage: none
+          tools: composer:v2
+          ini-values: memory_limit=512M
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ runner.os }}-php8.4-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            composer-${{ runner.os }}-php8.4-
+
+      - name: Install Composer dependencies
+        run: |
+          cp .env.example .env
+          composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Run unit tests
+        run: composer test:unit
+
+  backend-messenger:
+    name: Backend · messenger tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: ctype, iconv, mbstring, pdo_sqlite, sqlite3
+          coverage: none
+          tools: composer:v2
+          ini-values: memory_limit=512M
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ runner.os }}-php8.4-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            composer-${{ runner.os }}-php8.4-
+
+      - name: Install Composer dependencies
+        run: |
+          cp .env.example .env
+          composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Run messenger tests
+        run: composer test:messenger
+
+  backend-phpstan:
+    name: Backend · PHPStan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: ctype, iconv, mbstring, pdo_sqlite, sqlite3
+          coverage: none
+          tools: composer:v2
+          ini-values: memory_limit=512M
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ runner.os }}-php8.4-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            composer-${{ runner.os }}-php8.4-
+
+      - name: Install Composer dependencies
+        run: |
+          cp .env.example .env
+          composer install --prefer-dist --no-interaction --no-progress
 
       - name: Warm up cache and run PHPStan
         run: |
           php bin/console cache:warmup --env=dev --no-interaction
           composer phpstan
 
+  backend-doctrine:
+    name: Backend · Doctrine schema & migrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DATABASE_URL: 'sqlite:///%kernel.project_dir%/var/ci.db'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: ctype, iconv, mbstring, pdo_sqlite, sqlite3
+          coverage: none
+          tools: composer:v2
+          ini-values: memory_limit=512M
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ runner.os }}-php8.4-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            composer-${{ runner.os }}-php8.4-
+
+      - name: Install Composer dependencies
+        run: |
+          cp .env.example .env
+          composer install --prefer-dist --no-interaction --no-progress
+
       - name: Validate Doctrine mapping and migrations
-        env:
-          DATABASE_URL: 'sqlite:///%kernel.project_dir%/var/ci.db'
         run: |
           mkdir -p var
           php bin/console doctrine:migrations:migrate --no-interaction --env=test
           php bin/console doctrine:schema:validate --env=test
           php bin/console doctrine:migrations:up-to-date --env=test
+
+  frontend-templates:
+    name: Frontend · Twig templates
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: ctype, iconv, mbstring, pdo_sqlite, sqlite3
+          coverage: none
+          tools: composer:v2
+          ini-values: memory_limit=512M
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ runner.os }}-php8.4-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            composer-${{ runner.os }}-php8.4-
+
+      - name: Install Composer dependencies
+        run: |
+          cp .env.example .env
+          composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Lint Twig templates
+        run: php bin/console lint:twig templates --show-deprecations
+
+  frontend-assets:
+    name: Frontend · static assets
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Check CSS and JS assets exist
+        run: |
+          test -d public/css
+          test -d public/js
+          test "$(find public/css -name '*.css' | wc -l)" -gt 0
+          test "$(find public/js -name '*.js' | wc -l)" -gt 0
+
+      - name: Syntax-check JavaScript
+        run: |
+          for file in public/js/*.js; do
+            echo "Checking $file"
+            node --check "$file"
+          done
+
+  frontend-functional:
+    name: Frontend · functional tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: ctype, iconv, mbstring, pdo_sqlite, sqlite3
+          coverage: none
+          tools: composer:v2
+          ini-values: memory_limit=512M
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ runner.os }}-php8.4-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            composer-${{ runner.os }}-php8.4-
+
+      - name: Install Composer dependencies
+        run: |
+          cp .env.example .env
+          composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Run functional (Presentation) tests
+        run: composer test:functional
+
+  ci-status:
+    name: CI status
+    runs-on: ubuntu-latest
+    needs:
+      - backend-lint
+      - backend-unit
+      - backend-messenger
+      - backend-phpstan
+      - backend-doctrine
+      - frontend-templates
+      - frontend-assets
+      - frontend-functional
+    if: always()
+    steps:
+      - name: Require every job to succeed
+        run: |
+          results=(
+            "${{ needs.backend-lint.result }}"
+            "${{ needs.backend-unit.result }}"
+            "${{ needs.backend-messenger.result }}"
+            "${{ needs.backend-phpstan.result }}"
+            "${{ needs.backend-doctrine.result }}"
+            "${{ needs.frontend-templates.result }}"
+            "${{ needs.frontend-assets.result }}"
+            "${{ needs.frontend-functional.result }}"
+          )
+          for result in "${results[@]}"; do
+            if [[ "$result" != "success" ]]; then
+              echo "A required job finished with: $result"
+              exit 1
+            fi
+          done
+          echo "All CI jobs passed."
