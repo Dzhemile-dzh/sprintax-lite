@@ -144,6 +144,36 @@ table.data-table a:hover {
     text-decoration: underline;
 }
 
+table.data-table a.btn,
+table.data-table a.btn:hover {
+    text-decoration: none;
+}
+
+table.data-table a.btn-secondary {
+    color: var(--white);
+}
+
+table.data-table a.btn-secondary:hover {
+    color: var(--white);
+}
+
+table.data-table a.btn-primary {
+    color: var(--white);
+}
+
+table.data-table a.btn-primary:hover {
+    color: var(--white);
+}
+
+table.data-table td.table-actions {
+    white-space: nowrap;
+    width: 1%;
+}
+
+table.data-table td.table-actions .entity-list__actions {
+    flex-wrap: nowrap;
+}
+
 section {
     margin: 0 0 1.25rem;
     padding: 0.85rem 1rem;

@@ -17,6 +17,11 @@ interface SubmissionRepositoryInterface
      */
     public function findForUser(string $userId): array;
 
+    /**
+     * @return list<QuestionnaireSubmission>
+     */
+    public function findAllRecent(): array;
+
     public function existsForQuestionnaire(string $questionnaireId): bool;
 
     public function save(QuestionnaireSubmission $submission): void;

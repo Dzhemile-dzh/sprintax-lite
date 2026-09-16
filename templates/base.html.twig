@@ -32,6 +32,7 @@
         {% if is_granted('ROLE_ADMIN') %}
             {% set extra_links = extra_links|merge({
                 'Admin': path('admin_home'),
+                'Submissions': path('admin_submissions'),
                 'Analytics': path('admin_analytics'),
             }) %}
         {% endif %}

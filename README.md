@@ -144,7 +144,7 @@ If demo logins fail after a partial first boot, see [Troubleshooting](#troublesh
 
 ## Features
 
-- **Admin** (`/admin`): build questionnaires - ordered steps, questions (types, validation, visibility), choice options, and PDF mappings.
+- **Admin** (`/admin`): build questionnaires - ordered steps, questions (types, validation, visibility), choice options, and PDF mappings. List all client submissions at `/admin/submissions` and download a ready PDF.
 - **Client** (`/client`): start or resume a submission. Each wizard step is its own route (POST/redirect/GET). Clients can go back but cannot skip ahead of `current_step`. Review is shown before submit. Finalize queues PDF generation; keep the worker running (Docker does this for you).
 
 ### Implemented extras

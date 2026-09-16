@@ -1,0 +1,12 @@
+{% extends 'base.html.twig' %}
+{% import 'macros/ui.html.twig' as ui %}
+{% import 'macros/submissions.html.twig' as submissions_ui %}
+
+{% block title %}Submissions{% endblock %}
+
+{% block body %}
+    {{ ui.page_header('Submissions', path('admin_home'), 'Back to questionnaires') }}
+    <p class="page-lead">Client questionnaire runs. Download a PDF when status is ready.</p>
+
+    {{ submissions_ui.admin_table(submissions) }}
+{% endblock %}

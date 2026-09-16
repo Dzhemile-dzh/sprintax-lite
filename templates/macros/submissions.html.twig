@@ -1,0 +1,40 @@
+{% macro admin_table(submissions) %}
+    {% import 'macros/ui.html.twig' as ui %}
+    {% if submissions is empty %}
+        <p class="empty-state">No submissions yet.</p>
+    {% else %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Client</th>
+                        <th>Questionnaire</th>
+                        <th>Status</th>
+                        <th>Updated</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for submission in submissions %}
+                        <tr>
+                            <td>{{ submission.user.email.value }}</td>
+                            <td>{{ submission.questionnaire.name }}</td>
+                            <td><span class="badge badge--soft">{{ submission.status.value }}</span></td>
+                            <td>{{ submission.updatedAt|date('Y-m-d H:i') }}</td>
+                            <td class="table-actions">
+                                <div class="entity-list__actions">
+                                    {{ ui.link(path('submission_show', {id: submission.id}), 'View', 'btn btn-secondary btn-sm') }}
+                                    {% if submission.status.value == 'pdf_ready' and is_granted('submission_download', submission) %}
+                                        {{ ui.link(path('submission_pdf', {id: submission.id}), 'Download', 'btn btn-primary btn-sm') }}
+                                    {% elseif submission.status.awaitingPdf %}
+                                        <span class="badge badge--soft">Preparing PDF</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+{% endmacro %}

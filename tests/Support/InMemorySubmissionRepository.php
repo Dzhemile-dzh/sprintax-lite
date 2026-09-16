@@ -69,6 +69,20 @@ final class InMemorySubmissionRepository implements SubmissionRepositoryInterfac
         return $matches;
     }
 
+    /**
+     * @return list<QuestionnaireSubmission>
+     */
+    public function findAllRecent(): array
+    {
+        $submissions = array_values($this->items);
+        usort(
+            $submissions,
+            static fn (QuestionnaireSubmission $left, QuestionnaireSubmission $right): int => $right->updatedAt() <=> $left->updatedAt(),
+        );
+
+        return $submissions;
+    }
+
     public function existsForQuestionnaire(string $questionnaireId): bool
     {
         foreach ($this->items as $submission) {

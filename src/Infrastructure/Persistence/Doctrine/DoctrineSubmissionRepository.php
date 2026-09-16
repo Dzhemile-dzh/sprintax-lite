@@ -88,6 +88,25 @@ final class DoctrineSubmissionRepository implements SubmissionRepositoryInterfac
         return $submissions;
     }
 
+    /**
+     * @return list<QuestionnaireSubmission>
+     */
+    public function findAllRecent(): array
+    {
+        /** @var list<QuestionnaireSubmission> $submissions */
+        $submissions = $this->entityManager->createQueryBuilder()
+            ->select('submission', 'questionnaire', 'owner', 'currentStep')
+            ->from(QuestionnaireSubmission::class, 'submission')
+            ->join('submission.questionnaire', 'questionnaire')
+            ->join('submission.user', 'owner')
+            ->join('submission.currentStep', 'currentStep')
+            ->orderBy('submission.updatedAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+
+        return $submissions;
+    }
+
     public function existsForQuestionnaire(string $questionnaireId): bool
     {
         $count = $this->entityManager->createQueryBuilder()

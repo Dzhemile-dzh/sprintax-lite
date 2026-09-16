@@ -253,6 +253,14 @@ final class FinalizeInMemorySubmissionRepository implements SubmissionRepository
         return $matches;
     }
 
+    /**
+     * @return list<QuestionnaireSubmission>
+     */
+    public function findAllRecent(): array
+    {
+        return array_values($this->submissions);
+    }
+
     public function existsForQuestionnaire(string $questionnaireId): bool
     {
         foreach ($this->submissions as $submission) {

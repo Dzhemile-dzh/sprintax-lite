@@ -158,6 +158,14 @@ final class InMemorySubmissionRepository implements SubmissionRepositoryInterfac
 
         return $matches;
     }
+
+    /**
+     * @return list<QuestionnaireSubmission>
+     */
+    public function findAllRecent(): array
+    {
+        return array_values($this->submissions);
+    }
 }
 
 final class MatchingCalculator implements CalculatorInterface
