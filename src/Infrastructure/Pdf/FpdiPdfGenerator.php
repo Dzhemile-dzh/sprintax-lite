@@ -146,12 +146,30 @@ final class FpdiPdfGenerator implements PdfGeneratorInterface
             return;
         }
 
-        $pdf->Text($placement->xMm, $placement->yMm, $this->encode($value));
+        $this->drawText($pdf, $placement, $value);
+    }
+
+    private function drawText(Fpdi $pdf, PdfFieldPlacement $placement, string $value): void
+    {
+        $encoded = $this->encode($value);
+        $xMm = $placement->xMm;
+
+        // Amount overlays use the mapped X as the right edge of the IRS amount column.
+        if ($this->isAmountValue($value)) {
+            $xMm -= $pdf->GetStringWidth($encoded);
+        }
+
+        $pdf->Text($xMm, $placement->yMm, $encoded);
     }
 
     private function isCheckboxMark(string $value): bool
     {
         return preg_match('/^[Xx✓✗]$/u', $value) === 1;
+    }
+
+    private function isAmountValue(string $value): bool
+    {
+        return preg_match('/^-?\d+\.\d{2}$/', $value) === 1;
     }
 
     private function drawCheckboxMark(

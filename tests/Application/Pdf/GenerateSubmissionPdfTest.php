@@ -207,17 +207,17 @@ final class GenerateSubmissionPdfTest extends TestCase
         $questionnaire->addMapping(QuestionMapping::forQuestion(
             'map-wages',
             $wages->key(),
-            new PdfCoordinates(1, 180.0, 142.9, 9),
+            new PdfCoordinates(1, 202.5, 141.5, 9),
         ));
         $questionnaire->addMapping(QuestionMapping::forComputedField(
             'map-single',
             Form1040NrCalculator::FIELD_FILING_SINGLE,
-            new PdfCoordinates(1, 37.7, 72.0, 9),
+            new PdfCoordinates(1, 38.2, 71.5, 9),
         ));
         $questionnaire->addMapping(QuestionMapping::forComputedField(
             'map-mfs',
             Form1040NrCalculator::FIELD_FILING_MFS,
-            new PdfCoordinates(1, 58.0, 72.0, 9),
+            new PdfCoordinates(1, 58.5, 71.5, 9),
         ));
 
         $now = new DateTimeImmutable('2026-01-01T10:00:00+00:00');
@@ -257,8 +257,8 @@ final class GenerateSubmissionPdfTest extends TestCase
             $byValue[$field['value']] = $field['placement'];
         }
 
-        self::assertSame(37.7, $byValue['X']->xMm);
-        self::assertSame(72.0, $byValue['X']->yMm);
+        self::assertSame(38.2, $byValue['X']->xMm);
+        self::assertSame(71.5, $byValue['X']->yMm);
         self::assertCount(2, $recorder->last->fields);
     }
 

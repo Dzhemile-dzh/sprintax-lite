@@ -491,9 +491,9 @@ The blank form is `resources/pdf/{formType}.pdf` from the questionnaire's `FormT
 
 #### Field mapping
 
-Admin `QuestionMapping` entries supply page + X/Y in mm for **visible** answers and computed fields. Amount mappings use the **left** edge of the IRS amount column. Checkbox marks (`X`) are centered on the mapped point.
+Admin `QuestionMapping` entries supply page + X/Y in mm for **visible** answers and computed fields. Amount overlays use the mapped X as the **right** edge of the IRS amount column (the generator right-aligns `*.00` values). Checkbox marks (`X`) are centered on the mapped point.
 
-Demo fixtures map names, wages/treaty, tax totals, and filing-status checkmarks only. Do **not** map `married`, `residency`, or `income_types` onto the form (that prints stray text like `no` or `resident`).
+Demo fixtures map names, wages/treaty, tax totals, and filing-status checkmarks only. Do **not** map `married`, `residency`, `income_types`, or `birth_date` onto the form (that prints stray text or overlaps the identifying-number area). After changing fixtures or cleaning bad admin mappings, reload fixtures and start a **new** submission so generation uses the repo coordinates.
 
 #### Computed fields
 
