@@ -126,7 +126,7 @@ final class QuestionnaireController extends AbstractController
     private function questionnaire(string $id): Questionnaire
     {
         try {
-            return $this->getQuestionnaire->execute($id)->questionnaire;
+            return $this->questionnaires->get($id);
         } catch (QuestionnaireNotFound) {
             throw $this->createNotFoundException();
         }

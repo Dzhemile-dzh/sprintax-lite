@@ -74,7 +74,7 @@ final class AnalyticsDashboardTest extends WebDatabaseTestCase
         $this->assertMetric('PDF ready', '1');
         $this->assertMetric('PDFs emailed', '1');
         $this->assertMetric('Stored answers', '1');
-        self::assertSelectorTextContains('body', '1040-NR');
+        $this->assertQuestionnaireRow('1040-NR', '2', '1', '0', '1', '1');
     }
 
     private function assertMetric(string $label, string $expectedValue): void
@@ -93,6 +93,43 @@ final class AnalyticsDashboardTest extends WebDatabaseTestCase
         );
 
         self::assertTrue($found, sprintf('Metric card "%s" not found.', $label));
+    }
+
+    private function assertQuestionnaireRow(
+        string $questionnaireName,
+        string $started,
+        string $inProgress,
+        string $finalized,
+        string $pdfReady,
+        string $emailed,
+    ): void {
+        $found = false;
+
+        $this->client->getCrawler()->filter('.data-table tbody tr')->each(
+            function (Crawler $row) use (
+                $questionnaireName,
+                $started,
+                $inProgress,
+                $finalized,
+                $pdfReady,
+                $emailed,
+                &$found,
+            ): void {
+                if (trim($row->filter('td')->eq(0)->text()) !== $questionnaireName) {
+                    return;
+                }
+
+                $counts = $row->filter('td.num');
+                self::assertSame($started, trim($counts->eq(0)->text()));
+                self::assertSame($inProgress, trim($counts->eq(1)->text()));
+                self::assertSame($finalized, trim($counts->eq(2)->text()));
+                self::assertSame($pdfReady, trim($counts->eq(3)->text()));
+                self::assertSame($emailed, trim($counts->eq(4)->text()));
+                $found = true;
+            },
+        );
+
+        self::assertTrue($found, sprintf('Questionnaire row "%s" not found.', $questionnaireName));
     }
 
     public function testAClientCannotOpenAnalytics(): void
