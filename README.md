@@ -59,52 +59,112 @@ Invariants:
 
 ## Requirements
 
-- Docker Desktop, **or** PHP 8.4+ with `pdo_sqlite` and Composer 2
-- PHP 8.4+, Symfony 7.4, Doctrine ORM, SQLite, Twig, Forms, Security, Messenger, Mailer, FPDI/FPDF, PHPUnit, PHPStan
+Pick **one** way to run the app:
 
-## Docker setup
+| Option | You need |
+| --- | --- |
+| **Docker** (recommended if installed) | [Docker Desktop](https://www.docker.com/products/docker-desktop/) running |
+| **Local PHP** (XAMPP / system PHP) | PHP 8.4+ with `pdo_sqlite`, Composer 2 |
+
+Stack: PHP 8.4+, Symfony 7.4, Doctrine ORM, SQLite, Twig, Forms, Security, Messenger, Mailer, FPDI/FPDF, PHPUnit, PHPStan.
+
+## Quick start — choose a path
+
+### Option A — Docker
+
+1. **Start Docker Desktop** and wait until it says it is running.  
+   If you see `open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified`, Docker Desktop is not running (or not installed).
+
+2. From the project root:
 
 ```bash
 docker compose up --build
 ```
 
-Apache and the Messenger worker start together. The app is [http://localhost:8080](http://localhost:8080). On first boot the app container runs migrations and loads demo fixtures. SQLite lives in the `sqlite_data` volume. Linux `vendor/` packages live in `vendor_data` so Windows and container PHP builds do not mix.
+3. Open the app: [http://localhost:8080](http://localhost:8080)  
+   Mailpit inbox (PDF emails): [http://localhost:8025](http://localhost:8025)
 
-This stack is for local use (`APP_ENV=dev`). `/_profiler` and `/_wdt` require `ROLE_ADMIN`. Do not publish port 8080 on a shared host without `APP_ENV=prod`, `APP_DEBUG=0`, and a unique `APP_SECRET`.
+Apache, the Messenger worker, and Mailpit start together. On first boot the app container runs migrations and loads demo fixtures. Log in with the [demo credentials](#demo-credentials) below.
 
-Commands that write SQLite or `var/cache` should run as `www-data`:
+To stop: `Ctrl+C`, or `docker compose down`. To wipe the database volume and start fresh: `docker compose down -v`, then `docker compose up --build` again.
 
-```bash
-docker compose exec --user www-data app php bin/console doctrine:migrations:migrate --no-interaction
-docker compose exec --user www-data app php bin/console doctrine:fixtures:load --no-interaction
-docker compose exec app composer test
-docker compose exec --user www-data app php bin/console cache:warmup --env=dev --no-interaction
-docker compose exec app composer phpstan
-docker compose logs -f worker
-```
+### Option B — Local PHP (Windows / XAMPP)
 
-`doctrine:fixtures:load` purges data. If demo logins fail after a partial first boot, run fixtures again or `docker compose down -v`.
+Use **two terminals**. Run every command from the project root (`c:\xampp\htdocs\sprintax-lite` or your clone path).
 
-If the worker service is not running:
-
-```bash
-docker compose run --rm --user www-data worker php bin/console messenger:consume async
-```
-
-Readonly-database after a root-owned volume:
-
-```bash
-docker compose exec app chown -R www-data:www-data /var/www/html/var/data
-```
-
-## Installation (local PHP)
+#### First time only
 
 ```bash
 composer install
-cp .env.example .env
 ```
 
-On Windows use `copy .env.example .env`. Docker Compose interpolates `APP_ENV`, `APP_DEBUG`, `APP_SECRET`, and `MAILER_FROM` from the host environment. `MAILER_DSN` is hardcoded in `docker-compose.yml` as `smtp://mailer:1025` (Mailpit). Local PHP uses `MAILER_DSN` from `.env` (`smtp://127.0.0.1:1025` when Mailpit is on the host).
+Create `.env` from the example:
+
+```bash
+# macOS / Linux
+cp .env.example .env
+
+# Windows (PowerShell or cmd)
+copy .env.example .env
+```
+
+Then create the schema and load demo data:
+
+```bash
+php bin/console doctrine:migrations:migrate --no-interaction
+php bin/console doctrine:fixtures:load --no-interaction
+```
+
+`doctrine:fixtures:load` **purges** existing data and seeds demo users plus a two-step **1040-NR** questionnaire.
+
+#### Every time you open the project
+
+**Terminal 1 — web server**
+
+```bash
+php -S 127.0.0.1:8000 -t public
+```
+
+Open: [http://127.0.0.1:8000](http://127.0.0.1:8000)
+
+**Terminal 2 — PDF worker** (required after a client finalizes a submission)
+
+```bash
+php bin/console messenger:consume async
+```
+
+Optional: run [Mailpit](https://github.com/axllent/mailpit) locally to view PDF emails at [http://localhost:8025](http://localhost:8025) (`MAILER_DSN` in `.env` defaults to `smtp://127.0.0.1:1025`).
+
+### Demo credentials
+
+| Role | Email | Password | Entry |
+| --- | --- | --- | --- |
+| Admin | `admin@example.test` | `admin123` | `/admin` |
+| Client | `client@example.test` | `client123` | `/client` |
+
+New clients register at `/register` (`ROLE_CLIENT` only). Admins cannot self-register.
+
+If demo logins fail after a partial first boot: reload fixtures (local: `php bin/console doctrine:fixtures:load --no-interaction`; Docker: see [Docker extras](#docker-extras) below), or on Docker run `docker compose down -v` and start again.
+
+### What to do in the app
+
+- **Admin** (`/admin`): build questionnaires — ordered steps, questions (types, validation, visibility), choice options, PDF mappings.
+- **Client** (`/client`): start or resume a submission. Each wizard step is its own route (POST/redirect/GET). Clients can go back but cannot skip ahead of `current_step`. Review is shown before submit. Finalize queues PDF generation; keep the worker running (Docker does this for you).
+
+Bonus / stretch goals (assignment optional items implemented):
+
+| Feature | Where |
+| --- | --- |
+| Structure history / audit trail | `/admin/questionnaires/{id}/history` and `/admin/questionnaires/{id}/history/{version}` — every create/update/delete of steps, questions, options, and mappings stores a versioned snapshot with the editing admin |
+| Admin analytics | `/admin/analytics` — submission counts by status and per questionnaire, plus emailed PDFs and stored answers |
+| Visual coordinate picker | Add/Edit PDF mapping — click the blank form (served from `resources/pdf/{formType}.pdf`) to fill page + X/Y mm; manual fields still work if the template file is missing |
+| JSON API | `GET /api/questionnaires` and `GET /api/questionnaires/{id}` (`ROLE_ADMIN`); `GET /api/submissions/{id}` (owner or admin; other clients get 404). Session auth (same form login), read-only |
+| Email PDF delivery | After async PDF generation, the worker emails the file to the client account (Mailpit locally); see Messenger section |
+| CI pipeline | GitHub Actions with parallel backend and frontend jobs (see CI section) |
+
+## Environment variables
+
+Docker Compose interpolates `APP_ENV`, `APP_DEBUG`, `APP_SECRET`, and `MAILER_FROM` from the host environment. `MAILER_DSN` is hardcoded in `docker-compose.yml` as `smtp://mailer:1025` (Mailpit). Local PHP uses `MAILER_DSN` from `.env`.
 
 | Variable | Purpose |
 | --- | --- |
@@ -133,45 +193,34 @@ php bin/console doctrine:migrations:up-to-date --env=test
 
 In `dev`, Messenger uses the Doctrine transport and expects `messenger_messages`, which migrations do not create.
 
-## Fixtures
+## Docker extras
+
+Apache and the Messenger worker start together. SQLite lives in the `sqlite_data` volume. Linux `vendor/` packages live in `vendor_data` so Windows and container PHP builds do not mix.
+
+This stack is for local use (`APP_ENV=dev`). `/_profiler` and `/_wdt` require `ROLE_ADMIN`. Do not publish port 8080 on a shared host without `APP_ENV=prod`, `APP_DEBUG=0`, and a unique `APP_SECRET`.
+
+Commands that write SQLite or `var/cache` should run as `www-data`:
 
 ```bash
-php bin/console doctrine:fixtures:load --no-interaction
+docker compose exec --user www-data app php bin/console doctrine:migrations:migrate --no-interaction
+docker compose exec --user www-data app php bin/console doctrine:fixtures:load --no-interaction
+docker compose exec app composer test
+docker compose exec --user www-data app php bin/console cache:warmup --env=dev --no-interaction
+docker compose exec app composer phpstan
+docker compose logs -f worker
 ```
 
-Seeds demo users and a two-step **1040-NR** questionnaire (married → spouse visibility, income choices, PDF mappings including computed `tax_owed`). This command purges existing data.
-
-## Demo credentials
-
-| Role | Email | Password | Entry |
-| --- | --- | --- | --- |
-| Admin | `admin@example.test` | `admin123` | `/admin` |
-| Client | `client@example.test` | `client123` | `/client` |
-
-New clients register at `/register` (`ROLE_CLIENT` only). Admins cannot self-register.
-
-## Running Symfony
-
-Local PHP built-in server:
+If the worker service is not running:
 
 ```bash
-php -S 127.0.0.1:8000 -t public
+docker compose run --rm --user www-data worker php bin/console messenger:consume async
 ```
 
-Docker: [http://localhost:8080](http://localhost:8080) after `docker compose up --build`.
+Readonly-database after a root-owned volume:
 
-Admins manage questionnaires at `/admin`: ordered steps, questions (types, validation, visibility), choice options, and PDF mappings. Clients start and resume at `/client`. Each wizard step is its own route, saved with POST/redirect/GET. Clients can go back but cannot skip ahead of `current_step`. Review is shown before submit.
-
-Bonus / stretch goals (assignment optional items implemented):
-
-| Feature | Where |
-| --- | --- |
-| Structure history / audit trail | `/admin/questionnaires/{id}/history` and `/admin/questionnaires/{id}/history/{version}` — every create/update/delete of steps, questions, options, and mappings stores a versioned snapshot with the editing admin |
-| Admin analytics | `/admin/analytics` — submission counts by status and per questionnaire, plus emailed PDFs and stored answers |
-| Visual coordinate picker | Add/Edit PDF mapping — click the blank form (served from `resources/pdf/{formType}.pdf`) to fill page + X/Y mm; manual fields still work if the template file is missing |
-| JSON API | `GET /api/questionnaires` and `GET /api/questionnaires/{id}` (`ROLE_ADMIN`); `GET /api/submissions/{id}` (owner or admin; other clients get 404). Session auth (same form login), read-only |
-| Email PDF delivery | After async PDF generation, the worker emails the file to the client account (Mailpit locally); see Messenger section |
-| CI pipeline | GitHub Actions with parallel backend and frontend jobs (see CI section) |
+```bash
+docker compose exec app chown -R www-data:www-data /var/www/html/var/data
+```
 
 ## Running the Messenger worker
 
@@ -246,7 +295,16 @@ php bin/console doctrine:schema:validate --env=test
 
 ## PDF generation
 
-Overlay goes through `PdfGeneratorInterface`. `GenerateSubmissionPdf` resolves `resources/pdf/{formType}.pdf` from the questionnaire's `FormType` (locked after a client starts; for Form 1040-NR, `resources/pdf/1040-nr.pdf`). It maps **visible** answers and computed fields through admin `QuestionMapping` coordinates (mm), and `FpdiPdfGenerator` stamps those values. The generator has no hardcoded field positions. File checks and directory creation go through `FileStorageInterface`. The worker writes the file under `var/pdf/` and stores `{id}.pdf` on the submission. It then emails that file to the client. The display name can be renamed without changing the template.
+Overlay goes through `PdfGeneratorInterface`. `GenerateSubmissionPdf` resolves `resources/pdf/{formType}.pdf` from the questionnaire's `FormType` (locked after a client starts; for Form 1040-NR, `resources/pdf/1040-nr.pdf`). It maps **visible** answers and computed fields through admin `QuestionMapping` coordinates (mm), and `FpdiPdfGenerator` stamps those values. The generator has no hardcoded field positions. Amount mappings use the **left** edge of the IRS amount column. Checkbox marks (`X`) are centered on the mapped point. Yes/no answers are never stamped as the words "yes"/"no" — filing status uses computed fields `filing_single` / `filing_mfs` that emit `X`. File checks and directory creation go through `FileStorageInterface`. The worker writes the file under `var/pdf/` and stores `{id}.pdf` on the submission. It then emails that file to the client. The display name can be renamed without changing the template.
+
+Demo fixtures map names, wages/treaty, tax totals, and filing-status checkmarks only. Do **not** map `married`, `residency`, or `income_types` onto the form (that prints stray text like `no` or `resident`). After changing fixtures or cleaning bad admin mappings, reload fixtures, delete cached PDFs, and start a **new** submission:
+
+```bash
+php bin/console doctrine:fixtures:load --no-interaction
+# Windows PowerShell:
+Remove-Item -Force var/pdf/*.pdf -ErrorAction SilentlyContinue
+# then start a new client submission and keep the Messenger worker running
+```
 
 The official IRS form is **not** in this repository (`resources/pdf/` is empty aside from `.gitkeep`). Download a blank Form 1040-NR and save it as `resources/pdf/1040-nr.pdf` before generating a real overlay **or** using the admin coordinate picker. Tests use their own dummy PDFs. Without the template, mapping forms fall back to manual millimetre fields.
 
