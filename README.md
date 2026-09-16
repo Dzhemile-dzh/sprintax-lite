@@ -11,7 +11,8 @@ Pragmatic Clean Architecture / hexagonal layout. HTTP never talks to Doctrine or
 ```
 Controller (Presentation)
     ↓
-Application use case
+Application use case  (writes, rules, orchestration)
+    or repository port (simple reads)
     ↓
 Domain
     ↑
@@ -21,11 +22,11 @@ Infrastructure implementations
 | Layer | Namespace | Responsibility |
 | --- | --- | --- |
 | Domain | `App\Domain` | Entities, value objects, repository interfaces, calculation/PDF contracts. No Symfony, HTTP, Forms, or Twig. Doctrine mapping attributes and collections only. |
-| Application | `App\Application` | Use cases: start/save/finalize a submission, calculate, generate and download a PDF, record structure revisions, analytics overview. |
-| Infrastructure | `App\Infrastructure` | Doctrine repositories, FPDI adapter, local filesystem, 1040-NR calculator, Messenger. |
+| Application | `App\Application` | Use cases for submission flow (start/save/finalize), calculation, PDF generate/download/email, registration, and audit recording. Admin structure writes are consolidated into `WriteQuestionnaire`, `WriteSteps`, `WriteQuestions`, `WriteOptions`, and `WriteMappings`. Simple list/get reads call repository ports from Presentation (no passthrough query wrappers). |
+| Infrastructure | `App\Infrastructure` | Doctrine repositories, FPDI adapter, local filesystem, 1040-NR calculator, Messenger, Mailer. |
 | Presentation | `App\Presentation` | Thin controllers and forms for admin, client, security, and a read-only JSON API. |
 
-Ports: `CalculatorInterface`, `PdfGeneratorInterface`, `FileStorageInterface`, `QuestionnaireRepositoryInterface`, `SubmissionRepositoryInterface`, `UserRepositoryInterface`, `QuestionnaireRevisionRepositoryInterface`, `AnalyticsRepositoryInterface`, `ActorProvider`.
+Ports: `CalculatorInterface`, `PdfGeneratorInterface`, `FileStorageInterface`, `QuestionnaireRepositoryInterface`, `SubmissionRepositoryInterface`, `UserRepositoryInterface`, `QuestionnaireRevisionRepositoryInterface`, `AnalyticsRepositoryInterface`, `ActorProvider`, `PasswordHasherInterface`, `SubmissionPdfMailer`, `PdfGenerationScheduler`.
 
 There are no generic managers, base CRUD services, or abstract domain service classes. Business rules do not live in controllers or Twig.
 
@@ -59,7 +60,7 @@ Invariants:
 ## Requirements
 
 - Docker Desktop, **or** PHP 8.4+ with `pdo_sqlite` and Composer 2
-- PHP 8.4+, Symfony 7.4, Doctrine ORM, SQLite, Twig, Forms, Security, Messenger, FPDI/FPDF, PHPUnit, PHPStan
+- PHP 8.4+, Symfony 7.4, Doctrine ORM, SQLite, Twig, Forms, Security, Messenger, Mailer, FPDI/FPDF, PHPUnit, PHPStan
 
 ## Docker setup
 
@@ -161,14 +162,16 @@ Docker: [http://localhost:8080](http://localhost:8080) after `docker compose up 
 
 Admins manage questionnaires at `/admin`: ordered steps, questions (types, validation, visibility), choice options, and PDF mappings. Clients start and resume at `/client`. Each wizard step is its own route, saved with POST/redirect/GET. Clients can go back but cannot skip ahead of `current_step`. Review is shown before submit.
 
-Bonus surfaces (admin unless noted):
+Bonus / stretch goals (assignment optional items implemented):
 
 | Feature | Where |
 | --- | --- |
-| Structure history | `/admin/questionnaires/{id}/history` and `/history/{version}` — every create/update/delete of steps, questions, options, and mappings stores a versioned snapshot with the editing admin |
-| Analytics | `/admin/analytics` — submission counts by status and per questionnaire, plus emailed PDFs and stored answers |
-| Coordinate picker | Add/Edit PDF mapping — click the blank form (served from `resources/pdf/{formType}.pdf`) to fill page + X/Y mm; manual fields still work if the template file is missing |
+| Structure history / audit trail | `/admin/questionnaires/{id}/history` and `/admin/questionnaires/{id}/history/{version}` — every create/update/delete of steps, questions, options, and mappings stores a versioned snapshot with the editing admin |
+| Admin analytics | `/admin/analytics` — submission counts by status and per questionnaire, plus emailed PDFs and stored answers |
+| Visual coordinate picker | Add/Edit PDF mapping — click the blank form (served from `resources/pdf/{formType}.pdf`) to fill page + X/Y mm; manual fields still work if the template file is missing |
 | JSON API | `GET /api/questionnaires` and `GET /api/questionnaires/{id}` (`ROLE_ADMIN`); `GET /api/submissions/{id}` (owner or admin; other clients get 404). Session auth (same form login), read-only |
+| Email PDF delivery | After async PDF generation, the worker emails the file to the client account (Mailpit locally); see Messenger section |
+| CI pipeline | GitHub Actions with parallel backend and frontend jobs (see CI section) |
 
 ## Running the Messenger worker
 
@@ -227,14 +230,18 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on push to `main` and on pull r
 | Backend | lint & PHP syntax, unit tests, messenger tests, PHPStan, Doctrine schema & migrations |
 | Frontend | Twig lint, static CSS/JS checks (`node --check`), Presentation functional tests |
 
-Local equivalents:
+Local equivalents (plus Doctrine validate under `backend-doctrine`, Twig lint / `node --check` under frontend jobs):
 
 ```bash
 composer lint
+composer lint:backend
+composer lint:frontend
 composer test:unit
 composer test:messenger
 composer test:functional
 composer phpstan
+php bin/console doctrine:migrations:migrate --no-interaction --env=test
+php bin/console doctrine:schema:validate --env=test
 ```
 
 ## PDF generation
@@ -243,7 +250,7 @@ Overlay goes through `PdfGeneratorInterface`. `GenerateSubmissionPdf` resolves `
 
 The official IRS form is **not** in this repository (`resources/pdf/` is empty aside from `.gitkeep`). Download a blank Form 1040-NR and save it as `resources/pdf/1040-nr.pdf` before generating a real overlay **or** using the admin coordinate picker. Tests use their own dummy PDFs. Without the template, mapping forms fall back to manual millimetre fields.
 
-Download is `GET /submissions/{id}/pdf` (`BinaryFileResponse`). `SubmissionVoter::DOWNLOAD`: another client gets 403; a PDF that is not ready returns 404.
+Download is `GET /submissions/{id}/pdf` (`BinaryFileResponse`). `SubmissionVoter::DOWNLOAD` gates access; another client or an unauthenticated user gets **404** (not 403) so existence is not leaked. A PDF that is not ready also returns 404.
 
 While status is `finalized`, the confirmation, review, client home, and submission pages refresh every 5 seconds, send `Cache-Control: no-store`, and show a preparing message with a **Check now** link. Refresh stops when the status becomes `pdf_ready` and the download link appears.
 
@@ -259,11 +266,11 @@ Rules live on the question (`equals` / `not_equals`). `QuestionVisibilityEvaluat
 
 ## Authorization
 
-`SecurityUser` adapts the domain `User` so the domain stays free of Symfony. Routes use `#[IsGranted('ROLE_ADMIN')]` / `ROLE_CLIENT`. `SubmissionVoter` allows a client to view/edit/download only their own submission; admins can access any submission.
+`SecurityUser` adapts the domain `User` so the domain stays free of Symfony. Routes use `#[IsGranted('ROLE_ADMIN')]` / `ROLE_CLIENT`. `SubmissionVoter` allows a client to view/edit/download only their own submission; admins can access any submission. Denied submission and PDF HTML/API access typically returns **404** rather than 403 (same privacy pattern as the JSON API).
 
 ## Calculation architecture
 
-`CalculateSubmission` picks a `CalculatorInterface` by the questionnaire's `FormType` (selected when the questionnaire is created, independent of the display name). `Form1040NrCalculator` is a simplified 10% tax stand-in. Wages print on the wages line; `total_income`, ECI, AGI, and `taxable_income` are all `max(0, wages − treaty)` so those lines foot. `tax_owed` is 10% of that net. Unused `amount_owed` / `amount_overpaid` values are blank rather than `0.00`. Output keys are for PDF mappings, not IRS rate tables. Form type cannot change after a client has started the questionnaire.
+`CalculateSubmission` picks a `CalculatorInterface` by the questionnaire's `FormType` (selected when the questionnaire is created, independent of the display name). `Form1040NrCalculator` is a simplified 10% tax stand-in. Wages print on the wages line; `total_income`, ECI, AGI, and `taxable_income` are all `max(0, wages − treaty)` so those lines foot. `tax_owed` is 10% of that net. The calculator may still return `0.0` for unused `amount_owed` / `amount_overpaid`; the PDF overlay blanks those zero balance lines instead of printing `0.00`. Output keys are for PDF mappings, not IRS rate tables. Form type cannot change after a client has started the questionnaire.
 
 ## Known limitations
 
