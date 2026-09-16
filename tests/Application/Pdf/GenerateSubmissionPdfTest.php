@@ -68,6 +68,7 @@ final class GenerateSubmissionPdfTest extends TestCase
         self::assertSame(20.5, $firstName['placement']->xMm);
         self::assertSame(40.25, $firstName['placement']->yMm);
         self::assertSame(11, $firstName['placement']->fontSize);
+        self::assertFalse($firstName['placement']->amountColumn);
 
         $incomeTypes = $recorder->last->fields[1];
         self::assertSame('wages, treaty', $incomeTypes['value']);
@@ -75,9 +76,11 @@ final class GenerateSubmissionPdfTest extends TestCase
         self::assertSame(15.0, $incomeTypes['placement']->xMm);
         self::assertSame(60.0, $incomeTypes['placement']->yMm);
         self::assertNull($incomeTypes['placement']->fontSize);
+        self::assertFalse($incomeTypes['placement']->amountColumn);
 
         $wages = $recorder->last->fields[2];
         self::assertSame('50000.00', $wages['value']);
+        self::assertTrue($wages['placement']->amountColumn);
 
         $taxOwed = $recorder->last->fields[3];
         self::assertSame('5000.00', $taxOwed['value']);
@@ -85,6 +88,7 @@ final class GenerateSubmissionPdfTest extends TestCase
         self::assertSame(100.0, $taxOwed['placement']->xMm);
         self::assertSame(180.5, $taxOwed['placement']->yMm);
         self::assertSame(9, $taxOwed['placement']->fontSize);
+        self::assertTrue($taxOwed['placement']->amountColumn);
     }
 
     public function testItOverlaysUsingMappingsFromTheQuestionnaireBuilder(): void
@@ -259,6 +263,8 @@ final class GenerateSubmissionPdfTest extends TestCase
 
         self::assertSame(38.2, $byValue['X']->xMm);
         self::assertSame(71.5, $byValue['X']->yMm);
+        self::assertFalse($byValue['X']->amountColumn);
+        self::assertTrue($byValue['3000.00']->amountColumn);
         self::assertCount(2, $recorder->last->fields);
     }
 

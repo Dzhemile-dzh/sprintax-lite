@@ -27,7 +27,7 @@ final class FpdiPdfGeneratorTest extends TestCase
                 'value' => 'Ada Lovelace',
             ],
             [
-                'placement' => new PdfFieldPlacement(2, 100.0, 180.5, 9),
+                'placement' => new PdfFieldPlacement(2, 100.0, 180.5, 9, amountColumn: true),
                 'value' => '4000.00',
             ],
         ]));
@@ -44,7 +44,7 @@ final class FpdiPdfGeneratorTest extends TestCase
         self::assertStringContainsString('4000.00', $contents);
     }
 
-    public function testItRightAlignsAmountValuesOnTheMappedX(): void
+    public function testItRightAlignsAmountColumnPlacementsOnTheMappedX(): void
     {
         $source = $this->blankPdf(1);
         $output = $this->tempFile('amount-align');
@@ -52,7 +52,7 @@ final class FpdiPdfGeneratorTest extends TestCase
         $generator = new FpdiPdfGenerator(new LocalFileStorage(), compressStreams: false);
         $generator->generate(new PdfGenerationRequest($source, $output, [
             [
-                'placement' => new PdfFieldPlacement(1, 202.5, 143.0, 9),
+                'placement' => new PdfFieldPlacement(1, 202.5, 143.0, 9, amountColumn: true),
                 'value' => '123.00',
             ],
             [
@@ -68,6 +68,41 @@ final class FpdiPdfGeneratorTest extends TestCase
         self::assertStringContainsString('Ada', $contents);
     }
 
+    public function testItDoesNotRightAlignMoneyShapedValuesWithoutAmountColumn(): void
+    {
+        $source = $this->blankPdf(1);
+        $aligned = $this->tempFile('amount-aligned');
+        $plain = $this->tempFile('amount-plain');
+        $generator = new FpdiPdfGenerator(new LocalFileStorage(), compressStreams: false);
+
+        $generator->generate(new PdfGenerationRequest($source, $aligned, [
+            [
+                'placement' => new PdfFieldPlacement(1, 202.5, 143.0, 9, amountColumn: true),
+                'value' => '123.00',
+            ],
+        ]));
+        $generator->generate(new PdfGenerationRequest($source, $plain, [
+            [
+                'placement' => new PdfFieldPlacement(1, 202.5, 143.0, 9, amountColumn: false),
+                'value' => '123.00',
+            ],
+        ]));
+
+        $alignedContents = file_get_contents($aligned);
+        $plainContents = file_get_contents($plain);
+        self::assertNotFalse($alignedContents);
+        self::assertNotFalse($plainContents);
+        self::assertNotSame(
+            $alignedContents,
+            $plainContents,
+            'amountColumn:false must keep left-edge placement even for *.00-shaped values.',
+        );
+
+        // FPDF writes mm coordinates in points (202.5 mm → 574.02).
+        self::assertMatchesRegularExpression('/574\.02\s+\d+\.\d+\s+Td\s+\(123\.00\)/', $plainContents);
+        self::assertDoesNotMatchRegularExpression('/574\.02\s+\d+\.\d+\s+Td\s+\(123\.00\)/', $alignedContents);
+    }
+
     public function testItCentersCheckboxMarksOnMappedCoordinates(): void
     {
         $source = $this->blankPdf(1);
@@ -76,7 +111,7 @@ final class FpdiPdfGeneratorTest extends TestCase
         $generator = new FpdiPdfGenerator(new LocalFileStorage(), compressStreams: false);
         $generator->generate(new PdfGenerationRequest($source, $output, [
             [
-                'placement' => new PdfFieldPlacement(1, 202.5, 143.0, 9),
+                'placement' => new PdfFieldPlacement(1, 202.5, 143.0, 9, amountColumn: true),
                 'value' => '3000.00',
             ],
             [

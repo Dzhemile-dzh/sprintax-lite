@@ -11,6 +11,7 @@ final readonly class PdfFieldPlacement
         public float $xMm,
         public float $yMm,
         public ?int $fontSize = null,
+        public bool $amountColumn = false,
     ) {
     }
 }

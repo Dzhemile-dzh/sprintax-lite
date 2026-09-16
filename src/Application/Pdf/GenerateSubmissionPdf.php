@@ -27,6 +27,12 @@ use DateTimeImmutable;
 
 final class GenerateSubmissionPdf
 {
+    /** Computed overlays that print as centered checkbox marks, not amount-column text. */
+    private const CHECKBOX_COMPUTED_FIELDS = [
+        'filing_single',
+        'filing_mfs',
+    ];
+
     public function __construct(
         private readonly SubmissionRepositoryInterface $submissions,
         private readonly QuestionnaireRepositoryInterface $questionnaires,
@@ -125,12 +131,27 @@ final class GenerateSubmissionPdf
                     $coordinates->xMm,
                     $coordinates->yMm,
                     $coordinates->fontSize,
+                    $this->usesAmountColumn($mapping, $questionnaire),
                 ),
                 'value' => $value,
             ];
         }
 
         return $fields;
+    }
+
+    private function usesAmountColumn(QuestionMapping $mapping, Questionnaire $questionnaire): bool
+    {
+        $source = $mapping->source();
+
+        if ($source->isQuestion()) {
+            $question = $questionnaire->findQuestionByKey($source->reference);
+
+            return $question !== null && $question->type() === QuestionType::Number;
+        }
+
+        // Computed money fields use the amount column; filing checkmarks do not.
+        return !in_array($source->reference, self::CHECKBOX_COMPUTED_FIELDS, true);
     }
 
     /**

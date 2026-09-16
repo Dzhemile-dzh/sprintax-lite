@@ -164,7 +164,8 @@ final class AppFixtures extends Fixture
         );
 
         // Coordinates are millimetres from the top-left of 2025 Form 1040-NR (Letter).
-        // Amount X is the RIGHT edge of the IRS amount column; FpdiPdfGenerator right-aligns *.00 values
+        // Amount X is the RIGHT edge of the IRS amount column; Number questions and
+        // computed money fields are marked amountColumn and right-aligned by FpdiPdfGenerator.
         // and applies a small baseline shift so digits sit in the amount row (not through the rule).
         // Filing-status marks are checkbox centers; married/residency/income_types/birth_date stay unmapped.
         $amountRightX = 202.5;
