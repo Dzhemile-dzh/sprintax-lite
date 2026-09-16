@@ -1,5 +1,25 @@
 # Sprintax-Lite
 
+## Contents
+
+1. [What is this?](#what-is-this)
+2. [How it works](#how-it-works)
+3. [Requirements](#requirements)
+4. [Quick start](#quick-start)
+5. [Demo credentials](#demo-credentials)
+6. [Features](#features)
+7. [Architecture](#architecture)
+8. [Project structure](#project-structure)
+9. [Domain model](#domain-model)
+10. [Database schema](#database-schema)
+11. [Development](#development)
+12. [Application behavior](#application-behavior)
+13. [Troubleshooting](#troubleshooting)
+14. [Known limitations](#known-limitations)
+15. [AI assistance](#ai-assistance)
+16. [Repository](#repository)
+17. [Screenshots](#screenshots)
+
 ## What is this?
 
 Sprintax-Lite is a Symfony-based questionnaire application that guides clients through a multi-step tax questionnaire and generates a completed Form 1040-NR PDF from their answers.
@@ -34,26 +54,6 @@ PDF is also emailed locally via Mailpit
 ```
 
 UI walkthrough: [Screenshots](#screenshots) at the end of this README.
-
-## Contents
-
-1. [What is this?](#what-is-this)
-2. [How it works](#how-it-works)
-3. [Requirements](#requirements)
-4. [Quick start](#quick-start)
-5. [Demo credentials](#demo-credentials)
-6. [Features](#features)
-7. [Architecture](#architecture)
-8. [Project structure](#project-structure)
-9. [Domain model](#domain-model)
-10. [Database schema](#database-schema)
-11. [Development](#development)
-12. [Application behavior](#application-behavior)
-13. [Troubleshooting](#troubleshooting)
-14. [Known limitations](#known-limitations)
-15. [AI assistance](#ai-assistance)
-16. [Repository](#repository)
-17. [Screenshots](#screenshots)
 
 ## Requirements
 
@@ -661,3 +661,7 @@ Example overlay onto Form 1040-NR after a client finalizes (names, Single filing
 #### Page 2
 
 ![Generated 1040-NR page 2](docs/screenshots/pdf/1040nr-page2.png)
+
+---
+
+Authored by Dzhemile Ahmed
