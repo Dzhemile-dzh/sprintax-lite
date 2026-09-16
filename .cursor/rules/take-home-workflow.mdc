@@ -1,11 +1,16 @@
 ---
-description: Stop after each phase for review
+description: Stop after each phase for review and tests
 ---
 
 # Workflow
 
-Implement one assignment phase at a time. After a phase, stop so the user can review.
+Implement one assignment phase at a time. After each functionality:
 
+1. Add or update tests for the behavior you just built (unit tests for domain/calculation/visibility; functional tests for admin, wizard, auth, PDF).
+2. Run the relevant test suite and fix failures before moving on.
+3. Stop so the user can review.
+
+Do not implement later assignment phases unless asked.
 
 Run the `review` subagent (`.cursor/agents/review.md`) when the user asks for review.
 

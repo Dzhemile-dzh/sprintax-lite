@@ -182,6 +182,8 @@ Docker Compose already runs that in the `worker` service (`docker compose logs -
 
 ## Running tests
 
+Development workflow: after each functionality, add or update tests for that behavior, run the matching suite, fix failures, then stop for review before the next phase. Prefer unit tests for domain rules, visibility, and calculation; functional (WebTestCase) tests for admin builder, client wizard, auth, and PDF download; messenger tests for async PDF handling.
+
 ```bash
 composer test
 composer test:unit
@@ -276,7 +278,7 @@ Rules live on the question (`equals` / `not_equals`). `QuestionVisibilityEvaluat
 
 ## AI assistance
 
-Cursor/AI assistance was used on tests and review of that written code. I directed each assignment phase and decided what to keep in the repository.
+Cursor/AI assistance was used for tests, and review of that written code. I directed each assignment phase, required tests after each functionality, and decided what to keep in the repository.
 
 ## Repository
 
