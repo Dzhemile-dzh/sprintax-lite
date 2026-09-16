@@ -153,13 +153,19 @@ final class FpdiPdfGenerator implements PdfGeneratorInterface
     {
         $encoded = $this->encode($value);
         $xMm = $placement->xMm;
+        $yMm = $placement->yMm;
+        $fontSize = $placement->fontSize ?? self::DEFAULT_FONT_SIZE;
+        $fontHeightMm = $fontSize * 25.4 / 72.0;
 
-        // Amount overlays use the mapped X as the right edge of the IRS amount column.
+        // Amount overlays use mapped X as the right edge of the IRS amount column.
+        // Mapped Y is the amount-row content band; FPDF Text() uses the glyph baseline,
+        // so shift down so digits sit on the form line instead of floating above it.
         if ($this->isAmountValue($value)) {
             $xMm -= $pdf->GetStringWidth($encoded);
+            $yMm += $fontHeightMm * 0.75;
         }
 
-        $pdf->Text($xMm, $placement->yMm, $encoded);
+        $pdf->Text($xMm, $yMm, $encoded);
     }
 
     private function isCheckboxMark(string $value): bool

@@ -164,7 +164,8 @@ final class AppFixtures extends Fixture
         );
 
         // Coordinates are millimetres from the top-left of 2025 Form 1040-NR (Letter).
-        // Amount X is the RIGHT edge of the IRS amount column; FpdiPdfGenerator right-aligns *.00 values.
+        // Amount X is the RIGHT edge of the IRS amount column; FpdiPdfGenerator right-aligns *.00 values
+        // and shifts amount Y down to the glyph baseline so digits sit on the form line.
         // Filing-status marks are checkbox centers; married/residency/income_types/birth_date stay unmapped.
         $amountRightX = 202.5;
         $this->mapQuestion($questionnaire, $firstName->key(), 1, 14.0, 42.5);
@@ -172,21 +173,21 @@ final class AppFixtures extends Fixture
         $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_FILING_SINGLE, 1, 38.2, 71.5, 9);
         $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_FILING_MFS, 1, 58.5, 71.5, 9);
         // 2025 1040-NR has no MFS spouse-name write-in; do not stamp spouse_name on the QSS child line.
-        $this->mapQuestion($questionnaire, $wages->key(), 1, $amountRightX, 141.5);
-        $this->mapQuestion($questionnaire, $treatyExempt->key(), 1, $amountRightX, 179.5);
-        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_TOTAL_INCOME, 1, $amountRightX, 192.0);
-        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_TOTAL_ECI, 1, $amountRightX, 242.8);
-        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_ADJUSTED_GROSS_INCOME, 1, $amountRightX, 255.3);
-        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_ADJUSTED_GROSS_INCOME_B, 2, $amountRightX, 18.8);
-        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_TAXABLE_INCOME, 2, $amountRightX, 46.2);
-        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_TAX_OWED, 2, $amountRightX, 50.4);
-        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_TAX_SUBTOTAL, 2, $amountRightX, 58.9);
-        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_TAX_AFTER_CREDITS, 2, $amountRightX, 75.8);
-        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_TOTAL_TAX, 2, $amountRightX, 101.2);
-        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_TAX_WITHHELD, 2, $amountRightX, 122.4);
-        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_TOTAL_PAYMENTS, 2, $amountRightX, 171.1);
-        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_AMOUNT_OVERPAID, 2, $amountRightX, 175.3);
-        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_AMOUNT_OWED, 2, $amountRightX, 207.0);
+        $this->mapQuestion($questionnaire, $wages->key(), 1, $amountRightX, 143.0);
+        $this->mapQuestion($questionnaire, $treatyExempt->key(), 1, $amountRightX, 181.0);
+        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_TOTAL_INCOME, 1, $amountRightX, 193.5);
+        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_TOTAL_ECI, 1, $amountRightX, 244.3);
+        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_ADJUSTED_GROSS_INCOME, 1, $amountRightX, 256.8);
+        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_ADJUSTED_GROSS_INCOME_B, 2, $amountRightX, 20.3);
+        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_TAXABLE_INCOME, 2, $amountRightX, 47.7);
+        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_TAX_OWED, 2, $amountRightX, 51.9);
+        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_TAX_SUBTOTAL, 2, $amountRightX, 60.4);
+        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_TAX_AFTER_CREDITS, 2, $amountRightX, 77.3);
+        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_TOTAL_TAX, 2, $amountRightX, 102.7);
+        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_TAX_WITHHELD, 2, $amountRightX, 123.9);
+        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_TOTAL_PAYMENTS, 2, $amountRightX, 172.6);
+        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_AMOUNT_OVERPAID, 2, $amountRightX, 176.8);
+        $this->mapComputed($questionnaire, Form1040NrCalculator::FIELD_AMOUNT_OWED, 2, $amountRightX, 208.5);
 
         return $questionnaire;
     }

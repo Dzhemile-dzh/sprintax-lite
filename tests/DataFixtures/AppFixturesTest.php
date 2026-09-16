@@ -107,8 +107,9 @@ final class AppFixturesTest extends WebDatabaseTestCase
             $byReference[$mapping->source()->reference] = $mapping->coordinates();
         }
         self::assertSame(202.5, $byReference['income_wages']->xMm);
-        self::assertSame(141.5, $byReference['income_wages']->yMm);
+        self::assertSame(143.0, $byReference['income_wages']->yMm);
         self::assertSame(202.5, $byReference[Form1040NrCalculator::FIELD_TAX_OWED]->xMm);
+        self::assertSame(51.9, $byReference[Form1040NrCalculator::FIELD_TAX_OWED]->yMm);
         self::assertSame(38.2, $byReference[Form1040NrCalculator::FIELD_FILING_SINGLE]->xMm);
         self::assertSame(71.5, $byReference[Form1040NrCalculator::FIELD_FILING_SINGLE]->yMm);
         self::assertSame(58.5, $byReference[Form1040NrCalculator::FIELD_FILING_MFS]->xMm);

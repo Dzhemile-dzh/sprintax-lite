@@ -207,7 +207,7 @@ final class GenerateSubmissionPdfTest extends TestCase
         $questionnaire->addMapping(QuestionMapping::forQuestion(
             'map-wages',
             $wages->key(),
-            new PdfCoordinates(1, 202.5, 141.5, 9),
+            new PdfCoordinates(1, 202.5, 143.0, 9),
         ));
         $questionnaire->addMapping(QuestionMapping::forComputedField(
             'map-single',

@@ -52,7 +52,7 @@ final class FpdiPdfGeneratorTest extends TestCase
         $generator = new FpdiPdfGenerator(new LocalFileStorage(), compressStreams: false);
         $generator->generate(new PdfGenerationRequest($source, $output, [
             [
-                'placement' => new PdfFieldPlacement(1, 202.5, 141.5, 9),
+                'placement' => new PdfFieldPlacement(1, 202.5, 143.0, 9),
                 'value' => '123.00',
             ],
             [
@@ -76,7 +76,7 @@ final class FpdiPdfGeneratorTest extends TestCase
         $generator = new FpdiPdfGenerator(new LocalFileStorage(), compressStreams: false);
         $generator->generate(new PdfGenerationRequest($source, $output, [
             [
-                'placement' => new PdfFieldPlacement(1, 202.5, 141.5, 9),
+                'placement' => new PdfFieldPlacement(1, 202.5, 143.0, 9),
                 'value' => '3000.00',
             ],
             [
