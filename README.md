@@ -57,6 +57,118 @@ Invariants:
 - Status only moves `in_progress` → `finalized` → `pdf_ready`. The generated file path is stored when the submission becomes `pdf_ready`.
 - Clients are created with `User::registerClient()`; admins with `User::provisionAdmin()`.
 
+## Database schema
+
+SQLite tables used by the app (plus Symfony `messenger_messages` and `doctrine_migration_versions`). Local DB file: `var/data.db`.
+
+```mermaid
+erDiagram
+    questionnaire ||--o{ questionnaire_step : has
+    questionnaire ||--o{ question : has
+    questionnaire ||--o{ question_mapping : has
+    questionnaire ||--o{ questionnaire_revision : audited_by
+    questionnaire ||--o{ questionnaire_submission : started_as
+    questionnaire_step ||--o{ question : contains
+    question ||--o{ question_option : has
+    question ||--o{ submission_answer : answered_in
+    app_user ||--o{ questionnaire_submission : owns
+    questionnaire_step ||--o{ questionnaire_submission : current_step
+    questionnaire_submission ||--o{ submission_answer : stores
+
+    questionnaire {
+        varchar id PK
+        varchar name
+        clob description
+        varchar form_type
+    }
+
+    questionnaire_step {
+        varchar id PK
+        varchar questionnaire_id FK
+        varchar title
+        integer position
+    }
+
+    question {
+        varchar id PK
+        varchar questionnaire_id FK
+        varchar step_id FK
+        varchar key
+        varchar label
+        varchar type
+        integer position
+        clob help_text
+        clob validation
+        clob visibility
+    }
+
+    question_option {
+        varchar id PK
+        varchar question_id FK
+        varchar label
+        varchar value
+        integer position
+    }
+
+    question_mapping {
+        varchar id PK
+        varchar questionnaire_id FK
+        varchar source_type
+        varchar source_reference
+        clob coordinates
+    }
+
+    questionnaire_revision {
+        varchar id PK
+        varchar questionnaire_id FK
+        integer version
+        varchar action
+        clob summary
+        varchar actor_id
+        varchar actor_email
+        datetime recorded_at
+        clob snapshot
+    }
+
+    app_user {
+        varchar id PK
+        varchar email
+        varchar password_hash
+        varchar role
+    }
+
+    questionnaire_submission {
+        varchar id PK
+        varchar questionnaire_id FK
+        varchar user_id FK
+        varchar current_step_id FK
+        varchar status
+        datetime created_at
+        datetime updated_at
+        datetime finalized_at
+        varchar pdf_path
+        datetime pdf_emailed_at
+    }
+
+    submission_answer {
+        varchar submission_id FK
+        varchar question_id FK
+        clob value
+    }
+```
+
+| Table | Role |
+| --- | --- |
+| `questionnaire` | Form definition (`form_type` selects calculator/PDF template) |
+| `questionnaire_step` | Ordered wizard pages |
+| `question` | Fields on a step (type, validation, visibility JSON) |
+| `question_option` | Labels/values for choice questions |
+| `question_mapping` | PDF overlay source (question key or computed field) + page/X/Y mm |
+| `questionnaire_revision` | Append-only structure audit trail |
+| `app_user` | Admin and client accounts |
+| `questionnaire_submission` | Client run of a questionnaire (status + PDF path) |
+| `submission_answer` | One stored answer per question per submission |
+
 ## Requirements
 
 Pick **one** way to run the app:
@@ -161,6 +273,100 @@ Bonus / stretch goals (assignment optional items implemented):
 | JSON API | `GET /api/questionnaires` and `GET /api/questionnaires/{id}` (`ROLE_ADMIN`); `GET /api/submissions/{id}` (owner or admin; other clients get 404). Session auth (same form login), read-only |
 | Email PDF delivery | After async PDF generation, the worker emails the file to the client account (Mailpit locally); see Messenger section |
 | CI pipeline | GitHub Actions with parallel backend and frontend jobs (see CI section) |
+
+## Screenshots
+
+### Login and register
+
+Sign in (`/login`) and create a client account (`/register`). Admins cannot self-register.
+
+| Login | Register |
+| --- | --- |
+| ![Sign in](docs/screenshots/auth/login.png) | ![Create account](docs/screenshots/auth/register.png) |
+
+### Client pages
+
+Client home, wizard steps, review, submit, and PDF-ready confirmation. Mailpit shows the emailed PDF locally.
+
+#### Client home
+
+![Client home](docs/screenshots/client/home.png)
+
+#### Wizard — Personal
+
+![Wizard personal step](docs/screenshots/client/wizard-personal.png)
+
+#### Wizard — Income
+
+![Wizard income step](docs/screenshots/client/wizard-income.png)
+
+#### Review
+
+![Review answers](docs/screenshots/client/review.png)
+
+#### Submitted (PDF ready)
+
+![Submitted](docs/screenshots/client/submitted.png)
+
+#### PDF email (Mailpit)
+
+![Mailpit PDF email](docs/screenshots/client/mailpit-pdf-email.png)
+
+### Admin pages
+
+Questionnaire list, builder, question forms, analytics, structure history, and the PDF coordinate picker.
+
+#### Questionnaires
+
+![Admin questionnaires](docs/screenshots/admin/questionnaires.png)
+
+#### New questionnaire
+
+![New questionnaire](docs/screenshots/admin/new-questionnaire.png)
+
+#### Builder — Personal step
+
+![Builder personal](docs/screenshots/admin/builder-personal.png)
+
+#### Builder — Income step
+
+![Builder income](docs/screenshots/admin/builder-income.png)
+
+#### Add question
+
+![Add question](docs/screenshots/admin/add-question.png)
+
+#### Edit question
+
+![Edit question](docs/screenshots/admin/edit-question.png)
+
+#### Analytics
+
+![Analytics](docs/screenshots/admin/analytics.png)
+
+#### Change history
+
+![Change history](docs/screenshots/admin/change-history.png)
+
+#### History version detail
+
+![History version](docs/screenshots/admin/history-version.png)
+
+#### PDF coordinate picker
+
+![Coordinate picker](docs/screenshots/admin/coordinate-picker.png)
+
+### Generated PDF
+
+Example overlay onto Form 1040-NR after a client finalizes (names, Single filing status, wages, tax, and refund lines).
+
+#### Page 1
+
+![Generated 1040-NR page 1](docs/screenshots/pdf/1040nr-page1.png)
+
+#### Page 2
+
+![Generated 1040-NR page 2](docs/screenshots/pdf/1040nr-page2.png)
 
 ## Environment variables
 
