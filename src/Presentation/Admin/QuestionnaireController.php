@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Presentation\Admin;
 
 use App\Application\Questionnaire\Get\GetQuestionnaire;
-use App\Application\Questionnaire\Preview\PreviewQuestionnaire;
 use App\Application\Questionnaire\WriteQuestionnaire;
 use App\Domain\Questionnaire\Entity\Questionnaire;
 use App\Domain\Questionnaire\Exception\InvalidQuestionnaire;
@@ -27,7 +26,6 @@ final class QuestionnaireController extends AbstractController
     public function __construct(
         private readonly QuestionnaireRepositoryInterface $questionnaires,
         private readonly WriteQuestionnaire $writeQuestionnaire,
-        private readonly PreviewQuestionnaire $previewQuestionnaire,
         private readonly GetQuestionnaire $getQuestionnaire,
     ) {
     }
@@ -120,14 +118,8 @@ final class QuestionnaireController extends AbstractController
     #[Route('/questionnaires/{id}/preview', name: 'admin_questionnaire_preview', methods: ['GET'])]
     public function preview(string $id): Response
     {
-        try {
-            $questionnaire = $this->previewQuestionnaire->execute($id);
-        } catch (QuestionnaireNotFound) {
-            throw $this->createNotFoundException();
-        }
-
         return $this->render('admin/questionnaire/preview.html.twig', [
-            'questionnaire' => $questionnaire,
+            'questionnaire' => $this->questionnaire($id),
         ]);
     }
 

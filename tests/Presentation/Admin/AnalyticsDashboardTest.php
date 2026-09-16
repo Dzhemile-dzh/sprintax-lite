@@ -18,6 +18,7 @@ use App\Domain\User\ValueObject\Email;
 use App\Infrastructure\Security\SecurityUser;
 use App\Tests\Support\WebDatabaseTestCase;
 use DateTimeImmutable;
+use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\HttpFoundation\Response;
 
 final class AnalyticsDashboardTest extends WebDatabaseTestCase
@@ -67,13 +68,31 @@ final class AnalyticsDashboardTest extends WebDatabaseTestCase
         $crawler = $this->client->click($crawler->selectLink('Analytics')->link());
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('h1', 'Analytics');
-        self::assertSelectorTextContains('body', 'Total submissions');
-        self::assertSelectorTextContains('body', 'In progress');
-        self::assertSelectorTextContains('body', 'PDF ready');
-        self::assertSelectorTextContains('body', 'PDFs emailed');
-        self::assertSelectorTextContains('body', 'Stored answers');
-        self::assertSelectorTextContains('.metric-card__value', '2');
+        $this->assertMetric('Total submissions', '2');
+        $this->assertMetric('In progress', '1');
+        $this->assertMetric('Awaiting PDF', '0');
+        $this->assertMetric('PDF ready', '1');
+        $this->assertMetric('PDFs emailed', '1');
+        $this->assertMetric('Stored answers', '1');
         self::assertSelectorTextContains('body', '1040-NR');
+    }
+
+    private function assertMetric(string $label, string $expectedValue): void
+    {
+        $found = false;
+
+        $this->client->getCrawler()->filter('.metric-card')->each(
+            function (Crawler $card) use ($label, $expectedValue, &$found): void {
+                if (trim($card->filter('.metric-card__label')->text()) !== $label) {
+                    return;
+                }
+
+                self::assertSame($expectedValue, trim($card->filter('.metric-card__value')->text()));
+                $found = true;
+            },
+        );
+
+        self::assertTrue($found, sprintf('Metric card "%s" not found.', $label));
     }
 
     public function testAClientCannotOpenAnalytics(): void
