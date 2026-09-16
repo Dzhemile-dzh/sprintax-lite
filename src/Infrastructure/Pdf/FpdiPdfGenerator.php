@@ -21,6 +21,12 @@ final class FpdiPdfGenerator implements PdfGeneratorInterface
 {
     private const DEFAULT_FONT_SIZE = 10;
 
+    /**
+     * Fraction of font height added to amount Y so FPDF's glyph baseline sits on the IRS row
+     * instead of floating above it or dropping below the rule.
+     */
+    private const AMOUNT_BASELINE_SHIFT = 0.32;
+
     public function __construct(
         private readonly FileStorageInterface $fileStorage,
         private readonly bool $compressStreams = true,
@@ -158,11 +164,10 @@ final class FpdiPdfGenerator implements PdfGeneratorInterface
         $fontHeightMm = $fontSize * 25.4 / 72.0;
 
         // Amount overlays use mapped X as the right edge of the IRS amount column.
-        // Mapped Y is the amount-row content band; FPDF Text() uses the glyph baseline,
-        // so shift down so digits sit on the form line instead of floating above it.
+        // Mapped Y is the amount-row content band; FPDF Text() uses the glyph baseline.
         if ($this->isAmountValue($value)) {
             $xMm -= $pdf->GetStringWidth($encoded);
-            $yMm += $fontHeightMm * 0.75;
+            $yMm += $fontHeightMm * self::AMOUNT_BASELINE_SHIFT;
         }
 
         $pdf->Text($xMm, $yMm, $encoded);
