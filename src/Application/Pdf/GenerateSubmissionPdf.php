@@ -178,6 +178,11 @@ final class GenerateSubmissionPdf
             return null;
         }
 
+        // Yes/no drives computed filing-status checkmarks (X); never stamp "yes"/"no" text.
+        if ($type === QuestionType::YesNo) {
+            return null;
+        }
+
         $raw = $value->raw();
 
         if ($type === QuestionType::Date) {

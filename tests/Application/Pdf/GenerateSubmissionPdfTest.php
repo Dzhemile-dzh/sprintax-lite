@@ -181,6 +181,87 @@ final class GenerateSubmissionPdfTest extends TestCase
         self::assertNotContains('   ', $values);
     }
 
+    public function testItOmitsYesNoTextAndStampsFilingStatusCheckmarks(): void
+    {
+        $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);
+        $questionnaire->addStep('step-1', 'Personal');
+        $married = $questionnaire->addQuestion(
+            'step-1',
+            'q-married',
+            'married',
+            'Married?',
+            QuestionType::YesNo,
+        );
+        $wages = $questionnaire->addQuestion(
+            'step-1',
+            'q-wages',
+            'income_wages',
+            'Wages',
+            QuestionType::Number,
+        );
+        $questionnaire->addMapping(QuestionMapping::forQuestion(
+            'map-married',
+            $married->key(),
+            new PdfCoordinates(1, 14.0, 70.0, 9),
+        ));
+        $questionnaire->addMapping(QuestionMapping::forQuestion(
+            'map-wages',
+            $wages->key(),
+            new PdfCoordinates(1, 180.0, 142.9, 9),
+        ));
+        $questionnaire->addMapping(QuestionMapping::forComputedField(
+            'map-single',
+            Form1040NrCalculator::FIELD_FILING_SINGLE,
+            new PdfCoordinates(1, 37.7, 72.0, 9),
+        ));
+        $questionnaire->addMapping(QuestionMapping::forComputedField(
+            'map-mfs',
+            Form1040NrCalculator::FIELD_FILING_MFS,
+            new PdfCoordinates(1, 58.0, 72.0, 9),
+        ));
+
+        $now = new DateTimeImmutable('2026-01-01T10:00:00+00:00');
+        $submission = QuestionnaireSubmission::start(
+            'sub-1',
+            $questionnaire,
+            User::registerClient('user-1', new Email('client@example.test'), 'hashed-password'),
+            $now,
+        );
+        $submission->recordAnswer($married, AnswerValue::text('no'), $now);
+        $submission->recordAnswer($wages, AnswerValue::text('3000'), $now);
+        $this->finalized($submission);
+
+        $recorder = new RecordingPdfGenerator();
+        $useCase = $this->useCase(
+            $submission,
+            $recorder,
+            $this->templatesDirectoryWith('1040-nr.pdf'),
+            sys_get_temp_dir().DIRECTORY_SEPARATOR.'sprintax-pdf-out-'.uniqid('', true),
+        );
+
+        $useCase->execute('sub-1');
+
+        self::assertNotNull($recorder->last);
+        $values = array_map(
+            static fn (array $field): string => $field['value'],
+            $recorder->last->fields,
+        );
+
+        self::assertNotContains('no', $values);
+        self::assertNotContains('yes', $values);
+        self::assertContains('X', $values);
+        self::assertContains('3000.00', $values);
+
+        $byValue = [];
+        foreach ($recorder->last->fields as $field) {
+            $byValue[$field['value']] = $field['placement'];
+        }
+
+        self::assertSame(37.7, $byValue['X']->xMm);
+        self::assertSame(72.0, $byValue['X']->yMm);
+        self::assertCount(2, $recorder->last->fields);
+    }
+
     public function testItFormatsStoredDatesAsMonthDayYear(): void
     {
         $questionnaire = Questionnaire::create('q-1', '1040-NR', FormType::Form1040Nr);

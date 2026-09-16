@@ -168,7 +168,7 @@ final class FpdiPdfGenerator implements PdfGeneratorInterface
         // the glyph baseline and left edge, so center the mark inside the box.
         $pdf->Text(
             $placement->xMm - ($width / 2),
-            $placement->yMm + ($fontHeightMm * 0.32),
+            $placement->yMm + ($fontHeightMm * 0.25),
             $encoded,
         );
     }

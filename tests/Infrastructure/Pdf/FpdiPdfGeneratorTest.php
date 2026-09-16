@@ -44,6 +44,30 @@ final class FpdiPdfGeneratorTest extends TestCase
         self::assertStringContainsString('4000.00', $contents);
     }
 
+    public function testItCentersCheckboxMarksOnMappedCoordinates(): void
+    {
+        $source = $this->blankPdf(1);
+        $output = $this->tempFile('checkbox-mark');
+
+        $generator = new FpdiPdfGenerator(new LocalFileStorage(), compressStreams: false);
+        $generator->generate(new PdfGenerationRequest($source, $output, [
+            [
+                'placement' => new PdfFieldPlacement(1, 180.0, 142.9, 9),
+                'value' => '3000.00',
+            ],
+            [
+                'placement' => new PdfFieldPlacement(1, 37.7, 72.0, 9),
+                'value' => 'X',
+            ],
+        ]));
+
+        self::assertFileExists($output);
+        $contents = file_get_contents($output);
+        self::assertNotFalse($contents);
+        self::assertStringContainsString('3000.00', $contents);
+        self::assertStringContainsString('X', $contents);
+    }
+
     public function testItFailsWhenTheSourcePdfCannotBeRead(): void
     {
         $generator = new FpdiPdfGenerator(new LocalFileStorage());
