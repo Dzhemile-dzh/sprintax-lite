@@ -10,12 +10,12 @@ Pragmatic Clean Architecture / hexagonal layout. HTTP never talks to Doctrine or
 
 ```
 Controller (Presentation)
-    ↓
-Application use case  (writes, rules, orchestration)
-    or repository port (simple reads)
-    ↓
+ ↓
+Application use case (writes, rules, orchestration)
+ or repository port (simple reads)
+ ↓
 Domain
-    ↑
+ ↑
 Infrastructure implementations
 ```
 
@@ -35,11 +35,11 @@ There are no generic managers, base CRUD services, or abstract domain service cl
 ```
 User
  └── QuestionnaireSubmission
-       ├── Questionnaire
-       │      └── QuestionnaireStep
-       │            └── Question
-       │                  └── QuestionOption
-       └── Answer
+ ├── Questionnaire
+ │ └── QuestionnaireStep
+ │ └── Question
+ │ └── QuestionOption
+ └── Answer
 ```
 
 `QuestionMapping` belongs to the questionnaire and points at a question **or** a computed field (page + X/Y mm + optional font size).
@@ -63,98 +63,98 @@ SQLite tables used by the app (plus Symfony `messenger_messages` and `doctrine_m
 
 ```mermaid
 erDiagram
-    questionnaire ||--o{ questionnaire_step : has
-    questionnaire ||--o{ question : has
-    questionnaire ||--o{ question_mapping : has
-    questionnaire ||--o{ questionnaire_revision : audited_by
-    questionnaire ||--o{ questionnaire_submission : started_as
-    questionnaire_step ||--o{ question : contains
-    question ||--o{ question_option : has
-    question ||--o{ submission_answer : answered_in
-    app_user ||--o{ questionnaire_submission : owns
-    questionnaire_step ||--o{ questionnaire_submission : current_step
-    questionnaire_submission ||--o{ submission_answer : stores
+ questionnaire ||--o{ questionnaire_step : has
+ questionnaire ||--o{ question : has
+ questionnaire ||--o{ question_mapping : has
+ questionnaire ||--o{ questionnaire_revision : audited_by
+ questionnaire ||--o{ questionnaire_submission : started_as
+ questionnaire_step ||--o{ question : contains
+ question ||--o{ question_option : has
+ question ||--o{ submission_answer : answered_in
+ app_user ||--o{ questionnaire_submission : owns
+ questionnaire_step ||--o{ questionnaire_submission : current_step
+ questionnaire_submission ||--o{ submission_answer : stores
 
-    questionnaire {
-        varchar id PK
-        varchar name
-        clob description
-        varchar form_type
-    }
+ questionnaire {
+ varchar id PK
+ varchar name
+ clob description
+ varchar form_type
+ }
 
-    questionnaire_step {
-        varchar id PK
-        varchar questionnaire_id FK
-        varchar title
-        integer position
-    }
+ questionnaire_step {
+ varchar id PK
+ varchar questionnaire_id FK
+ varchar title
+ integer position
+ }
 
-    question {
-        varchar id PK
-        varchar questionnaire_id FK
-        varchar step_id FK
-        varchar key
-        varchar label
-        varchar type
-        integer position
-        clob help_text
-        clob validation
-        clob visibility
-    }
+ question {
+ varchar id PK
+ varchar questionnaire_id FK
+ varchar step_id FK
+ varchar key
+ varchar label
+ varchar type
+ integer position
+ clob help_text
+ clob validation
+ clob visibility
+ }
 
-    question_option {
-        varchar id PK
-        varchar question_id FK
-        varchar label
-        varchar value
-        integer position
-    }
+ question_option {
+ varchar id PK
+ varchar question_id FK
+ varchar label
+ varchar value
+ integer position
+ }
 
-    question_mapping {
-        varchar id PK
-        varchar questionnaire_id FK
-        varchar source_type
-        varchar source_reference
-        clob coordinates
-    }
+ question_mapping {
+ varchar id PK
+ varchar questionnaire_id FK
+ varchar source_type
+ varchar source_reference
+ clob coordinates
+ }
 
-    questionnaire_revision {
-        varchar id PK
-        varchar questionnaire_id FK
-        integer version
-        varchar action
-        clob summary
-        varchar actor_id
-        varchar actor_email
-        datetime recorded_at
-        clob snapshot
-    }
+ questionnaire_revision {
+ varchar id PK
+ varchar questionnaire_id FK
+ integer version
+ varchar action
+ clob summary
+ varchar actor_id
+ varchar actor_email
+ datetime recorded_at
+ clob snapshot
+ }
 
-    app_user {
-        varchar id PK
-        varchar email
-        varchar password_hash
-        varchar role
-    }
+ app_user {
+ varchar id PK
+ varchar email
+ varchar password_hash
+ varchar role
+ }
 
-    questionnaire_submission {
-        varchar id PK
-        varchar questionnaire_id FK
-        varchar user_id FK
-        varchar current_step_id FK
-        varchar status
-        datetime created_at
-        datetime updated_at
-        datetime finalized_at
-        varchar pdf_path
-        datetime pdf_emailed_at
-    }
+ questionnaire_submission {
+ varchar id PK
+ varchar questionnaire_id FK
+ varchar user_id FK
+ varchar current_step_id FK
+ varchar status
+ datetime created_at
+ datetime updated_at
+ datetime finalized_at
+ varchar pdf_path
+ datetime pdf_emailed_at
+ }
 
-    submission_answer {
-        varchar submission_id FK
-        varchar question_id FK
-        clob value
-    }
+ submission_answer {
+ varchar submission_id FK
+ varchar question_id FK
+ clob value
+ }
 ```
 
 | Table | Role |
@@ -180,11 +180,11 @@ Pick **one** way to run the app:
 
 Stack: PHP 8.4+, Symfony 7.4, Doctrine ORM, SQLite, Twig, Forms, Security, Messenger, Mailer, FPDI/FPDF, PHPUnit, PHPStan.
 
-## Quick start — choose a path
+## Quick start - choose a path
 
-### Option A — Docker
+### Option A - Docker
 
-1. **Start Docker Desktop** and wait until it says it is running.  
+1. **Start Docker Desktop** and wait until it says it is running.
    If you see `open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified`, Docker Desktop is not running (or not installed).
 
 2. From the project root:
@@ -193,14 +193,14 @@ Stack: PHP 8.4+, Symfony 7.4, Doctrine ORM, SQLite, Twig, Forms, Security, Messe
 docker compose up --build
 ```
 
-3. Open the app: [http://localhost:8080](http://localhost:8080)  
+3. Open the app: [http://localhost:8080](http://localhost:8080)
    Mailpit inbox (PDF emails): [http://localhost:8025](http://localhost:8025)
 
 Apache, the Messenger worker, and Mailpit start together. On first boot the app container runs migrations and loads demo fixtures. Log in with the [demo credentials](#demo-credentials) below.
 
 To stop: `Ctrl+C`, or `docker compose down`. To wipe the database volume and start fresh: `docker compose down -v`, then `docker compose up --build` again.
 
-### Option B — Local PHP (Windows / XAMPP)
+### Option B - Local PHP (Windows / XAMPP)
 
 Use **two terminals**. Run every command from the project root (`c:\xampp\htdocs\sprintax-lite` or your clone path).
 
@@ -231,7 +231,7 @@ php bin/console doctrine:fixtures:load --no-interaction
 
 #### Every time you open the project
 
-**Terminal 1 — web server**
+**Terminal 1 - web server**
 
 ```bash
 php -S 127.0.0.1:8000 -t public
@@ -239,7 +239,7 @@ php -S 127.0.0.1:8000 -t public
 
 Open: [http://127.0.0.1:8000](http://127.0.0.1:8000)
 
-**Terminal 2 — PDF worker** (required after a client finalizes a submission)
+**Terminal 2 - PDF worker** (required after a client finalizes a submission)
 
 ```bash
 php bin/console messenger:consume async
@@ -260,113 +260,19 @@ If demo logins fail after a partial first boot: reload fixtures (local: `php bin
 
 ### What to do in the app
 
-- **Admin** (`/admin`): build questionnaires — ordered steps, questions (types, validation, visibility), choice options, PDF mappings.
+- **Admin** (`/admin`): build questionnaires - ordered steps, questions (types, validation, visibility), choice options, PDF mappings.
 - **Client** (`/client`): start or resume a submission. Each wizard step is its own route (POST/redirect/GET). Clients can go back but cannot skip ahead of `current_step`. Review is shown before submit. Finalize queues PDF generation; keep the worker running (Docker does this for you).
 
 Bonus / stretch goals (assignment optional items implemented):
 
 | Feature | Where |
 | --- | --- |
-| Structure history / audit trail | `/admin/questionnaires/{id}/history` and `/admin/questionnaires/{id}/history/{version}` — every create/update/delete of steps, questions, options, and mappings stores a versioned snapshot with the editing admin |
-| Admin analytics | `/admin/analytics` — submission counts by status and per questionnaire, plus emailed PDFs and stored answers |
-| Visual coordinate picker | Add/Edit PDF mapping — click the blank form (served from `resources/pdf/{formType}.pdf`) to fill page + X/Y mm; manual fields still work if the template file is missing |
+| Structure history / audit trail | `/admin/questionnaires/{id}/history` and `/admin/questionnaires/{id}/history/{version}` - every create/update/delete of steps, questions, options, and mappings stores a versioned snapshot with the editing admin |
+| Admin analytics | `/admin/analytics` - submission counts by status and per questionnaire, plus emailed PDFs and stored answers |
+| Visual coordinate picker | Add/Edit PDF mapping - click the blank form (served from `resources/pdf/{formType}.pdf`) to fill page + X/Y mm; manual fields still work if the template file is missing |
 | JSON API | `GET /api/questionnaires` and `GET /api/questionnaires/{id}` (`ROLE_ADMIN`); `GET /api/submissions/{id}` (owner or admin; other clients get 404). Session auth (same form login), read-only |
 | Email PDF delivery | After async PDF generation, the worker emails the file to the client account (Mailpit locally); see Messenger section |
 | CI pipeline | GitHub Actions with parallel backend and frontend jobs (see CI section) |
-
-## Screenshots
-
-### Login and register
-
-Sign in (`/login`) and create a client account (`/register`). Admins cannot self-register.
-
-| Login | Register |
-| --- | --- |
-| ![Sign in](docs/screenshots/auth/login.png) | ![Create account](docs/screenshots/auth/register.png) |
-
-### Client pages
-
-Client home, wizard steps, review, submit, and PDF-ready confirmation. Mailpit shows the emailed PDF locally.
-
-#### Client home
-
-![Client home](docs/screenshots/client/home.png)
-
-#### Wizard — Personal
-
-![Wizard personal step](docs/screenshots/client/wizard-personal.png)
-
-#### Wizard — Income
-
-![Wizard income step](docs/screenshots/client/wizard-income.png)
-
-#### Review
-
-![Review answers](docs/screenshots/client/review.png)
-
-#### Submitted (PDF ready)
-
-![Submitted](docs/screenshots/client/submitted.png)
-
-#### PDF email (Mailpit)
-
-![Mailpit PDF email](docs/screenshots/client/mailpit-pdf-email.png)
-
-### Admin pages
-
-Questionnaire list, builder, question forms, analytics, structure history, and the PDF coordinate picker.
-
-#### Questionnaires
-
-![Admin questionnaires](docs/screenshots/admin/questionnaires.png)
-
-#### New questionnaire
-
-![New questionnaire](docs/screenshots/admin/new-questionnaire.png)
-
-#### Builder — Personal step
-
-![Builder personal](docs/screenshots/admin/builder-personal.png)
-
-#### Builder — Income step
-
-![Builder income](docs/screenshots/admin/builder-income.png)
-
-#### Add question
-
-![Add question](docs/screenshots/admin/add-question.png)
-
-#### Edit question
-
-![Edit question](docs/screenshots/admin/edit-question.png)
-
-#### Analytics
-
-![Analytics](docs/screenshots/admin/analytics.png)
-
-#### Change history
-
-![Change history](docs/screenshots/admin/change-history.png)
-
-#### History version detail
-
-![History version](docs/screenshots/admin/history-version.png)
-
-#### PDF coordinate picker
-
-![Coordinate picker](docs/screenshots/admin/coordinate-picker.png)
-
-### Generated PDF
-
-Example overlay onto Form 1040-NR after a client finalizes (names, Single filing status, wages, tax, and refund lines).
-
-#### Page 1
-
-![Generated 1040-NR page 1](docs/screenshots/pdf/1040nr-page1.png)
-
-#### Page 2
-
-![Generated 1040-NR page 2](docs/screenshots/pdf/1040nr-page2.png)
 
 ## Environment variables
 
@@ -501,7 +407,7 @@ php bin/console doctrine:schema:validate --env=test
 
 ## PDF generation
 
-Overlay goes through `PdfGeneratorInterface`. `GenerateSubmissionPdf` resolves `resources/pdf/{formType}.pdf` from the questionnaire's `FormType` (locked after a client starts; for Form 1040-NR, `resources/pdf/1040-nr.pdf`). It maps **visible** answers and computed fields through admin `QuestionMapping` coordinates (mm), and `FpdiPdfGenerator` stamps those values. The generator has no hardcoded field positions. Amount mappings use the **left** edge of the IRS amount column. Checkbox marks (`X`) are centered on the mapped point. Yes/no answers are never stamped as the words "yes"/"no" — filing status uses computed fields `filing_single` / `filing_mfs` that emit `X`. File checks and directory creation go through `FileStorageInterface`. The worker writes the file under `var/pdf/` and stores `{id}.pdf` on the submission. It then emails that file to the client. The display name can be renamed without changing the template.
+Overlay goes through `PdfGeneratorInterface`. `GenerateSubmissionPdf` resolves `resources/pdf/{formType}.pdf` from the questionnaire's `FormType` (locked after a client starts; for Form 1040-NR, `resources/pdf/1040-nr.pdf`). It maps **visible** answers and computed fields through admin `QuestionMapping` coordinates (mm), and `FpdiPdfGenerator` stamps those values. The generator has no hardcoded field positions. Amount mappings use the **left** edge of the IRS amount column. Checkbox marks (`X`) are centered on the mapped point. Yes/no answers are never stamped as the words "yes"/"no" - filing status uses computed fields `filing_single` / `filing_mfs` that emit `X`. File checks and directory creation go through `FileStorageInterface`. The worker writes the file under `var/pdf/` and stores `{id}.pdf` on the submission. It then emails that file to the client. The display name can be renamed without changing the template.
 
 Demo fixtures map names, wages/treaty, tax totals, and filing-status checkmarks only. Do **not** map `married`, `residency`, or `income_types` onto the form (that prints stray text like `no` or `resident`). After changing fixtures or cleaning bad admin mappings, reload fixtures, delete cached PDFs, and start a **new** submission:
 
@@ -520,7 +426,7 @@ While status is `finalized`, the confirmation, review, client home, and submissi
 
 ## Conditional visibility
 
-Rules live on the question (`equals` / `not_equals`). `QuestionVisibilityEvaluator` applies them **server-side** against answers keyed by question key — not JavaScript.
+Rules live on the question (`equals` / `not_equals`). `QuestionVisibilityEvaluator` applies them **server-side** against answers keyed by question key - not JavaScript.
 
 - Every condition on a question must hold (AND).
 - Missing or blank text answers hide both `equals` and `not_equals` dependents.
@@ -554,3 +460,98 @@ Cursor/AI assistance was used for tests, and review of that written code. I dire
 ## Repository
 
 https://github.com/Dzhemile-dzh/sprintax-lite
+
+## Screenshots
+
+### Login and register
+
+Sign in (`/login`) and create a client account (`/register`). Admins cannot self-register.
+
+| Login | Register |
+| --- | --- |
+| ![Sign in](docs/screenshots/auth/login.png) | ![Create account](docs/screenshots/auth/register.png) |
+
+### Client pages
+
+Client home, wizard steps, review, submit, and PDF-ready confirmation. Mailpit shows the emailed PDF locally.
+
+#### Client home
+
+![Client home](docs/screenshots/client/home.png)
+
+#### Wizard - Personal
+
+![Wizard personal step](docs/screenshots/client/wizard-personal.png)
+
+#### Wizard - Income
+
+![Wizard income step](docs/screenshots/client/wizard-income.png)
+
+#### Review
+
+![Review answers](docs/screenshots/client/review.png)
+
+#### Submitted (PDF ready)
+
+![Submitted](docs/screenshots/client/submitted.png)
+
+#### PDF email (Mailpit)
+
+![Mailpit PDF email](docs/screenshots/client/mailpit-pdf-email.png)
+
+### Admin pages
+
+Questionnaire list, builder, question forms, analytics, structure history, and the PDF coordinate picker.
+
+#### Questionnaires
+
+![Admin questionnaires](docs/screenshots/admin/questionnaires.png)
+
+#### New questionnaire
+
+![New questionnaire](docs/screenshots/admin/new-questionnaire.png)
+
+#### Builder - Personal step
+
+![Builder personal](docs/screenshots/admin/builder-personal.png)
+
+#### Builder - Income step
+
+![Builder income](docs/screenshots/admin/builder-income.png)
+
+#### Add question
+
+![Add question](docs/screenshots/admin/add-question.png)
+
+#### Edit question
+
+![Edit question](docs/screenshots/admin/edit-question.png)
+
+#### Analytics
+
+![Analytics](docs/screenshots/admin/analytics.png)
+
+#### Change history
+
+![Change history](docs/screenshots/admin/change-history.png)
+
+#### History version detail
+
+![History version](docs/screenshots/admin/history-version.png)
+
+#### PDF coordinate picker
+
+![Coordinate picker](docs/screenshots/admin/coordinate-picker.png)
+
+### Generated PDF
+
+Example overlay onto Form 1040-NR after a client finalizes (names, Single filing status, wages, tax, and refund lines).
+
+#### Page 1
+
+![Generated 1040-NR page 1](docs/screenshots/pdf/1040nr-page1.png)
+
+#### Page 2
+
+![Generated 1040-NR page 2](docs/screenshots/pdf/1040nr-page2.png)
+
